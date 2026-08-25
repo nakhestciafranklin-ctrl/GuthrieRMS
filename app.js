@@ -2,71 +2,71 @@ const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
 const bekDryInvoiceImport=[
-{barcode:'105944',name:'Cup Plas 16oz Clear Pet',unit:'20/50 CT',onHand:1},
-{barcode:'111179',name:'Cleaner Oven & Grill Aerosol',unit:'6/17.5 OZ',onHand:1},
-{barcode:'112208',name:'Cup Plas Souffle 2 Oz Trans',unit:'10/250 CT',onHand:1},
-{barcode:'116532',name:'Pastry Bag 18in Clr Disposable',unit:'1/100 CT',onHand:6},
-{barcode:'113601',name:'Cont Foam Hngd 3-c Lg White',unit:'1/150 CT',onHand:1},
-{barcode:'129706',name:'Bag Reclosable Quart 7x8',unit:'1/500 CT',onHand:6},
-{barcode:'129707',name:'Bag Reclosable 1 Gal 10.5x10.5',unit:'1/250 CT',onHand:2},
-{barcode:'129708',name:'Bag Reclosable 2 Gal 13x15.5',unit:'1/100 CT',onHand:2},
-{barcode:'134727',name:'Fuel Butane Cartridge 8 Oz',unit:'1/12 CT',onHand:3},
-{barcode:'144183',name:'Bleach Keith Ultra',unit:'6/1 GAL',onHand:1},
-{barcode:'147169',name:'Cup Plas 16 Oz Clear Pet',unit:'12/70 CT',onHand:1},
-{barcode:'147183',name:'Lid Plas 16oz&24oz Clear Pet',unit:'12/85 CT',onHand:1},
-{barcode:'150063',name:'Cutlery Spork White Mw',unit:'1/1000 CT',onHand:8},
-{barcode:'154478',name:'Cup Plas 12 Oz Trans',unit:'15/57 CT',onHand:1},
-{barcode:'158208',name:'Glove Poly Blue LXI',unit:'10/200 CT',onHand:1},
-{barcode:'166295',name:'Bag Poly 6x3x12 Inch',unit:'1/1000 CT',onHand:4},
-{barcode:'169556',name:'Tray Food Kraft 1 Lb 100',unit:'1/1000 CT',onHand:6},
-{barcode:'177103',name:'Tray Food 8 Oz #40',unit:'1/1000 CT',onHand:5},
-{barcode:'182753',name:'Pan Alum Half Deep HD Steam Table',unit:'1/100 CT',onHand:2},
-{barcode:'182754',name:'Lid Half Pan VC Alum Steam Table',unit:'1/100 CT',onHand:2},
-{barcode:'182756',name:'Lid Alum Full Pan VC Steam Table',unit:'1/50 CT',onHand:2},
-{barcode:'191739',name:'Pan Alum Full Deep Std Duty Steam Table',unit:'1/50 CT',onHand:2},
-{barcode:'193593',name:'Cont Plas 8oz Deli W/Lid',unit:'1/240 CT',onHand:3},
-{barcode:'193595',name:'Cont Plas 16oz Deli W/Lid',unit:'1/240 CT',onHand:3},
-{barcode:'193597',name:'Cont Plas 32oz Deli W/Lid',unit:'1/240 CT',onHand:3},
-{barcode:'196345',name:'Tray Food 4 Oz Red Check',unit:'1/1000 CT',onHand:1},
-{barcode:'197296',name:'Film 12x2000 Clear Wrap',unit:'1/1 ROLL',onHand:8},
-{barcode:'197297',name:'Film 18x2000 Clear Wrap',unit:'1/1 ROLL',onHand:8},
-{barcode:'197298',name:'Film 24x2000 Clear Wrap',unit:'1/1 ROLL',onHand:8},
-{barcode:'198208',name:'Tray Food 1/2 Lb 50 Red Plaid',unit:'4/250 CT',onHand:1},
-{barcode:'198211',name:'Tray Food 3 Lb 300 Red Plaid',unit:'2/250 CT',onHand:2},
-{barcode:'205026',name:'Tray Food 1 Lb Kraft Poly Coat',unit:'1/1000 CT',onHand:1},
-{barcode:'220741',name:'Cutlery Spoon 5.9 In White',unit:'1/1000 CT',onHand:8},
-{barcode:'640050',name:'Filter Coffee 3 Gal Urn',unit:'1/250 CT',onHand:1},
-{barcode:'813152',name:'Lid Plas 10-24 Oz Wht Traveler',unit:'10/100 CT',onHand:1},
-{barcode:'813154',name:'Sleeve Coffee Hot 12/16/20',unit:'1/1300 CT',onHand:1},
-{barcode:'813173',name:'Cup Paper Hot 12 Oz White',unit:'20/50 CT',onHand:1},
-{barcode:'860042',name:'Lid Plas 12J White Vented',unit:'10/100 CT',onHand:1},
-{barcode:'870047',name:'Lid Foam 20rl White Vented',unit:'10/50 CT',onHand:1},
-{barcode:'871154',name:'Cutlery Fork Clear Hw',unit:'1/1000 CT',onHand:1},
-{barcode:'872052',name:'Tray Hot Dog 8in Red Plaid',unit:'1/1000 CT',onHand:1},
-{barcode:'872241',name:'Cont Foam Hngd 1-c Perf Lid',unit:'1/200 CT',onHand:1},
-{barcode:'872975',name:'Cont Foam Hngd 1-c Lg Rect Wht',unit:'1/150 CT',onHand:1},
-{barcode:'873053',name:'Straw 7.75in Clear Wrapped',unit:'24/400 CT',onHand:2},
-{barcode:'875035',name:'Bag Sandwich Foil Square',unit:'1/1000 CT',onHand:1},
-{barcode:'875403',name:'Bag Reclosable Sandwich 6x5',unit:'1/500 CT',onHand:1},
-{barcode:'875501',name:'Bag Poly Bun Pan Freezer 27x37',unit:'1/200 CT',onHand:2},
-{barcode:'875548',name:'Cover Bun Rack Clear',unit:'1/50 CT',onHand:1},
-{barcode:'876055',name:'Foil 18x500 Roll',unit:'1/1 ROLL',onHand:6},
-{barcode:'880125',name:'Napkin Bev Black 2 Ply',unit:'4/250 CT',onHand:1},
-{barcode:'883595',name:'Apron Plastic 24x42 Inch',unit:'10/100 CT',onHand:1},
-{barcode:'883708',name:'Hair Net Black Light Wgt',unit:'1/144 CT',onHand:10},
-{barcode:'883721',name:'Glove Vinyl Xl Pf Clear',unit:'10/100 CT',onHand:1},
-{barcode:'883834',name:'Glove Vinyl Smpf Clear',unit:'4/100 CT',onHand:2},
-{barcode:'883835',name:'Glove Vinyl Med Pf Clear',unit:'4/100 CT',onHand:2},
-{barcode:'883840',name:'Glove Vinyl Lg Pf Clear',unit:'4/100 CT',onHand:2},
-{barcode:'883917',name:'Glove Latex Large Yellow',unit:'1/1 PR',onHand:50},
-{barcode:'884100',name:'Chopstick Red Envelope',unit:'800/1 PR',onHand:1},
-{barcode:'885043',name:'Cleanser Ajax Scouring Powder',unit:'24/21 OZ',onHand:1},
-{barcode:'885915',name:'Sanitizer Redi-san Rtu',unit:'6/1 QT',onHand:2},
-{barcode:'887029',name:'Soap Dawn Liq Dishwashing',unit:'8/38 OZ',onHand:1},
-{barcode:'888020',name:'Pad Scrubbing General Purpose',unit:'2/40 CT',onHand:2},
-{barcode:'888077',name:'Scrubber Stainless Steel Lg',unit:'1/12 CT',onHand:1},
-{barcode:'918865',name:'Thermometer Probe Wipes',unit:'1/200 CT',onHand:1},
-{barcode:'980196',name:'Cleaner Stainless Steel Polish',unit:'4/32 OZ',onHand:1}
+{barcode:'105944',name:'Cup Plas 16oz Clear Pet',unit:'20 / 50 CT',onHand:1},
+{barcode:'111179',name:'Cleaner Oven & Grill Aerosol',unit:'6 / 17.5 OZ',onHand:1},
+{barcode:'112208',name:'Cup Plas Souffle 2 Oz Trans',unit:'10 / 250 CT',onHand:1},
+{barcode:'116532',name:'Pastry Bag 18in Clr Disposable',unit:'1 / 100 CT',onHand:6},
+{barcode:'116601',name:'Cont Foam Hngd 3-c Lg White',unit:'1 / 150 CT',onHand:1},
+{barcode:'129706',name:'Bag Reclosable Quart 7x8',unit:'1 / 500 CT',onHand:6},
+{barcode:'129707',name:'Bag Reclosable 1 Gal 10.5x10.5',unit:'1 / 250 CT',onHand:2},
+{barcode:'129708',name:'Bag Reclosable 2 Gal 13x15.5',unit:'1 / 100 CT',onHand:2},
+{barcode:'134727',name:'Fuel Butane Cartridge 8 Oz',unit:'1 / 12 CT',onHand:3},
+{barcode:'144183',name:'Bleach Keith Ultra',unit:'6 / 1 GAL',onHand:1},
+{barcode:'147169',name:'Cup Plas 16 Oz Clear Pet',unit:'12 / 70 CT',onHand:1},
+{barcode:'147183',name:'Lid Plas 16oz&24oz Clear Pet',unit:'12 / 85 CT',onHand:1},
+{barcode:'150063',name:'Cutlery Spork White Mw',unit:'1 / 1000 CT',onHand:8},
+{barcode:'154478',name:'Cup Plas 12 Oz Trans',unit:'15 / 57 CT',onHand:1},
+{barcode:'158208',name:'Glove Poly Blue  L/xl',unit:'10 / 200 CT',onHand:1},
+{barcode:'166295',name:'Bag Poly 6x3x12 Inch',unit:'1 / 1000 CT',onHand:4},
+{barcode:'169556',name:'Tray Food Kraft 1 Lb  100',unit:'1 / 1000 CT',onHand:6},
+{barcode:'177103',name:'Tray Food 8 Oz #40',unit:'1 / 1000 CT',onHand:5},
+{barcode:'182753',name:'Pan Alum Half Deep HD Steam Table',unit:'1 / 100 CT',onHand:2},
+{barcode:'182754',name:'Lid Half Pan IVC Alum Steam Table',unit:'1 / 100 CT',onHand:2},
+{barcode:'182756',name:'Lid Alum Full Pan IVC Steam Table',unit:'1 / 50 CT',onHand:2},
+{barcode:'191739',name:'Pan Alum Full Deep Std Duty Steam Table',unit:'1 / 50 CT',onHand:2},
+{barcode:'193593',name:'Cont Plas 8oz Deli W/ Lid',unit:'1 / 240 CT',onHand:3},
+{barcode:'193595',name:'Cont Plas 16oz Deli W/ Lid',unit:'1 / 240 CT',onHand:3},
+{barcode:'193597',name:'Cont Plas 32oz Deli W/ Lid',unit:'1 / 240 CT',onHand:3},
+{barcode:'196345',name:'Tray Food 4 Oz Red Check',unit:'1 / 1000 CT',onHand:1},
+{barcode:'197296',name:'Film 12x2000 Clear Wrap',unit:'1 / 1 ROLL',onHand:8},
+{barcode:'197297',name:'Film 18x2000 Clear Wrap',unit:'1 / 1 ROLL',onHand:8},
+{barcode:'197298',name:'Film 24x2000 Clear Wrap',unit:'1 / 1 ROLL',onHand:8},
+{barcode:'198208',name:'Tray Food 1/2 Lb  50 Red Plaid',unit:'4 / 250 CT',onHand:1},
+{barcode:'198211',name:'Tray Food 3 Lb  300 Red Plaid',unit:'2 / 250 CT',onHand:2},
+{barcode:'205026',name:'Tray Food 1 Lb Kraft Poly Coat',unit:'1 / 1000 CT',onHand:1},
+{barcode:'220741',name:'Cutlery Spoon 5.9 In White',unit:'1 / 1000 CT',onHand:8},
+{barcode:'640050',name:'Filter Coffee 3 Gal Urn',unit:'1 / 250 CT',onHand:1},
+{barcode:'813152',name:'Lid Plas 10-24 Oz Wht Traveler',unit:'10 / 100 CT',onHand:1},
+{barcode:'813154',name:'Sleeve Coffee Hot 12/16/20',unit:'1 / 1300 CT',onHand:1},
+{barcode:'813173',name:'Cup Paper Hot 12 Oz White',unit:'20 / 50 CT',onHand:1},
+{barcode:'860042',name:'Lid Plas 12jl White Vented',unit:'10 / 100 CT',onHand:1},
+{barcode:'870047',name:'Lid Foam 20rl White Vented',unit:'10 / 50 CT',onHand:1},
+{barcode:'871154',name:'Cutlery Fork Clear Hw',unit:'1 / 1000 CT',onHand:1},
+{barcode:'872052',name:'Tray Hot Dog 8in Red Plaid',unit:'1 / 1000 CT',onHand:1},
+{barcode:'872241',name:'Cont Foam Hngd 1-c Perf Lid',unit:'1 / 200 CT',onHand:1},
+{barcode:'872976',name:'Cont Foam Hngd 1-c Lg Rect Wht',unit:'1 / 150 CT',onHand:1},
+{barcode:'873053',name:'Straw 7.75in Clear Wrapped',unit:'24 / 400 CT',onHand:2},
+{barcode:'875035',name:'Bag Sandwich Foil Square',unit:'1 / 1000 CT',onHand:1},
+{barcode:'875403',name:'Bag Reclosable Sandwich 6x5',unit:'1 / 500 CT',onHand:1},
+{barcode:'875501',name:'Bag Poly Bun Pan Freezer 27x37',unit:'1 / 200 CT',onHand:2},
+{barcode:'875548',name:'Cover Bun Rack Clear',unit:'1 / 50 CT',onHand:1},
+{barcode:'876055',name:'Foil 18x500 Roll',unit:'1 / 1 ROLL',onHand:6},
+{barcode:'880125',name:'Napkin Bev Black 2 Ply',unit:'4 / 250 CT',onHand:1},
+{barcode:'883595',name:'Apron Plastic 24x42 Inch',unit:'10 / 100 CT',onHand:1},
+{barcode:'883708',name:'Hair Net Black Light Wgt',unit:'1 / 144 CT',onHand:10},
+{barcode:'883721',name:'Glove Vinyl Xl Pf Clear',unit:'10 / 100 CT',onHand:1},
+{barcode:'883834',name:'Glove Vinyl Smpf Clear',unit:'4 / 100 CT',onHand:2},
+{barcode:'883835',name:'Glove Vinyl Med Pf Clear',unit:'4 / 100 CT',onHand:2},
+{barcode:'883840',name:'Glove Vinyl Lg Pf Clear',unit:'4 / 100 CT',onHand:2},
+{barcode:'883917',name:'Glove Latex Large Yellow',unit:'1 / 1 PR',onHand:50},
+{barcode:'884100',name:'Chopstick Red Envelope',unit:'800 / 1 PR',onHand:1},
+{barcode:'885043',name:'Cleanser Ajax Scouring Powder',unit:'24 / 21 OZ',onHand:1},
+{barcode:'885915',name:'Sanitizer Redi-san Rtu',unit:'6 / 1 QT',onHand:2},
+{barcode:'887029',name:'Soap Dawn Liq Dishwashing',unit:'8 / 38 OZ',onHand:1},
+{barcode:'888020',name:'Pad Scrubbing General Purpose',unit:'2 / 40 CT',onHand:2},
+{barcode:'888077',name:'Scrubber Stainless Steel Lg',unit:'1 / 12 CT',onHand:1},
+{barcode:'918865',name:'Thermometer Probe Wipes',unit:'1 / 200 CT',onHand:1},
+{barcode:'980196',name:'Cleaner Stainless Steel Polish',unit:'4 / 32 OZ',onHand:1}
 ];
 seed.inventory=seed.inventory.concat(bekDryInvoiceImport.map((it,i)=>({id:100+i,division:'culinary',vendor:'Ben E. Keith',location:'Dry Storage',par:0,...it})));
 function loadSavedRMS(){
@@ -104,20 +104,35 @@ if(!db.settings.inventoryLocations)db.settings.inventoryLocations=['Bistro Dry S
 ['Walk-In Fridge','Walk-In Freezer'].forEach(loc=>{if(!db.settings.inventoryLocations.includes(loc))db.settings.inventoryLocations.push(loc)});
 if(!db.settings.kmsStations)db.settings.kmsStations=['Expo','Grill','Salad','Beverage','Dessert','Catering']; if(!db.settings.operations)db.settings.operations=['Bistro Service','Counter + To-Go','Catering Event','Culinary Lab','Inventory / Receiving','Special Event','Training','Competition Prep'];
 (db.inventory||[]).forEach(i=>{if(i.barcode==null)i.barcode='';});
-if(!db.settings.bekDryInvoiceImported){
-  let added=0;
-  bekDryInvoiceImport.forEach((it,i)=>{
-    if(!db.inventory.some(x=>normalizeBarcode(x.barcode)===it.barcode)){
-      db.inventory.push({id:Date.now()+i,division:'culinary',vendor:'Ben E. Keith',location:'Dry Storage',par:0,...it});
-      added++;
+{
+  let bekChanged=false;
+  const bekBarcodeRenumbers={'113601':'116601','872975':'872976'};
+  Object.entries(bekBarcodeRenumbers).forEach(([oldCode,newCode])=>{
+    let item=db.inventory.find(x=>normalizeBarcode(x.barcode)===oldCode);
+    if(item){item.barcode=newCode;bekChanged=true;}
+  });
+  if(!db.settings.bekDryInvoiceImported){
+    let added=0;
+    bekDryInvoiceImport.forEach((it,i)=>{
+      if(!db.inventory.some(x=>normalizeBarcode(x.barcode)===it.barcode)){
+        db.inventory.push({id:Date.now()+i,division:'culinary',vendor:'Ben E. Keith',location:'Dry Storage',par:0,...it});
+        added++;
+      }
+    });
+    if(added){
+      db.deliveries=db.deliveries||[];
+      db.deliveries.push({date:now(),by:'BEK Invoice Import',division:'culinary',vendor:'Ben E. Keith',invoice:'57832449 / PO 28012614-00',name:`${added} dry-goods item(s) imported from Ben E. Keith invoice`,qty:added,unit:'item(s)',location:'Dry Storage',quality:'Pass',notes:'Imported from Ben E. Keith order confirmation 0002828855 / PO 28012614-00, dated 08/11/2026. Barcode field holds Ben E. Keith\'s item number.'});
+    }
+    db.settings.bekDryInvoiceImported=true;
+    bekChanged=true;
+  }
+  bekDryInvoiceImport.forEach(it=>{
+    let existing=db.inventory.find(x=>normalizeBarcode(x.barcode)===it.barcode&&x.vendor==='Ben E. Keith');
+    if(existing&&(existing.name!==it.name||existing.unit!==it.unit)){
+      existing.name=it.name;existing.unit=it.unit;bekChanged=true;
     }
   });
-  if(added){
-    db.deliveries=db.deliveries||[];
-    db.deliveries.push({date:now(),by:'BEK Invoice Import',division:'culinary',vendor:'Ben E. Keith',invoice:'57832449 / PO 28012614-00',name:`${added} dry-goods item(s) imported from Ben E. Keith invoice`,qty:added,unit:'item(s)',location:'Dry Storage',quality:'Pass',notes:'Imported from scanned invoice PO 28012614-00, dated 08/11/2026. Barcode field holds Ben E. Keith\'s item number.'});
-  }
-  db.settings.bekDryInvoiceImported=true;
-  save();
+  if(bekChanged)save();
 }
 if(db.settings.lowStockThreshold===undefined)db.settings.lowStockThreshold=10;
 if(!db.settings.theme)db.settings.theme={};
