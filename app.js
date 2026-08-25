@@ -358,6 +358,560 @@ function handleScannedBarcode(code,targetInputId,mode){code=normalizeBarcode(cod
 async function startHtml5QrcodeScanner(targetInputId,mode,mount){if(typeof Html5Qrcode==='undefined'){mount.innerHTML='<div class="notice danger"><b>iPad scanner library could not load.</b><br>Check the internet connection, refresh the page, or use Bluetooth/manual entry.</div>';return;}mount.innerHTML=`<div class="barcode-camera ipad-camera"><div class="ipad-camera-head"><b>iPad Rear Camera</b><span class="small">Hold the barcode inside the frame</span></div><div id="html5BarcodeReader"></div><div class="scan-guidance">Move the iPad slowly until the barcode is sharp and fills the center box.</div><button class="small-btn danger" onclick="stopBarcodeCamera()">Cancel Camera</button></div>`;try{html5BarcodeScanner=new Html5Qrcode('html5BarcodeReader',{verbose:false});await html5BarcodeScanner.start({facingMode:'environment'},{fps:10,qrbox:(w,h)=>({width:Math.min(Math.floor(w*.82),420),height:Math.min(Math.floor(h*.34),180)}),aspectRatio:1.777778,disableFlip:true},decoded=>handleScannedBarcode(decoded,targetInputId,mode),()=>{});}catch(err){html5BarcodeScanner=null;mount.innerHTML=`<div class="notice danger"><b>Unable to start the iPad camera.</b><br>In Safari, open Settings → Safari → Camera and allow camera access for this site, then reload Guthrie RMS.<br><span class="small">${err?.message||err||''}</span></div>`;}}
 window.openBarcodeCamera=async(targetInputId,mode='inventory')=>{await stopBarcodeCamera();let mount=$('#barcodeCameraMount');if(!mount)return;if(!navigator.mediaDevices?.getUserMedia){mount.innerHTML='<div class="notice danger">Camera access is not available in this browser. Use Bluetooth scanner or manual barcode entry.</div>';return;}if(isAppleMobile()){return startHtml5QrcodeScanner(targetInputId,mode,mount);}if('BarcodeDetector' in window){try{barcodeDetectorInstance=barcodeDetectorInstance||new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});barcodeCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});mount.innerHTML=`<div class="barcode-camera"><video id="barcodeVideo" autoplay playsinline muted></video><div class="barcode-frame"></div><p id="barcodeStatus" class="small">Point the rear camera at the barcode.</p><button class="small-btn danger" onclick="stopBarcodeCamera()">Cancel Camera</button></div>`;let video=$('#barcodeVideo');video.srcObject=barcodeCameraStream;await video.play();let scan=async()=>{if(!barcodeCameraStream||!video)return;try{let codes=await barcodeDetectorInstance.detect(video);if(codes?.length){handleScannedBarcode(codes[0].rawValue,targetInputId,mode);return;}}catch(e){}barcodeCameraTimer=setTimeout(scan,250);};scan();return;}catch(err){}}return startHtml5QrcodeScanner(targetInputId,mode,mount);};
 
+// ---- Production / 86 tracking ----
+function productionItem(menuId){
+  db.production.items=db.production.items||{};
+  if(!db.production.items[menuId]){
+    let m=db.menu.find(x=>x.id===menuId);
+    db.production.items[menuId]={startingPar:Number(m&&m.dailyPar)||0,remaining:Number(m&&m.dailyPar)||0,manual86:false,reason:''};
+  }
+  return db.production.items[menuId];
+}
+function isMenu86(m){
+  let p=productionItem(m.id);
+  if(p.manual86) return true;
+  if(p.startingPar>0 && p.remaining<=0) return true;
+  return false;
+}
+function productionRemaining(menuId){
+  let p=productionItem(menuId);
+  return p.startingPar>0 ? p.remaining : '∞';
+}
+function deductProduction(menuId,qty){
+  let p=productionItem(menuId);
+  if(p.manual86) return false;
+  if(p.startingPar>0){
+    if(p.remaining<qty) return false;
+    p.remaining-=qty;
+  }
+  return true;
+}
+function restoreProduction(menuId,qty){
+  let p=productionItem(menuId);
+  if(p.startingPar>0) p.remaining=Math.min(p.startingPar,p.remaining+qty);
+}
+function renderBistroMenuButtons(){
+  let items=db.menu.filter(m=>m.active!==false);
+  if(!items.length) return '<p>No menu items configured.</p>';
+  return items.map(m=>{
+    let d86=isMenu86(m);
+    return `<button class="menu-item ${d86?'disabled86':''}" onclick="modifierModal(${m.id},state.seat)">${m.name}<br><span class="small">${money(m.price)}${d86?' &bull; Sold Out':''}</span></button>`;
+  }).join('');
+}
+
+// ---- Shared inventory / CSV helpers ----
+function locations(division){
+  return db.settings.inventoryLocations||[];
+}
+function downloadCSV(filename, rows){
+  let csv=rows.map(r=>r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  let blob=new Blob([csv],{type:'text/csv'});
+  let url=URL.createObjectURL(blob);
+  let a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+window.exportInventoryData=(division)=>{
+  let rows=[['Item','Barcode','Vendor','Location','On Hand','Par','Unit']];
+  db.inventory.filter(i=>i.division===division).forEach(i=>rows.push([i.name,i.barcode||'',i.vendor,i.location||'',i.onHand,i.par,i.unit]));
+  downloadCSV(`guthrie-rms-${division}-inventory.csv`,rows);
+};
+window.exportAllInventoryData=()=>{
+  let rows=[['Division','Item','Barcode','Vendor','Location','On Hand','Par','Unit']];
+  db.inventory.forEach(i=>rows.push([i.division,i.name,i.barcode||'',i.vendor,i.location||'',i.onHand,i.par,i.unit]));
+  downloadCSV('guthrie-rms-all-inventory.csv',rows);
+};
+window.inventoryCount=()=>{
+  let items=db.inventory.filter(i=>i.division===state.invDivision);
+  let box=$('#invExtra'); if(!box) return;
+  box.innerHTML=`<div class="section panel"><h2>Inventory Count</h2><p class="small">Enter the physical count for each item, then save to update on-hand quantities.</p>
+    <table class="report-table"><tr><th>Item</th><th>Current On Hand</th><th>Counted Qty</th></tr>${items.map(i=>`<tr><td>${i.name}</td><td>${i.onHand}</td><td><input class="input inventory-number countInput" data-id="${i.id}" type="number" step="0.01" value="${i.onHand}"></td></tr>`).join('')}</table>
+    <button class="primary success" onclick="saveInventoryCount()">Save Count</button></div>`;
+};
+window.saveInventoryCount=()=>{
+  [...document.querySelectorAll('.countInput')].forEach(inp=>{let item=db.inventory.find(i=>i.id===Number(inp.dataset.id));if(item)item.onHand=Number(inp.value)||0;});
+  save();render();toast('Inventory count saved.');
+};
+window.wasteTracking=()=>{
+  let items=db.inventory.filter(i=>i.division===state.invDivision);
+  let box=$('#invExtra'); if(!box) return;
+  box.innerHTML=`<div class="section panel"><h2>Waste Tracking</h2>
+    <div class="form-grid"><label>Item<select id="wasteItem" class="input">${items.map(i=>`<option value="${i.id}">${i.name}</option>`).join('')}</select></label><label>Quantity<input id="wasteQty" type="number" step="0.01" class="input" value="1"></label><label>Reason<select id="wasteReason" class="input"><option>Spoilage</option><option>Prep Error</option><option>Dropped or Contaminated</option><option>Overproduction</option><option>Other</option></select></label></div>
+    <label>Notes<textarea id="wasteNotes" class="input"></textarea></label>
+    <button class="primary danger" onclick="saveWaste()">Log Waste</button>
+    <h3>Recent Waste</h3><table class="report-table"><tr><th>Date</th><th>Item</th><th>Qty</th><th>Reason</th></tr>${(db.waste||[]).filter(w=>w.division===state.invDivision).slice(-10).reverse().map(w=>`<tr><td>${new Date(w.date).toLocaleString()}</td><td>${w.name}</td><td>${w.qty}</td><td>${w.reason}</td></tr>`).join('')||'<tr><td colspan="4">No waste logged yet.</td></tr>'}</table>
+    </div>`;
+};
+window.saveWaste=()=>{
+  let itemId=Number($('#wasteItem')?.value);let item=db.inventory.find(i=>i.id===itemId);if(!item)return;
+  let qty=Number($('#wasteQty')?.value)||0;if(qty<=0){alert('Enter a quantity greater than zero.');return;}
+  item.onHand=Math.max(0,Number(item.onHand)-qty);
+  db.waste=db.waste||[];
+  db.waste.push({id:Date.now(),division:item.division,itemId:item.id,name:item.name,qty,reason:$('#wasteReason')?.value||'Other',notes:$('#wasteNotes')?.value||'',by:state.user.name,date:now()});
+  save();wasteTracking();toast('Waste logged.');
+};
+
+// ---- Scheduling helpers ----
+function shiftDateTime(s){return new Date(`${s.date}T${s.startTime||'00:00'}`);}
+function shiftHours(s){return s.out ? +(((new Date(s.out))-(new Date(s.in)))/3600000).toFixed(2) : 0;}
+function scheduledForStudent(userId){return (db.scheduledShifts||[]).filter(s=>(s.assignments||[]).some(a=>a.userId===userId));}
+function scheduledForTeacher(teacherId){return (db.scheduledShifts||[]).filter(s=>(s.assignments||[]).some(a=>{let u=db.users.find(x=>x.id===a.userId);return u&&u.teacherId===teacherId;}));}
+
+// ---- Catering ----
+function catering(){
+  let extra=state.cateringOrderId? cateringOrderBuilder(state.cateringOrderId) : '';
+  let openOrders=db.orders.filter(o=>o.type==='catering'&&!o.paid);
+  return `<section class="card"><h1>Catering</h1>
+    <div class="row"><button class="primary success" onclick="createCateringOrder()">New Catering Order</button></div>
+    <h2>Catering Packages</h2>
+    <div class="grid">${db.cateringMenus.map(m=>`<div class="tile" style="display:block;text-align:left;padding:14px;cursor:default"><b>${m.name}</b><p class="small">${m.description||''}</p><p>${money(m.price)}</p></div>`).join('')}</div>
+    <h2>Open Catering Orders</h2>
+    <div class="grid">${openOrders.map(o=>`<div class="order-card"><b>${o.customer}</b><p>${o.guestCount?o.guestCount+' guests &bull; ':''}${money(total(o))} &bull; ${o.status}</p><div class="row"><button class="small-btn" onclick="state.cateringOrderId=${o.id};render()">Edit</button><button class="small-btn" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="small-btn" onclick="state.checkoutType='catering';state.selectedOrder=${o.id};state.view='checkout';render()">Checkout</button></div></div>`).join('')||'<p>No open catering orders.</p>'}</div>
+    ${extra}
+  </section>`;
+}
+window.createCateringOrder=()=>{let customer=prompt('Event / Customer name:','Catering Event')||'Catering Event';let o={id:Date.now(),type:'catering',customer,guestCount:0,items:[],status:'open',created:now(),sent:null,paid:false};db.orders.push(o);state.cateringOrderId=o.id;save();render();};
+function cateringOrderBuilder(orderId){
+  let o=db.orders.find(x=>x.id===orderId);if(!o)return'';
+  return `<div class="section panel"><h2>${o.customer}</h2>
+    <div class="catering-guest-block"><label>Guest Count<input class="input" type="number" value="${o.guestCount||0}" onchange="setCateringGuestCount(${o.id},this.value)"></label><span class="small">Used to size packages and per-guest items.</span></div>
+    <h3>Add Package</h3><div class="grid">${db.cateringMenus.map(m=>`<button class="tile" onclick="addCateringPackage(${o.id},${m.id})">${m.name} &mdash; ${money(m.price)}</button>`).join('')}</div>
+    <h3>Add A La Carte Item</h3><div class="grid">${(db.cateringItems||[]).map(ci=>`<button class="tile" onclick="addCateringItem(${o.id},${ci.id})">${ci.name} &mdash; ${money(ci.price)}</button>`).join('')}</div>
+    <h3>Ticket</h3>${ticketItems(o)}
+    <div class="row"><button class="primary" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="primary" onclick="state.checkoutType='catering';state.selectedOrder=${o.id};state.view='checkout';render()">Checkout</button><button class="small-btn" onclick="state.cateringOrderId=null;render()">Close</button></div>
+  </div>`;
+}
+window.setCateringGuestCount=(id,v)=>{let o=db.orders.find(x=>x.id===id);if(!o)return;o.guestCount=Number(v)||0;save();};
+window.addCateringPackage=(orderId,menuId)=>{let o=db.orders.find(x=>x.id===orderId),m=db.cateringMenus.find(x=>x.id===menuId);if(!o||!m)return;o.items.push({id:Date.now(),lineId:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),name:m.name,price:m.price,mods:[],note:'Catering Package'});save();render();};
+window.addCateringItem=(orderId,itemId)=>{let o=db.orders.find(x=>x.id===orderId),ci=(db.cateringItems||[]).find(x=>x.id===itemId);if(!o||!ci)return;o.items.push({id:Date.now(),lineId:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),name:ci.name,price:ci.price,mods:[],note:''});save();render();};
+
+// ---- Recipes / Labs ----
+function recipesLab(){
+  let extra=state.addingRecipe?recipeForm(null):(state.editingRecipe?recipeForm(state.editingRecipe):'');
+  return `<section class="card"><h1>Recipes / Labs</h1><p class="notice">Standardized recipes for culinary labs. Logging lab usage deducts ingredients from Culinary inventory.</p>
+    <div class="row"><button class="primary success" onclick="state.addingRecipe=true;state.editingRecipe=null;render()">Add Recipe</button></div>
+    ${extra}
+    <div class="grid">${(db.recipes||[]).map(r=>`<div class="tile" style="display:block;text-align:left;padding:14px;cursor:default"><b>${r.name}</b><p class="small">Yield: ${r.yield||''}</p><div class="row"><button class="small-btn" onclick="state.editingRecipe=${r.id};state.addingRecipe=false;render()">Edit</button><button class="small-btn" onclick="logLabUsage(${r.id})">Log Lab Usage</button><button class="small-btn danger" onclick="deleteRecipe(${r.id})">Delete</button></div></div>`).join('')||'<p>No recipes added yet.</p>'}</div>
+    <h2>Recent Lab Usage</h2>
+    <table class="report-table"><tr><th>Date</th><th>Recipe</th><th>By</th></tr>${(db.labUsage||[]).slice(-10).reverse().map(l=>`<tr><td>${new Date(l.date).toLocaleString()}</td><td>${l.recipeName}</td><td>${l.by}</td></tr>`).join('')||'<tr><td colspan="3">No lab usage logged yet.</td></tr>'}</table>
+  </section>`;
+}
+function recipeForm(id){
+  let r=id?db.recipes.find(x=>x.id===id):null;
+  let ingredientRows=(r&&r.ingredients&&r.ingredients.length)?r.ingredients:[{}];
+  return `<div class="section panel"><h3>${r?'Edit Recipe':'Add Recipe'}</h3>
+    <div class="form-grid"><label>Recipe Name<input id="recName" class="input" value="${r?r.name:''}"></label><label>Yield<input id="recYield" class="input" value="${r?r.yield||'':''}"></label></div>
+    <label>Instructions<textarea id="recInstructions" class="input">${r?r.instructions||'':''}</textarea></label>
+    <h4>Ingredients (Culinary Inventory)</h4>
+    <div id="recIngredients">${ingredientRows.map((ing,idx)=>ingredientRow(ing,idx)).join('')}</div>
+    <button class="small-btn" onclick="addIngredientRow()">Add Ingredient Line</button>
+    <div class="row section"><button class="primary success" onclick="saveRecipe(${id||'null'})">Save Recipe</button><button class="small-btn" onclick="state.addingRecipe=false;state.editingRecipe=null;render()">Cancel</button></div>
+  </div>`;
+}
+function ingredientRow(ing,idx){
+  let culinary=db.inventory.filter(i=>i.division==='culinary');
+  return `<div class="row ingredient-row" data-idx="${idx}"><select class="input ingIngredient">${culinary.map(i=>`<option value="${i.id}" ${ing&&ing.inventoryId===i.id?'selected':''}>${i.name}</option>`).join('')}</select><input class="input ingQty" type="number" step="0.01" placeholder="Qty" value="${ing&&ing.qty?ing.qty:''}"></div>`;
+}
+window.addIngredientRow=()=>{let box=$('#recIngredients');if(box)box.insertAdjacentHTML('beforeend',ingredientRow({},box.children.length));};
+window.saveRecipe=(id)=>{
+  let name=$('#recName')?.value.trim();if(!name){alert('Recipe name is required.');return;}
+  let ingredients=[...document.querySelectorAll('.ingredient-row')].map(row=>({inventoryId:Number(row.querySelector('.ingIngredient').value),qty:Number(row.querySelector('.ingQty').value)||0})).filter(i=>i.qty>0);
+  let data={name,yield:$('#recYield')?.value||'',instructions:$('#recInstructions')?.value||'',ingredients};
+  if(id){let r=db.recipes.find(x=>x.id===id);Object.assign(r,data);}else{db.recipes.push({id:Date.now(),...data});}
+  state.addingRecipe=false;state.editingRecipe=null;save();render();toast('Recipe saved.');
+};
+window.deleteRecipe=(id)=>{if(!confirm('Delete this recipe?'))return;db.recipes=db.recipes.filter(x=>x.id!==id);save();render();};
+window.logLabUsage=(id)=>{
+  let r=db.recipes.find(x=>x.id===id);if(!r)return;
+  let missing=[];
+  (r.ingredients||[]).forEach(ing=>{let item=db.inventory.find(i=>i.id===ing.inventoryId);if(!item||Number(item.onHand)<ing.qty)missing.push(item?item.name:'Unknown item');});
+  if(missing.length&&!confirm(`Low or insufficient stock for: ${missing.join(', ')}. Log usage anyway?`))return;
+  (r.ingredients||[]).forEach(ing=>{let item=db.inventory.find(i=>i.id===ing.inventoryId);if(item)item.onHand=Math.max(0,Number(item.onHand)-ing.qty);});
+  db.labUsage=db.labUsage||[];db.labUsage.push({id:Date.now(),recipeId:id,recipeName:r.name,by:state.user.name,date:now()});
+  save();render();toast('Lab usage logged and inventory deducted.');
+};
+
+// ---- Reports ----
+function reports(){
+  let paidOrders=db.orders.filter(o=>o.paid);
+  let sales=paidOrders.reduce((a,o)=>a+total(o),0);
+  let refunds=(db.refunds||[]).reduce((a,r)=>a+(Number(r.amount)||0),0);
+  let byType={};paidOrders.forEach(o=>{byType[o.type]=(byType[o.type]||0)+total(o);});
+  let hours=db.shifts.filter(s=>s.out).reduce((a,s)=>a+(Number(s.hours)||0),0);
+  let low=db.inventory.filter(i=>Number(i.onHand)<Number(i.par));
+  return `<section class="card"><h1>Reports</h1>
+    <div class="stats">
+      <div><b>${money(sales)}</b><span>Total Sales</span></div>
+      <div><b>${money(refunds)}</b><span>Total Refunds</span></div>
+      <div><b>${paidOrders.length}</b><span>Paid Orders</span></div>
+      <div><b>${hours.toFixed(2)}</b><span>Labor Hours</span></div>
+      <div><b>${low.length}</b><span>Items Below Par</span></div>
+    </div>
+    <h2>Sales by Order Type</h2>
+    <table class="report-table"><tr><th>Type</th><th>Total</th></tr>${Object.entries(byType).map(([t,v])=>`<tr><td>${t.toUpperCase()}</td><td>${money(v)}</td></tr>`).join('')||'<tr><td colspan="2">No paid orders yet.</td></tr>'}</table>
+    <h2>Recent Shifts</h2>
+    <table class="report-table"><tr><th>Name</th><th>Position</th><th>In</th><th>Out</th><th>Hours</th></tr>${db.shifts.slice(-10).reverse().map(s=>`<tr><td>${s.name}</td><td>${s.pos||''}</td><td>${new Date(s.in).toLocaleString()}</td><td>${s.out?new Date(s.out).toLocaleString():'&mdash;'}</td><td>${(Number(s.hours)||0).toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="5">No shifts recorded yet.</td></tr>'}</table>
+    <div class="row section"><button class="primary" onclick="exportReportCSV()">Export Sales CSV</button></div>
+  </section>`;
+}
+window.exportReportCSV=()=>{
+  let rows=[['Order ID','Type','Customer','Total','Status','Paid At']];
+  db.orders.filter(o=>o.paid).forEach(o=>rows.push([o.id,o.type,o.customer,total(o).toFixed(2),o.status,o.paidAt||'']));
+  downloadCSV('guthrie-rms-sales.csv',rows);
+};
+
+// ---- Invoices ----
+function invoiceCenter(){
+  let extra=state.addingInvoice?invoiceForm():'';
+  return `<section class="card"><h1>Invoices</h1>
+    <div class="row"><button class="primary success" onclick="state.addingInvoice=true;render()">New Invoice</button></div>
+    ${extra}
+    <table class="report-table"><tr><th>Invoice #</th><th>Billed To</th><th>Amount</th><th>Status</th><th>Due</th><th>Actions</th></tr>
+    ${(db.invoices||[]).map(inv=>`<tr><td>${inv.number}</td><td>${inv.billTo}</td><td>${money(inv.amount)}</td><td>${inv.status}</td><td>${inv.dueDate||''}</td><td><div class="row">${inv.status!=='Paid'?`<button class="small-btn success" onclick="markInvoicePaid(${inv.id})">Mark Paid</button>`:''}<button class="small-btn danger" onclick="deleteInvoice(${inv.id})">Delete</button></div></td></tr>`).join('')||'<tr><td colspan="6">No invoices yet.</td></tr>'}
+    </table>
+  </section>`;
+}
+function invoiceForm(){
+  return `<div class="section panel"><h3>New Invoice</h3><div class="form-grid">
+    <label>Billed To<input id="invBillTo" class="input" placeholder="Department / Organization"></label>
+    <label>Amount<input id="invAmount" class="input" type="number" step="0.01"></label>
+    <label>Due Date<input id="invDue" class="input" type="date"></label>
+  </div><label>Notes<textarea id="invNotes" class="input"></textarea></label>
+  <div class="row"><button class="primary success" onclick="saveInvoice()">Create Invoice</button><button class="small-btn" onclick="state.addingInvoice=false;render()">Cancel</button></div></div>`;
+}
+window.saveInvoice=()=>{
+  let billTo=$('#invBillTo')?.value.trim();let amount=Number($('#invAmount')?.value)||0;
+  if(!billTo||amount<=0){alert('Billed To and a positive amount are required.');return;}
+  db.invoices=db.invoices||[];
+  let number='INV-'+String(db.invoices.length+1).padStart(4,'0');
+  db.invoices.push({id:Date.now(),number,billTo,amount,dueDate:$('#invDue')?.value||'',notes:$('#invNotes')?.value||'',status:'Open',createdBy:state.user.name,createdAt:now()});
+  state.addingInvoice=false;save();render();toast('Invoice created.');
+};
+window.markInvoicePaid=(id)=>{let inv=db.invoices.find(x=>x.id===id);if(!inv)return;inv.status='Paid';inv.paidAt=now();save();render();toast('Invoice marked paid.');};
+window.deleteInvoice=(id)=>{if(!confirm('Delete this invoice?'))return;db.invoices=db.invoices.filter(x=>x.id!==id);save();render();};
+
+// ---- Student Development ----
+function development(){
+  if(state.user.role==='manager') return developmentManager();
+  if(state.user.role==='teacher') return developmentTeacher();
+  return developmentStudent();
+}
+function developmentStudent(){
+  let myShifts=db.shifts.filter(s=>s.userId===state.user.id && s.out);
+  let totalHours=myShifts.reduce((a,s)=>a+(Number(s.hours)||0),0);
+  let myEvals=(db.evaluations||[]).filter(e=>e.studentId===state.user.id);
+  return `<section class="card"><h1>My Development</h1>
+    <div class="stats"><div><b>${myShifts.length}</b><span>Completed Shifts</span></div><div><b>${totalHours.toFixed(2)}</b><span>Total Hours</span></div><div><b>${myEvals.length}</b><span>Evaluations</span></div></div>
+    <h3>Shift History</h3>${myShifts.length?`<table class="report-table"><tr><th>Date</th><th>Position</th><th>Hours</th></tr>${myShifts.slice().reverse().map(s=>`<tr><td>${new Date(s.in).toLocaleDateString()}</td><td>${s.pos||''}</td><td>${(Number(s.hours)||0).toFixed(2)}</td></tr>`).join('')}</table>`:'<p>No completed shifts yet.</p>'}
+    <h3>Evaluations</h3>${myEvals.length?myEvals.map(e=>`<div class="ticket"><b>${new Date(e.date).toLocaleDateString()}</b> &bull; ${e.rating||''}/5<p>${e.notes||''}</p><p class="small">By ${e.by||''}</p></div>`).join(''):'<p>No evaluations recorded yet.</p>'}
+  </section>`;
+}
+function developmentTeacher(){
+  let myStudents=db.users.filter(u=>u.role==='student'&&u.teacherId===state.user.id);
+  let extra = state.addingStudent? studentForm(null) : (state.editingStudent? studentForm(state.editingStudent):'');
+  return `<section class="card"><h1>Student Development</h1><p class="notice">Students assigned to you: ${myStudents.length}</p>
+    <div class="row"><button class="primary success" onclick="state.addingStudent=true;state.editingStudent=null;render()">Add Student</button></div>
+    ${extra}
+    <table class="report-table"><tr><th>Name</th><th>Student ID</th><th>Position</th><th>Active</th><th>Actions</th></tr>
+    ${myStudents.map(u=>`<tr><td>${u.name}</td><td>${u.studentId||''}</td><td>${u.pos||''}</td><td>${u.active?'Yes':'No'}</td><td><div class="row"><button class="small-btn" onclick="state.editingStudent=${u.id};state.addingStudent=false;render()">Edit</button><button class="small-btn" onclick="state.evalStudent=${u.id};render()">Evaluate</button><button class="small-btn danger" onclick="deleteStudent(${u.id})">Delete</button></div></td></tr>`).join('')||'<tr><td colspan="5">No students assigned yet.</td></tr>'}
+    </table>
+    ${state.evalStudent?evalForm(state.evalStudent):''}
+  </section>`;
+}
+function developmentManager(){
+  let students=db.users.filter(u=>u.role==='student');
+  let teachers=db.users.filter(u=>u.role==='teacher');
+  return `<section class="card"><h1>Student Development Overview</h1>
+    <div class="stats"><div><b>${students.length}</b><span>Students</span></div><div><b>${teachers.length}</b><span>Teachers</span></div><div><b>${(db.evaluations||[]).length}</b><span>Evaluations</span></div></div>
+    <table class="report-table"><tr><th>Student</th><th>Teacher</th><th>Position</th><th>Active</th></tr>
+    ${students.map(s=>{let t=teachers.find(t=>t.id===s.teacherId);return `<tr><td>${s.name}</td><td>${t?t.name:'Unassigned'}</td><td>${s.pos||''}</td><td>${s.active?'Yes':'No'}</td></tr>`;}).join('')||'<tr><td colspan="4">No students yet.</td></tr>'}
+    </table>
+  </section>`;
+}
+function studentForm(id){
+  let u=id?db.users.find(x=>x.id===id):null;
+  return `<div class="section panel"><h3>${u?'Edit Student':'Add Student'}</h3>
+    <div class="form-grid">
+      <label>Name<input id="stuName" class="input" value="${u?u.name:''}"></label>
+      <label>Student ID / PIN<input id="stuId" class="input" value="${u?u.studentId||'':''}"></label>
+      <label>Position<select id="stuPos" class="input">${db.positions.map(p=>`<option ${u&&u.pos===p?'selected':''}>${p}</option>`).join('')}</select></label>
+      <label>Active<select id="stuActive" class="input"><option value="true" ${!u||u.active!==false?'selected':''}>Active</option><option value="false" ${u&&u.active===false?'selected':''}>Inactive</option></select></label>
+    </div>
+    <div class="row"><button class="primary success" onclick="saveStudent(${id||'null'})">Save</button><button class="small-btn" onclick="state.addingStudent=false;state.editingStudent=null;render()">Cancel</button></div>
+  </div>`;
+}
+window.saveStudent=(id)=>{
+  let name=$('#stuName')?.value.trim();let studentId=$('#stuId')?.value.trim();let pos=$('#stuPos')?.value;let active=$('#stuActive')?.value==='true';
+  if(!name||!studentId){alert('Name and Student ID are required.');return;}
+  if(db.users.some(u=>u.pin===studentId&&u.id!==id)){alert('That Student ID/PIN is already in use.');return;}
+  if(id){let u=db.users.find(x=>x.id===id);if(!u)return;u.name=name;u.studentId=studentId;u.pin=studentId;u.pos=pos;u.active=active;}
+  else{db.users.push({id:Date.now(),name,studentId,pin:studentId,role:'student',pos,active,teacherId:state.user.id,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'});}
+  state.addingStudent=false;state.editingStudent=null;save();render();toast('Student saved.');
+};
+window.deleteStudent=(id)=>{let u=db.users.find(x=>x.id===id);if(!u)return;if(!confirm(`Delete ${u.name}? Historical shift and evaluation records are preserved.`))return;db.scheduledShifts.forEach(s=>{s.assignments=(s.assignments||[]).filter(a=>a.userId!==id)});db.users=db.users.filter(x=>x.id!==id);save();render();toast('Student removed.');};
+function evalForm(studentId){
+  let u=db.users.find(x=>x.id===studentId);
+  return `<div class="section panel"><h3>Evaluate ${u?u.name:''}</h3>
+    <div class="form-grid"><label>Rating (1-5)<input id="evalRating" type="number" min="1" max="5" class="input" value="5"></label></div>
+    <label>Notes<textarea id="evalNotes" class="input" placeholder="Feedback notes"></textarea></label>
+    <div class="row"><button class="primary success" onclick="saveEvaluation(${studentId})">Save Evaluation</button><button class="small-btn" onclick="state.evalStudent=null;render()">Cancel</button></div>
+  </div>`;
+}
+window.saveEvaluation=(studentId)=>{let rating=Number($('#evalRating')?.value)||0;let notes=$('#evalNotes')?.value||'';db.evaluations=db.evaluations||[];db.evaluations.push({id:Date.now(),studentId,rating,notes,by:state.user.name,date:now()});state.evalStudent=null;save();render();toast('Evaluation saved.');};
+
+// ---- Scheduling ----
+function scheduleCenter(){
+  if(state.user.role==='student') return scheduleStudentView();
+  if(state.user.role==='teacher') return scheduleTeacherView();
+  return scheduleManagerView();
+}
+function scheduleStudentView(){
+  let mine=scheduledForStudent(state.user.id).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  return `<section class="card"><h1>My Schedule</h1>
+    ${mine.length?`<table class="report-table"><tr><th>Date</th><th>Operation</th><th>Time</th><th>Location</th><th>Position</th><th>Status</th></tr>${mine.map(s=>{let mySlot=(s.assignments||[]).find(a=>a.userId===state.user.id);return `<tr><td>${s.date}</td><td>${s.operation}</td><td>${s.startTime}&ndash;${s.endTime}</td><td>${s.location||''}</td><td>${mySlot?mySlot.position||'':''}</td><td>${s.status}</td></tr>`}).join('')}</table>`:'<p>No shifts scheduled yet.</p>'}
+  </section>`;
+}
+function scheduleTeacherView(){
+  let mine=scheduledForTeacher(state.user.id).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  return `<section class="card"><h1>Student Schedule</h1>
+    ${mine.length?mine.map(s=>{let names=(s.assignments||[]).filter(a=>{let u=db.users.find(x=>x.id===a.userId);return u&&u.teacherId===state.user.id}).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} (${a.position||''})`;}).join(', ');return `<div class="ticket"><b>${s.date}</b> &bull; ${s.operation} &bull; ${s.startTime}&ndash;${s.endTime} &bull; ${s.status}<p>${names}</p></div>`;}).join(''):'<p>No shifts scheduled yet.</p>'}
+  </section>`;
+}
+function scheduleManagerView(){
+  let extra=(state.editingShiftId!==undefined&&state.editingShiftId!==null)?shiftForm(state.editingShiftId):'';
+  let list=(db.scheduledShifts||[]).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  return `<section class="card"><h1>Manager Shift Scheduler</h1>
+    <div class="row"><button class="primary success" onclick="state.editingShiftId='new';render()">New Scheduled Shift</button><button class="small-btn" onclick="exportScheduleCSV()">Export Schedule CSV</button></div>
+    ${extra}
+    ${list.map(s=>`<div class="ticket"><div class="row"><div><b>${s.date}</b> &bull; ${s.operation} &bull; ${s.startTime}&ndash;${s.endTime} &bull; ${s.location||''}</div><span class="spacer"></span><span class="pill">${s.status}</span></div>
+      <p>${(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:'Unassigned'} (${a.position||''})`;}).join(', ')||'No students assigned.'}</p>
+      <p class="small">${s.notes||''}</p>
+      <div class="row"><button class="small-btn" onclick="state.editingShiftId=${s.id};render()">Edit</button><button class="small-btn" onclick="duplicateShift(${s.id})">Duplicate</button><button class="small-btn success" onclick="toggleShiftPublish(${s.id})">${s.status==='Published'?'Unpublish':'Publish'}</button><button class="small-btn danger" onclick="deleteShift(${s.id})">Delete</button></div>
+    </div>`).join('')||'<p>No shifts scheduled yet.</p>'}
+  </section>`;
+}
+function shiftForm(id){
+  let s=(id&&id!=='new')?db.scheduledShifts.find(x=>x.id===id):null;
+  let students=db.users.filter(u=>u.role==='student'&&u.active);
+  let assigned=(s&&s.assignments)||[];
+  return `<div class="section panel"><h3>${s?'Edit Shift':'New Shift'}</h3>
+    <div class="form-grid">
+      <label>Operation<select id="shiftOp" class="input">${(db.settings.operations||[]).map(o=>`<option ${s&&s.operation===o?'selected':''}>${o}</option>`).join('')}</select></label>
+      <label>Date<input id="shiftDate" type="date" class="input" value="${s?s.date:''}"></label>
+      <label>Start Time<input id="shiftStart" type="time" class="input" value="${s?s.startTime:''}"></label>
+      <label>End Time<input id="shiftEnd" type="time" class="input" value="${s?s.endTime:''}"></label>
+      <label>Location<input id="shiftLoc" class="input" value="${s?s.location||'':''}"></label>
+      <label>Status<select id="shiftStatus" class="input"><option ${!s||s.status==='Draft'?'selected':''}>Draft</option><option ${s&&s.status==='Published'?'selected':''}>Published</option></select></label>
+    </div>
+    <label>Notes<textarea id="shiftNotes" class="input">${s?s.notes||'':''}</textarea></label>
+    <h4>Assign Students</h4>
+    <div class="schedule-assign-grid">${students.map(st=>{let a=assigned.find(x=>x.userId===st.id);return `<div class="schedule-assignment ${a?'assigned':''}"><label><input type="checkbox" class="assignChk" value="${st.id}" ${a?'checked':''}> ${st.name}</label><input class="input assignPos" data-user="${st.id}" placeholder="Position" value="${a?a.position||'':st.pos||''}"></div>`}).join('')||'<p class="small">No active students yet.</p>'}</div>
+    <div class="row section"><button class="primary success" onclick="saveShift(${id==='new'?"'new'":id})">Save Shift</button><button class="small-btn" onclick="state.editingShiftId=null;render()">Cancel</button></div>
+  </div>`;
+}
+window.saveShift=(id)=>{
+  let operation=$('#shiftOp')?.value,date=$('#shiftDate')?.value,startTime=$('#shiftStart')?.value,endTime=$('#shiftEnd')?.value;
+  if(!date||!startTime||!endTime){alert('Date, start time, and end time are required.');return;}
+  let assignments=[...document.querySelectorAll('.assignChk:checked')].map(chk=>{let uid=Number(chk.value);let posInput=document.querySelector(`.assignPos[data-user="${uid}"]`);return {userId:uid,position:posInput?posInput.value:''};});
+  let data={operation,date,startTime,endTime,location:$('#shiftLoc')?.value||'',status:$('#shiftStatus')?.value||'Draft',notes:$('#shiftNotes')?.value||'',assignments};
+  db.scheduledShifts=db.scheduledShifts||[];
+  if(id&&id!=='new'){let s=db.scheduledShifts.find(x=>x.id===id);Object.assign(s,data);}else{db.scheduledShifts.push({id:Date.now(),...data});}
+  state.editingShiftId=null;save();render();toast('Shift saved.');
+};
+window.duplicateShift=(id)=>{let s=db.scheduledShifts.find(x=>x.id===id);if(!s)return;db.scheduledShifts.push(Object.assign(JSON.parse(JSON.stringify(s)),{id:Date.now(),status:'Draft'}));save();render();toast('Shift duplicated.');};
+window.toggleShiftPublish=(id)=>{let s=db.scheduledShifts.find(x=>x.id===id);if(!s)return;s.status=s.status==='Published'?'Draft':'Published';save();render();};
+window.deleteShift=(id)=>{if(!confirm('Delete this scheduled shift?'))return;db.scheduledShifts=db.scheduledShifts.filter(x=>x.id!==id);save();render();};
+window.exportScheduleCSV=()=>{
+  let rows=[['Date','Operation','Start','End','Location','Status','Assignments']];
+  (db.scheduledShifts||[]).forEach(s=>rows.push([s.date,s.operation,s.startTime,s.endTime,s.location||'',s.status,(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} (${a.position||''})`;}).join('; ')]));
+  downloadCSV('guthrie-rms-schedule.csv',rows);
+};
+
+// ---- End of Day Closeout ----
+function closeout(){
+  let today=new Date().toISOString().slice(0,10);
+  let todaysOrders=db.orders.filter(o=>o.paid&&(o.paidAt||'').slice(0,10)===today);
+  let sales=todaysOrders.reduce((a,o)=>a+total(o),0);
+  let byPayment={};todaysOrders.forEach(o=>{let t=(o.payment&&o.payment.type)||'Unknown';byPayment[t]=(byPayment[t]||0)+total(o);});
+  let alreadyClosed=(db.dailyCloseouts||[]).find(c=>c.date===today);
+  return `<section class="card"><h1>End of Day Closeout</h1>
+    <div class="stats"><div><b>${money(sales)}</b><span>Today's Sales</span></div><div><b>${todaysOrders.length}</b><span>Orders</span></div></div>
+    <table class="report-table"><tr><th>Payment Type</th><th>Total</th></tr>${Object.entries(byPayment).map(([t,v])=>`<tr><td>${t}</td><td>${money(v)}</td></tr>`).join('')||'<tr><td colspan="2">No paid orders yet today.</td></tr>'}</table>
+    ${alreadyClosed?`<div class="notice">Closed out today at ${new Date(alreadyClosed.closedAt).toLocaleTimeString()} by ${alreadyClosed.closedBy}.</div>`:`<label>Counted Cash Drawer<input id="closeoutCash" type="number" step="0.01" class="input"></label><label>Notes<textarea id="closeoutNotes" class="input"></textarea></label><button class="primary success" onclick="submitCloseout()">Submit Closeout</button>`}
+    <h2>Recent Closeouts</h2>
+    <table class="report-table"><tr><th>Date</th><th>Sales</th><th>Counted Cash</th><th>By</th></tr>${(db.dailyCloseouts||[]).slice(-10).reverse().map(c=>`<tr><td>${c.date}</td><td>${money(c.sales)}</td><td>${money(c.countedCash)}</td><td>${c.closedBy}</td></tr>`).join('')||'<tr><td colspan="4">No closeouts recorded yet.</td></tr>'}</table>
+  </section>`;
+}
+window.submitCloseout=()=>{
+  let today=new Date().toISOString().slice(0,10);
+  let todaysOrders=db.orders.filter(o=>o.paid&&(o.paidAt||'').slice(0,10)===today);
+  let sales=todaysOrders.reduce((a,o)=>a+total(o),0);
+  let countedCash=Number($('#closeoutCash')?.value)||0;
+  db.dailyCloseouts=db.dailyCloseouts||[];
+  db.dailyCloseouts.push({id:Date.now(),date:today,sales,countedCash,notes:$('#closeoutNotes')?.value||'',closedBy:state.user.name,closedAt:now()});
+  save();render();toast('Day closed out.');
+};
+
+// ---- Settings ----
+function setup(){
+  const tabs=[
+    ['business','Business','Name, subtitle, and demo mode'],
+    ['theme','Theme &amp; Appearance','Colors, fonts, and layout'],
+    ['users','Users','Managers, teachers, and students'],
+    ['positions','Positions','Job titles used across the RMS'],
+    ['vendors','Vendors','Delivery and ordering vendors'],
+    ['locations','Storage Locations','Inventory storage locations'],
+    ['operations','Operations','Scheduling operation types'],
+    ['kms','KMS Stations','Kitchen station routing'],
+    ['data','Data','Reset local demo data']
+  ];
+  state.settingsTab = state.settingsTab || 'business';
+  return `<section class="settings-shell">
+    <aside class="settings-sidebar">
+      <div class="settings-sidebar-head"><h2>Settings</h2><p>Manager configuration center</p></div>
+      ${tabs.map(([key,label,desc])=>`<button class="settings-nav ${state.settingsTab===key?'active':''}" onclick="state.settingsTab='${key}';render()"><strong>${label}</strong><span>${desc}</span></button>`).join('')}
+    </aside>
+    <div class="settings-content">${settingsPage(state.settingsTab)}</div>
+  </section>`;
+}
+function settingsPage(tab){
+  if(tab==='business') return settingsBusiness();
+  if(tab==='theme') return settingsTheme();
+  if(tab==='users') return settingsUsers();
+  if(tab==='positions') return settingsPositions();
+  if(tab==='vendors') return settingsListEditor('vendors','Vendors','Vendor');
+  if(tab==='locations') return settingsListEditor('inventoryLocations','Storage Locations','Location');
+  if(tab==='operations') return settingsListEditor('operations','Operations','Operation');
+  if(tab==='kms') return settingsListEditor('kmsStations','KMS Stations','Station');
+  if(tab==='data') return settingsData();
+  return '';
+}
+function settingsBusiness(){
+  let s=db.settings;
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>Business</h1><p>Name and mode shown across the RMS.</p></div>
+    <div class="settings-card">
+      <div class="setting-row"><div><b>Business Name</b><p>Shown on login and the top navigation.</p></div><input class="input" value="${s.businessName||''}" onchange="db.settings.businessName=this.value;save();render()"></div>
+      <div class="setting-row"><div><b>Subtitle</b><p>Shown under the business name on login.</p></div><input class="input" value="${s.businessSubtitle||''}" onchange="db.settings.businessSubtitle=this.value;save();render()"></div>
+      <div class="setting-row"><div><b>Low Stock Threshold</b><p>Used for inventory alerts.</p></div><input class="input" type="number" value="${s.lowStockThreshold||0}" onchange="db.settings.lowStockThreshold=Number(this.value)||0;save();render()"></div>
+      <button class="toggle-button ${s.demoMode?'on':''}" onclick="db.settings.demoMode=!db.settings.demoMode;save();render()"><span></span>${s.demoMode?'Demo Mode ON':'Live Mode ON'}</button>
+      <div class="mode-banner ${s.demoMode?'demo':'live'}">${s.demoMode?'DEMO MODE - PIN HINTS SHOWN ON LOGIN':'LIVE MODE - PIN HINTS HIDDEN'}</div>
+    </div>
+  </div>`;
+}
+function settingsTheme(){
+  let t=db.settings.theme;
+  const colorField=(key,label)=>`<label>${label}<input type="color" class="theme-color" value="${t[key]}" onchange="db.settings.theme['${key}']=this.value;save();render()"></label>`;
+  let fontOptions=["Arial, Helvetica, sans-serif","Georgia, serif","'Trebuchet MS', sans-serif","'Segoe UI', sans-serif","'Times New Roman', serif"];
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>Theme &amp; Appearance</h1><p>Customize colors, fonts, and layout without editing code.</p></div>
+    <div class="settings-card">
+      <div class="theme-control-grid">
+        ${colorField('primary','Primary')}
+        ${colorField('accent','Accent')}
+        ${colorField('success','Success')}
+        ${colorField('danger','Danger')}
+        ${colorField('headerBackground','Header Background')}
+        ${colorField('pageBackground','Page Background')}
+        ${colorField('surface','Card / Surface')}
+        ${colorField('text','Text')}
+        <label>Font Family<select class="input" onchange="db.settings.theme.font=this.value;save();render()">${fontOptions.map(f=>`<option value="${f}" ${t.font===f?'selected':''}>${f.split(',')[0].replace(/'/g,'')}</option>`).join('')}</select></label>
+        <label>Card Radius<input class="input" type="range" min="0" max="30" value="${t.cardRadius}" onchange="db.settings.theme.cardRadius=Number(this.value);save();render()"></label>
+        <label>Button Radius<input class="input" type="range" min="0" max="30" value="${t.buttonRadius}" onchange="db.settings.theme.buttonRadius=Number(this.value);save();render()"></label>
+        <label>Background Style<select class="input" onchange="db.settings.theme.backgroundStyle=this.value;save();render()"><option value="solid" ${t.backgroundStyle==='solid'?'selected':''}>Solid</option><option value="soft" ${t.backgroundStyle==='soft'?'selected':''}>Soft Gradient</option><option value="subtle" ${t.backgroundStyle==='subtle'?'selected':''}>Subtle Dotted</option></select></label>
+      </div>
+      <button class="small-btn danger" onclick="db.settings.theme=Object.assign({},themeDefaults);save();render();toast('Theme reset to Guthrie default.')">Reset to Guthrie Default</button>
+      <div class="theme-preview section">
+        <div class="theme-preview-header">${db.settings.businessName||'Guthrie RMS'}</div>
+        <div class="theme-preview-body"><div class="theme-preview-card"><b>Live Preview</b><p>This is how cards will look with your selected theme.</p><button class="primary">Sample Button</button></div></div>
+      </div>
+    </div>
+  </div>`;
+}
+function settingsUsers(){
+  let extra = state.userEditId? userEditForm(state.userEditId) : (state.addingUser? userAddForm() : '');
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>Users</h1><p>Managers, teachers, and students who can log in with a PIN.</p></div>
+    <div class="settings-card">
+      <div class="row"><button class="primary success" onclick="state.addingUser=true;state.userEditId=null;render()">Add User</button></div>
+      ${extra}
+      <table class="report-table"><tr><th>Name</th><th>Role</th><th>Position</th><th>PIN</th><th>Active</th><th>Actions</th></tr>
+      ${db.users.map(u=>`<tr><td>${u.name}</td><td>${u.role}</td><td>${u.pos||''}</td><td>${u.pin}</td><td>${u.active?'Yes':'No'}</td><td><div class="row"><button class="small-btn" onclick="state.userEditId=${u.id};state.addingUser=false;render()">Edit</button><button class="small-btn danger" onclick="deleteUser(${u.id})">Delete</button></div></td></tr>`).join('')}
+      </table>
+    </div>
+  </div>`;
+}
+function userAddForm(){
+  return `<div class="section panel"><h3>Add User</h3><div class="form-grid">
+    <label>Name<input id="newUserName" class="input"></label>
+    <label>Role<select id="newUserRole" class="input"><option value="manager">Manager</option><option value="teacher">Teacher</option><option value="student">Student</option></select></label>
+    <label>Position<select id="newUserPos" class="input">${db.positions.map(p=>`<option>${p}</option>`).join('')}</select></label>
+    <label>PIN<input id="newUserPin" class="input" inputmode="numeric"></label>
+  </div>
+  <div class="row"><button class="primary success" onclick="saveNewUser()">Add User</button><button class="small-btn" onclick="state.addingUser=false;render()">Cancel</button></div></div>`;
+}
+window.saveNewUser=()=>{
+  let name=$('#newUserName')?.value.trim();let role=$('#newUserRole')?.value;let pos=$('#newUserPos')?.value;let pin=$('#newUserPin')?.value.trim();
+  if(!name||!pin){alert('Name and PIN are required.');return;}
+  if(db.users.some(u=>u.pin===pin)){alert('That PIN is already in use.');return;}
+  let u={id:Date.now(),name,pin,role,pos,active:true};
+  if(role==='student'){u.studentId=pin;u.teacherId='';u.inventoryScope='assigned';}
+  else if(role==='teacher'){u.inventoryScope='culinary';}
+  else{u.inventoryScope='all';}
+  normalizeAccessForUser(u);
+  db.users.push(u);
+  state.addingUser=false;save();render();toast('User added.');
+};
+function userEditForm(id){
+  let u=db.users.find(x=>x.id===id);if(!u)return'';
+  return `<div class="section panel"><h3>Edit User</h3><div class="form-grid">
+    <label>Name<input id="editUserName" class="input" value="${u.name}"></label>
+    <label>Position<select id="editUserPos" class="input">${db.positions.map(p=>`<option ${u.pos===p?'selected':''}>${p}</option>`).join('')}</select></label>
+    <label>PIN<input id="editUserPin" class="input" value="${u.pin}"></label>
+    <label>Active<select id="editUserActive" class="input"><option value="true" ${u.active!==false?'selected':''}>Active</option><option value="false" ${u.active===false?'selected':''}>Inactive</option></select></label>
+  </div>
+  <div class="row"><button class="primary success" onclick="saveUserEdit(${id})">Save</button><button class="small-btn danger" onclick="deleteUser(${id})">Delete</button><button class="small-btn" onclick="state.userEditId=null;render()">Cancel</button></div></div>`;
+}
+window.saveUserEdit=(id)=>{
+  let u=db.users.find(x=>x.id===id);if(!u)return;
+  let pin=$('#editUserPin')?.value.trim();
+  if(db.users.some(x=>x.pin===pin&&x.id!==id)){alert('That PIN is already in use.');return;}
+  u.name=$('#editUserName')?.value.trim()||u.name;u.pos=$('#editUserPos')?.value||u.pos;u.pin=pin||u.pin;u.active=$('#editUserActive')?.value==='true';
+  if(u.role==='student')u.studentId=u.pin;
+  state.userEditId=null;save();render();toast('User saved.');
+};
+window.deleteUser=(id)=>{let u=db.users.find(x=>x.id===id);if(!u)return;if(u.id===state.user.id){alert('You cannot delete the account you are logged in as.');return;}if(!confirm(`Delete ${u.name}?`))return;
+  if(u.role==='teacher'){db.users.forEach(x=>{if(x.teacherId===id)x.teacherId='';});}
+  db.users=db.users.filter(x=>x.id!==id);save();render();toast('User removed.');
+};
+function settingsPositions(){
+  return `<div class="settings-page"><div class="settings-page-head"><h1>Positions</h1><p>Job titles used for staffing and scheduling.</p></div>
+    <div class="settings-card"><div class="row"><input class="input" id="newPosition" placeholder="Add position"><button class="primary success" onclick="addPosition()">Add</button></div>
+    <div class="settings-list">${db.positions.map((p,i)=>`<div class="settings-list-row"><span>${p}</span><button class="small-btn danger" onclick="removePosition(${i})">Remove</button></div>`).join('')}</div></div></div>`;
+}
+window.addPosition=()=>{let v=$('#newPosition')?.value.trim();if(!v)return;if(db.positions.includes(v)){alert('That position already exists.');return;}db.positions.push(v);save();render();};
+window.removePosition=(i)=>{if(!confirm('Remove this position?'))return;db.positions.splice(i,1);save();render();};
+function settingsListEditor(field,title,singular){
+  let list=db.settings[field]||[];
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>${title}</h1><p>Used throughout the RMS wherever a ${singular.toLowerCase()} is selected.</p></div>
+    <div class="settings-card">
+      <div class="row"><input class="input" id="newListItem" placeholder="Add ${singular}"><button class="primary success" onclick="addSettingsListItem('${field}')">Add</button></div>
+      <div class="settings-list">${list.map((x,i)=>`<div class="settings-list-row"><span>${x}</span><button class="small-btn danger" onclick="removeSettingsListItem('${field}',${i})">Remove</button></div>`).join('')||'<div class="settings-list-row"><span class="small">None added yet.</span></div>'}</div>
+    </div>
+  </div>`;
+}
+window.addSettingsListItem=(field)=>{let v=$('#newListItem')?.value.trim();if(!v)return;db.settings[field]=db.settings[field]||[];if(db.settings[field].includes(v)){alert('That already exists.');return;}db.settings[field].push(v);save();render();toast('Added.');};
+window.removeSettingsListItem=(field,i)=>{if(!confirm('Remove this item?'))return;db.settings[field].splice(i,1);save();render();toast('Removed.');};
+function settingsData(){
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>Data</h1><p>Local demo data stored in this browser only.</p></div>
+    <div class="settings-card">
+      <p>This resets all locally saved Guthrie RMS demo data in this browser (orders, inventory changes, users, schedule, etc.) back to the built-in demo seed.</p>
+      <button class="primary danger" onclick="if(confirm('Reset all local demo data? This cannot be undone.')){localStorage.removeItem('guthrieRMS7A');localStorage.removeItem('guthrieRMS5A');localStorage.removeItem('guthrieRMS4K');localStorage.removeItem('guthrieRMS4F');location.reload();}">Reset Local App Data</button>
+    </div>
+  </div>`;
+}
+
 window.addEventListener('error',function(e){
   const root=document.getElementById('app');
   if(root && !root.innerHTML.trim()){
