@@ -364,3 +364,6 @@ window.addEventListener('error',function(e){
     root.innerHTML='<div style="font-family:Arial;padding:32px;max-width:700px;margin:auto"><h1 style="color:#003DA5">Guthrie RMS</h1><h2>We could not load the RMS.</h2><p>Please refresh the page. If the issue continues, use the Reset Local App Data button below. This resets only this browser\'s locally saved RMS prototype data.</p><button style="padding:12px 18px;background:#003DA5;color:white;border:0;border-radius:10px" onclick="localStorage.removeItem(\'guthrieRMS7A\');localStorage.removeItem(\'guthrieRMS5A\');localStorage.removeItem(\'guthrieRMS4K\');localStorage.removeItem(\'guthrieRMS4F\');location.reload()">Reset Local App Data</button></div>';
   }
 });
+
+normalizeOrders();
+render();
