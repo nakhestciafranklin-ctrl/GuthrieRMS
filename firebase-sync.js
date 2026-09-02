@@ -28,8 +28,16 @@ function isConfigured(cfg){
   return !!(cfg && cfg.apiKey && !String(cfg.apiKey).startsWith('REPLACE_'));
 }
 
+function setCloudStatus(ok,message){
+  window.__guthrieRMSCloudStatus={ok,message};
+}
+
 function bootApp(reason,err){
-  if(reason) console.warn('Guthrie RMS cloud sync: '+reason+' - running in local-only mode.',err||'');
+  if(reason){
+    console.warn('Guthrie RMS cloud sync: '+reason+' - running in local-only mode.',err||'');
+    const detail=err&&err.message?(' ('+err.message+')'):'';
+    setCloudStatus(false,'Local only — '+reason+detail);
+  }
   if(typeof window.startGuthrieRMS==='function') window.startGuthrieRMS();
 }
 
@@ -100,6 +108,7 @@ if(!isConfigured(firebaseConfig)){
           cloudReady=true;
           clearTimeout(fallbackTimer);
           window.__guthrieRMSBooted=true;
+          setCloudStatus(true,'Connected — shared with all devices');
           bootApp();
         }catch(err){
           clearTimeout(fallbackTimer);

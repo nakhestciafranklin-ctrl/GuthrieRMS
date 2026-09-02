@@ -485,7 +485,14 @@ function render(){
   app.innerHTML=topbar()+`<main class="wrap">${dashboardShortcut}${views[state.view]()}</main>`;
   bindCommon();
 }
-function login(){applyTheme();app.innerHTML=`<div class="login"><div class="card login-card"><img class="logo" src="assets/guthrie-center-logo.jpg"><h1 class="title">${db.settings?.businessName||'Guthrie RMS'}</h1><p>${db.settings?.businessSubtitle||'Restaurant Management System'}</p><p>Enter Student or Manager PIN</p><div class="pin-display">${'*'.repeat(state.pin.length)}</div><div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-key="${n}">${n}</button>`).join('')}<button class="clear" data-clear>Clear</button><button data-key="0">0</button><button class="login-btn" data-login>Login</button></div><p class="error" id="err"></p>${db.settings?.demoMode?'<p class="small">Demo: Manager 9999 | Teacher 8888 | Student IDs/PINs: FOH 1001 | BOH 1002 | Cashier 1003 | Inventory 1004</p>':''}</div></div>`; document.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>{state.pin+=b.dataset.key;login()}); $('[data-clear]').onclick=()=>{state.pin='';login()}; $('[data-login]').onclick=()=>{let u=db.users.find(x=>x.pin===state.pin&&x.active); if(u){state.user=u;state.pin='';state.view='dashboard';render()} else $('#err').textContent='PIN not found or inactive.'};}
+function cloudStatusLine(){
+  const s=window.__guthrieRMSCloudStatus;
+  if(!s) return '';
+  const color=s.ok?'#2E7D32':'#C62828';
+  const icon=s.ok?'☁':'⚠';
+  return `<p class="small" style="color:${color};margin-top:8px">${icon} ${s.message}</p>`;
+}
+function login(){applyTheme();app.innerHTML=`<div class="login"><div class="card login-card"><img class="logo" src="assets/guthrie-center-logo.jpg"><h1 class="title">${db.settings?.businessName||'Guthrie RMS'}</h1><p>${db.settings?.businessSubtitle||'Restaurant Management System'}</p><p>Enter Student or Manager PIN</p><div class="pin-display">${'*'.repeat(state.pin.length)}</div><div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-key="${n}">${n}</button>`).join('')}<button class="clear" data-clear>Clear</button><button data-key="0">0</button><button class="login-btn" data-login>Login</button></div><p class="error" id="err"></p>${db.settings?.demoMode?'<p class="small">Demo: Manager 9999 | Teacher 8888 | Student IDs/PINs: FOH 1001 | BOH 1002 | Cashier 1003 | Inventory 1004</p>':''}${cloudStatusLine()}</div></div>`; document.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>{state.pin+=b.dataset.key;login()}); $('[data-clear]').onclick=()=>{state.pin='';login()}; $('[data-login]').onclick=()=>{let u=db.users.find(x=>x.pin===state.pin&&x.active); if(u){state.user=u;state.pin='';state.view='dashboard';render()} else $('#err').textContent='PIN not found or inactive.'};}
 function allowedViews(){
   if(!state.user) return [];
   normalizeAccessForUser(state.user);
