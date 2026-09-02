@@ -339,7 +339,7 @@ function loadSavedRMS(){
   }
   return JSON.parse(JSON.stringify(seed));
 }
-let db=loadSavedRMS();
+var db=loadSavedRMS();
 if(!Array.isArray(db.users))db.users=JSON.parse(JSON.stringify(seed.users));
 if(!Array.isArray(db.positions))db.positions=[...seed.positions];
 if(!Array.isArray(db.tables))db.tables=JSON.parse(JSON.stringify(seed.tables));
@@ -1367,5 +1367,16 @@ window.addEventListener('error',function(e){
   }
 });
 
-normalizeOrders();
-render();
+let _guthrieRMSStarted=false;
+window.startGuthrieRMS=function(){
+  if(_guthrieRMSStarted)return;
+  _guthrieRMSStarted=true;
+  normalizeOrders();
+  render();
+};
+setTimeout(()=>{
+  if(!_guthrieRMSStarted){
+    console.warn('Guthrie RMS: cloud sync script did not respond, starting in local-only mode.');
+    window.startGuthrieRMS();
+  }
+},7000);
