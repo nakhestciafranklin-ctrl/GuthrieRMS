@@ -12,12 +12,12 @@
 // back to local-only mode automatically -- nothing here can hard-break the
 // app for anyone.
 const firebaseConfig={
-  apiKey:'REPLACE_WITH_YOUR_API_KEY',
-  authDomain:'REPLACE_WITH_YOUR_PROJECT.firebaseapp.com',
-  projectId:'REPLACE_WITH_YOUR_PROJECT',
-  storageBucket:'REPLACE_WITH_YOUR_PROJECT.appspot.com',
-  messagingSenderId:'REPLACE_WITH_YOUR_SENDER_ID',
-  appId:'REPLACE_WITH_YOUR_APP_ID'
+  apiKey:'AIzaSyAtG-I3wJZqIEA1AM4BvANp2YHEs9PCdL8',
+  authDomain:'guthrie-rms.firebaseapp.com',
+  projectId:'guthrie-rms',
+  storageBucket:'guthrie-rms.firebasestorage.app',
+  messagingSenderId:'515721873582',
+  appId:'1:515721873582:web:c4f7825c8d616b69e5853f'
 };
 
 const SHARED_DOC_PATH=['guthrieRMS','sharedState'];
