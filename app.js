@@ -1289,18 +1289,29 @@ function settingsUsers(){
     <div class="settings-card">
       <div class="row"><button class="primary success" onclick="state.addingUser=true;state.userEditId=null;render()">Add User</button></div>
       ${extra}
-      <table class="report-table"><tr><th>Name</th><th>Role</th><th>Position</th><th>PIN</th><th>Active</th><th>Actions</th></tr>
-      ${db.users.map(u=>`<tr><td>${u.name}</td><td>${u.role}</td><td>${u.pos||''}</td><td>${u.pin}</td><td>${u.active?'Yes':'No'}</td><td><div class="row"><button class="small-btn" onclick="state.userEditId=${u.id};state.addingUser=false;render()">Edit</button><button class="small-btn danger" onclick="deleteUser(${u.id})">Delete</button></div></td></tr>`).join('')}
+      <table class="report-table"><tr><th>Name</th><th>Role</th><th>Position</th><th>Teacher</th><th>PIN</th><th>Active</th><th>Actions</th></tr>
+      ${db.users.map(u=>{let teacherName=u.role==='student'?(db.users.find(t=>t.id===u.teacherId)?.name||'Unassigned'):'';return `<tr><td>${u.name}</td><td>${u.role}</td><td>${u.pos||''}</td><td>${teacherName}</td><td>${u.pin}</td><td>${u.active?'Yes':'No'}</td><td><div class="row"><button class="small-btn" onclick="state.userEditId=${u.id};state.addingUser=false;render()">Edit</button><button class="small-btn danger" onclick="deleteUser(${u.id})">Delete</button></div></td></tr>`;}).join('')}
       </table>
     </div>
   </div>`;
 }
+function teacherOptionsHtml(selectedId){
+  let teachers=db.users.filter(u=>u.role==='teacher');
+  return `<option value="">Unassigned</option>${teachers.map(t=>`<option value="${t.id}" ${String(selectedId)===String(t.id)?'selected':''}>${t.name}</option>`).join('')}`;
+}
+window.toggleNewUserTeacherField=()=>{
+  let role=$('#newUserRole')?.value;
+  let box=$('#newUserTeacherField');
+  if(!box)return;
+  box.innerHTML=role==='student'?`<label>Teacher<select id="newUserTeacher" class="input">${teacherOptionsHtml('')}</select></label>`:'';
+};
 function userAddForm(){
   return `<div class="section panel"><h3>Add User</h3><div class="form-grid">
     <label>Name<input id="newUserName" class="input"></label>
-    <label>Role<select id="newUserRole" class="input"><option value="manager">Manager</option><option value="teacher">Teacher</option><option value="student">Student</option></select></label>
+    <label>Role<select id="newUserRole" class="input" onchange="toggleNewUserTeacherField()"><option value="manager">Manager</option><option value="teacher">Teacher</option><option value="student">Student</option></select></label>
     <label>Position<select id="newUserPos" class="input">${db.positions.map(p=>`<option>${p}</option>`).join('')}</select></label>
     <label>PIN<input id="newUserPin" class="input" inputmode="numeric"></label>
+    <div id="newUserTeacherField"></div>
   </div>
   <div class="row"><button class="primary success" onclick="saveNewUser()">Add User</button><button class="small-btn" onclick="state.addingUser=false;render()">Cancel</button></div></div>`;
 }
@@ -1309,7 +1320,7 @@ window.saveNewUser=()=>{
   if(!name||!pin){alert('Name and PIN are required.');return;}
   if(db.users.some(u=>u.pin===pin)){alert('That PIN is already in use.');return;}
   let u={id:Date.now(),name,pin,role,pos,active:true};
-  if(role==='student'){u.studentId=pin;u.teacherId='';u.inventoryScope='assigned';}
+  if(role==='student'){u.studentId=pin;u.teacherId=Number($('#newUserTeacher')?.value)||'';u.inventoryScope='assigned';}
   else if(role==='teacher'){u.inventoryScope='culinary';}
   else{u.inventoryScope='all';}
   normalizeAccessForUser(u);
@@ -1323,6 +1334,7 @@ function userEditForm(id){
     <label>Position<select id="editUserPos" class="input">${db.positions.map(p=>`<option ${u.pos===p?'selected':''}>${p}</option>`).join('')}</select></label>
     <label>PIN<input id="editUserPin" class="input" value="${u.pin}"></label>
     <label>Active<select id="editUserActive" class="input"><option value="true" ${u.active!==false?'selected':''}>Active</option><option value="false" ${u.active===false?'selected':''}>Inactive</option></select></label>
+    ${u.role==='student'?`<label>Teacher<select id="editUserTeacher" class="input">${teacherOptionsHtml(u.teacherId)}</select></label>`:''}
   </div>
   <div class="row"><button class="primary success" onclick="saveUserEdit(${id})">Save</button><button class="small-btn danger" onclick="deleteUser(${id})">Delete</button><button class="small-btn" onclick="state.userEditId=null;render()">Cancel</button></div></div>`;
 }
@@ -1331,7 +1343,7 @@ window.saveUserEdit=(id)=>{
   let pin=$('#editUserPin')?.value.trim();
   if(db.users.some(x=>x.pin===pin&&x.id!==id)){alert('That PIN is already in use.');return;}
   u.name=$('#editUserName')?.value.trim()||u.name;u.pos=$('#editUserPos')?.value||u.pos;u.pin=pin||u.pin;u.active=$('#editUserActive')?.value==='true';
-  if(u.role==='student')u.studentId=u.pin;
+  if(u.role==='student'){u.studentId=u.pin;u.teacherId=Number($('#editUserTeacher')?.value)||'';}
   state.userEditId=null;save();render();toast('User saved.');
 };
 window.deleteUser=(id)=>{let u=db.users.find(x=>x.id===id);if(!u)return;if(u.id===state.user.id){alert('You cannot delete the account you are logged in as.');return;}if(!confirm(`Delete ${u.name}?`))return;
