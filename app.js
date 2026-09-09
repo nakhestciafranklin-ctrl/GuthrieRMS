@@ -409,6 +409,226 @@ if(db.settings.lowStockThreshold===undefined)db.settings.lowStockThreshold=10;
 if(!db.settings.theme)db.settings.theme={};
 const themeDefaults={primary:'#003DA5',accent:'#F9A825',success:'#2E7D32',danger:'#C62828',pageBackground:'#F3F6FB',surface:'#FFFFFF',text:'#102033',font:'Arial, Helvetica, sans-serif',cardRadius:18,buttonRadius:12,headerBackground:'#003DA5',backgroundStyle:'solid'};
 Object.entries(themeDefaults).forEach(([k,v])=>{if(db.settings.theme[k]===undefined)db.settings.theme[k]=v;}); if(!db.production)db.production={date:new Date().toISOString().slice(0,10),items:{},history:[]}; if(!db.cateringItems)db.cateringItems=[{id:1,name:'Box Lunch',price:12,unit:'per guest',inventorySource:'culinary'},{id:2,name:'Dessert Tray',price:35,unit:'per tray',inventorySource:'culinary'},{id:3,name:'Peach Tea Gallon',price:10,unit:'per gallon',inventorySource:'culinary'},{id:4,name:'Cookie Dozen',price:18,unit:'per dozen',inventorySource:'culinary'}]; if(!Array.isArray(db.dailyCloseouts))db.dailyCloseouts=[]; if(!Array.isArray(db.invoices))db.invoices=[]; if(!Array.isArray(db.evaluations))db.evaluations=[]; if(!Array.isArray(db.refunds))db.refunds=[]; if(!Array.isArray(db.recipes))db.recipes=[]; if(!Array.isArray(db.labUsage))db.labUsage=[]; if(!Array.isArray(db.scheduledShifts))db.scheduledShifts=[]; if(!db.positions)db.positions=seed.positions;
+const rosterImportData=[
+{teacherName:'Alexander Bove',teacherAliases:['Alexander Bove'],students:[
+{name:'Hojara Barrera',studentId:'210776',block:'A'},
+{name:'Sherry Cardona Garcia',studentId:'254339',block:'A'},
+{name:'Londyn Franks',studentId:'237389',block:'A'},
+{name:'Shaylin Hernandez',studentId:'215033',block:'A'},
+{name:'Mariah Jones',studentId:'221854',block:'A'},
+{name:'Jesus Melendez',studentId:'234841',block:'A'},
+{name:'Xavier Mendez',studentId:'203387',block:'A'},
+{name:'Andrian Najera Veliz',studentId:'225387',block:'A'},
+{name:'Mariah Portis',studentId:'279023',block:'A'},
+{name:'Eloise Posey',studentId:'228840',block:'A'},
+{name:'Leah Razo',studentId:'218646',block:'A'},
+{name:'Chiquinquira Salazar',studentId:'265101',block:'A'},
+{name:'Brooklyn Sykes',studentId:'229535',block:'A'},
+{name:'Jefferson Ventura De Leon',studentId:'266555',block:'A'},
+{name:'Fatima Banikhalid',studentId:'252697',block:'B'},
+{name:'Karson Jeffrey Case',studentId:'257132',block:'B'},
+{name:'Michelle Flores',studentId:'210937',block:'B'},
+{name:'Olmer Flores',studentId:'217455',block:'B'},
+{name:'Gabriel Hernandez',studentId:'256669',block:'B'},
+{name:'Kelin Hernandez Orellana',studentId:'236930',block:'B'},
+{name:'Noah Janssen',studentId:'222682',block:'B'},
+{name:'Ana Jimenez',studentId:'207444',block:'B'},
+{name:'Natalia Maldonado',studentId:'215972',block:'B'},
+{name:'Jazmin Mendoza Cortez',studentId:'203072',block:'B'},
+{name:'Oliver Pablo',studentId:'240261',block:'B'},
+{name:'Kaylee Ruiz',studentId:'215449',block:'B'},
+{name:'Luke White',studentId:'256186',block:'B'},
+{name:'Marvin Alexander',studentId:'214229',block:'D'},
+{name:'Andi Almarales Larrude',studentId:'259754',block:'D'},
+{name:'Julie Casares',studentId:'272098',block:'D'},
+{name:'Victoria Diaz',studentId:'238580',block:'D'},
+{name:'Isaiah Lee',studentId:'272190',block:'D'},
+{name:'Jacob Macias',studentId:'217115',block:'D'},
+{name:'Isabella Maldonado',studentId:'206475',block:'D'},
+{name:'Karen Mejia Valle',studentId:'263459',block:'D'},
+{name:'Rai Quiroa',studentId:'272175',block:'D'},
+{name:'Madelynn Razo',studentId:'208221',block:'D'},
+{name:'Ayden Reyna',studentId:'215926',block:'D'},
+{name:'Diamantina Saldana',studentId:'246367',block:'D'},
+{name:'Elara Senninger',studentId:'239340',block:'D'},
+{name:'Lucas Soriano',studentId:'201274',block:'D'},
+{name:'Josgar Vazquez',studentId:'202093',block:'D'},
+{name:'Gustavo Velasquez Gonzales',studentId:'264813',block:'D'},
+{name:'Samuel Viasus Perez',studentId:'274030',block:'D'}
+]},
+{teacherName:'Andi Pope',teacherAliases:['Andi Pope'],students:[
+{name:'Kevin Castillo',studentId:'250112',block:'A'},
+{name:'Jaslene Castro',studentId:'208848',block:'A'},
+{name:'Anabely Cordova Ramos',studentId:'223280',block:'A'},
+{name:'Beatriz Donson',studentId:'279071',block:'A'},
+{name:'Jalynn Guerra',studentId:'208996',block:'A'},
+{name:'Yoswel Macias Caraballo',studentId:'266847',block:'A'},
+{name:'Gabriela Martinez',studentId:'268714',block:'A'},
+{name:'Julio Mendoza',studentId:'263640',block:'A'},
+{name:'Katie Mendoza',studentId:'210842',block:'A'},
+{name:'Nasdely Munoz',studentId:'224763',block:'A'},
+{name:'Cristina-Ernesta Nze Nzang',studentId:'267824',block:'A'},
+{name:'Isabelle Patino',studentId:'214676',block:'A'},
+{name:'Khang Phan',studentId:'273928',block:'A'},
+{name:'Lupita Reyes',studentId:'215946',block:'A'},
+{name:'Jacob Anderson',studentId:'202394',block:'C'},
+{name:'Catcher Jankowski',studentId:'202474',block:'C'},
+{name:'Lydia Lane',studentId:'201862',block:'C'},
+{name:'Isabelle Malone',studentId:'233978',block:'C'},
+{name:'Natan Matteoni Marcos',studentId:'244767',block:'C'},
+{name:'Madison Stone',studentId:'209038',block:'C'},
+{name:'Morgan Stone',studentId:'209039',block:'C'},
+{name:'Francisco Amaro',studentId:'214142',block:'C'},
+{name:'Dulce Angeles',studentId:'210485',block:'C'},
+{name:'Stefany Castaneda Ayala',studentId:'235378',block:'C'},
+{name:'Ricardo Cortes Reyes',studentId:'236868',block:'C'},
+{name:'Kaylee Fraire Perales',studentId:'216052',block:'C'},
+{name:'Kayla Gonzalez',studentId:'275202',block:'C'},
+{name:'Carter Jennings',studentId:'224964',block:'C'},
+{name:'Sebastian Lopera Giraldo',studentId:'263271',block:'C'},
+{name:'Valerie Mata',studentId:'955447',block:'C'},
+{name:'Valerie Morales',studentId:'222556',block:'C'},
+{name:'Jasmine Nieto',studentId:'214704',block:'C'},
+{name:'Daniela Ochoa',studentId:'215702',block:'C'},
+{name:'Luis Reyes Ventura',studentId:'266580',block:'C'},
+{name:'Brooklyn Ruth',studentId:'260125',block:'C'},
+{name:'Jose Segura',studentId:'216797',block:'C'},
+{name:'Ashley Vasquez Bonilla',studentId:'214216',block:'C'},
+{name:'Rowel Almario Bien',studentId:'218177',block:'D'},
+{name:'Leonel Cartagena Ordonez',studentId:'237005',block:'D'},
+{name:'Destiny Davis',studentId:'203296',block:'D'},
+{name:'Leland Langlois',studentId:'208312',block:'D'},
+{name:'Francisco Olvera',studentId:'205436',block:'D'},
+{name:'Edgar Podzemny',studentId:'265893',block:'D'},
+{name:'Declan Reid',studentId:'262455',block:'D'},
+{name:'Dayana Briones Sustaita',studentId:'230318',block:'D'},
+{name:'Marshon Carpenter',studentId:'276321',block:'D'},
+{name:'Yahir Eulogio Romero',studentId:'215832',block:'D'},
+{name:'Landon Faber',studentId:'248717',block:'D'},
+{name:'Allana Gandhi',studentId:'249600',block:'D'},
+{name:'Walker Girkin',studentId:'243548',block:'D'},
+{name:'Jannelly Ibarra',studentId:'215162',block:'D'},
+{name:'Daniela Juarez',studentId:'210808',block:'D'},
+{name:'Jeira Martinez Ulloa',studentId:'259515',block:'D'},
+{name:'Jose Manuel Ramirez Vidal',studentId:'235580',block:'D'},
+{name:'Stella Ramos',studentId:'256847',block:'D'},
+{name:'Danny Rodriguez Cortes',studentId:'224863',block:'D'},
+{name:'Tyson Thompson',studentId:'208796',block:'D'},
+{name:'Justin Vega',studentId:'270837',block:'D'},
+{name:'Jeremiah Welford',studentId:'253523',block:'D'},
+{name:'Ariani Zambrano Rios',studentId:'273850',block:'D'}
+]},
+{teacherName:'Benjamin Baze',teacherAliases:['Benjamin Baze'],students:[
+{name:'Kenneth Basurto',studentId:'205032',block:'B'},
+{name:'Melissa Estrada',studentId:'210771',block:'B'},
+{name:'Jeremy Garcia-Cortez',studentId:'203028',block:'B'},
+{name:'Sebastian James',studentId:'258042',block:'B'},
+{name:'Ayden Liles',studentId:'271601',block:'B'},
+{name:'Johan Lopez Pagoaga',studentId:'253863',block:'B'},
+{name:'Lianna Marin',studentId:'258684',block:'B'},
+{name:'Cindy Martinez Lopez',studentId:'210702',block:'B'},
+{name:'Emily Martinez-Hernandez',studentId:'245414',block:'B'},
+{name:'Sierra Morales',studentId:'263495',block:'B'},
+{name:'Yvanna Rebollo Perales',studentId:'202316',block:'B'},
+{name:'Evoleth Rodriguez',studentId:'210968',block:'B'},
+{name:'Alejandro Rodriguez Valdes',studentId:'263199',block:'B'},
+{name:'Lucas Rubio',studentId:'263570',block:'B'},
+{name:'Elliott Torres',studentId:'230197',block:'B'},
+{name:'Abraham Urdaneta Parra',studentId:'267576',block:'B'},
+{name:'Jeniffer Vigil',studentId:'242390',block:'B'},
+{name:'Luis Zetino Salmeron',studentId:'244289',block:'B'},
+{name:'Michael Guevara',studentId:'209566',block:'B'},
+{name:'Osiel Gutierrez',studentId:'208547',block:'B'},
+{name:'Nia Barnett',studentId:'208483',block:'C'},
+{name:'Ederson Diaz Coreas',studentId:'250419',block:'C'},
+{name:'Austin Doyle',studentId:'248824',block:'C'},
+{name:'Dulce Duarte Medina',studentId:'275669',block:'C'},
+{name:'Ana Duron Cruz',studentId:'240184',block:'C'},
+{name:'Anderson Escobar Trigueros',studentId:'245989',block:'C'},
+{name:'Olivia Hernandez Aguilar',studentId:'259590',block:'C'},
+{name:'Josue Lopez',studentId:'204492',block:'C'},
+{name:'Jonathan Medina-Lopez',studentId:'202290',block:'C'},
+{name:'Pablo Mendez',studentId:'218804',block:'C'},
+{name:'Logan Morales',studentId:'253006',block:'C'},
+{name:'Alonzo Palmeros',studentId:'203586',block:'C'},
+{name:'Azula Ramirez',studentId:'225024',block:'C'},
+{name:'Jared Rasgado',studentId:'203407',block:'C'},
+{name:'Perla Rivas-Antunez',studentId:'203804',block:'C'},
+{name:'Yasmin Ruiz',studentId:'209473',block:'C'},
+{name:'Franklin Ruiz Arita',studentId:'252537',block:'C'},
+{name:'Nashaly Salas Sanchez',studentId:'202420',block:'C'},
+{name:'Johana Zapeta',studentId:'251310',block:'C'},
+{name:'Kimberly Carranza Bejarano',studentId:'225414',block:'D'},
+{name:'Vincent Detamore',studentId:'267027',block:'D'},
+{name:'Michael Figueroa Serrano',studentId:'208351',block:'D'},
+{name:'Arwen Hassan',studentId:'267930',block:'D'},
+{name:'Logan Krajnovich',studentId:'262823',block:'D'},
+{name:'Edder Lagunas',studentId:'203821',block:'D'},
+{name:'Filipp Lapotko',studentId:'249614',block:'D'},
+{name:'Hazel Marquez-Carrillo',studentId:'218084',block:'D'},
+{name:'Brenden Moore',studentId:'205958',block:'D'},
+{name:'Leo Nava',studentId:'225753',block:'D'},
+{name:'Sofia Palmer',studentId:'214397',block:'D'},
+{name:'Elvin Ponce Orellana',studentId:'258821',block:'D'},
+{name:'Alex Ramirez',studentId:'204036',block:'D'},
+{name:'Alize Rodriguez',studentId:'202824',block:'D'},
+{name:'Joshua Romero',studentId:'228258',block:'D'},
+{name:'Angie Zaldivar Galdamez',studentId:'211692',block:'D'}
+]},
+{teacherName:'Chef Mikhail',teacherAliases:['Chef Mikhail','Sarah Johnson'],students:[
+{name:'Juanita Aguilar',studentId:'229949',block:'A'},
+{name:'Evelin Alonso Sanchez',studentId:'258562',block:'A'},
+{name:'Diego Amaro',studentId:'210896',block:'A'},
+{name:'Abraham Bermudez Arias',studentId:'252523',block:'A'},
+{name:'Cristopher Carmona-Lucio',studentId:'208216',block:'A'},
+{name:'Yisel Castrejon',studentId:'201713',block:'A'},
+{name:'Odaly Castro',studentId:'205103',block:'A'},
+{name:'Kathy Council-Barahona',studentId:'213443',block:'A'},
+{name:'Leiana Dixon',studentId:'229108',block:'A'},
+{name:'Alessandra Garcia',studentId:'204222',block:'A'},
+{name:'Favian Godinez',studentId:'201650',block:'A'},
+{name:'Landen Jenkins',studentId:'239519',block:'A'},
+{name:'Alyssa Marroquin',studentId:'204299',block:'A'},
+{name:'Carmen Nze Nzang',studentId:'267901',block:'A'},
+{name:'Jissel Ochoa',studentId:'203127',block:'A'},
+{name:'Justyce Patterson',studentId:'256300',block:'A'},
+{name:'Grant Smith',studentId:'207816',block:'A'},
+{name:'Adehan Stubblefield',studentId:'234070',block:'A'},
+{name:'Aiden Acevedo',studentId:'279231',block:'B'},
+{name:'Maribel Aguilar',studentId:'214377',block:'B'},
+{name:'Alexandra Bravo',studentId:'215046',block:'B'},
+{name:'Estefany Diaz Reyes',studentId:'230419',block:'B'},
+{name:'Gustavo Garcia',studentId:'220568',block:'B'},
+{name:'Giovanni Hinojosa',studentId:'210423',block:'B'},
+{name:'Phuc Ho',studentId:'275325',block:'B'},
+{name:'Victor Jimenez',studentId:'242923',block:'B'},
+{name:'Omielle Keyes',studentId:'260379',block:'B'},
+{name:'Grace Lee',studentId:'271505',block:'B'},
+{name:'Cesar Quinones Espinoza',studentId:'258453',block:'B'},
+{name:'Jace Rodriguez',studentId:'216354',block:'B'},
+{name:'Anthony Rodriguez-Acosta',studentId:'214328',block:'B'},
+{name:'Fiona So',studentId:'278541',block:'B'},
+{name:'Darwin Sylvester',studentId:'211033',block:'B'},
+{name:'Daniel Taylor',studentId:'275193',block:'B'},
+{name:'Ryan Young',studentId:'213714',block:'B'},
+{name:'Chris Aranda',studentId:'201912',block:'C'},
+{name:'Omar Clemente',studentId:'218510',block:'C'},
+{name:'Jose De La Cruz',studentId:'001879',block:'C'},
+{name:'Leila Foley',studentId:'261731',block:'C'},
+{name:'Avery Graham',studentId:'205031',block:'C'},
+{name:'Carmen Guerra',studentId:'241377',block:'C'},
+{name:'Alyssa Lopez',studentId:'205589',block:'C'},
+{name:'David Mata',studentId:'204594',block:'C'},
+{name:'Kerlyn Meza Lainez',studentId:'204140',block:'C'},
+{name:'McKenzie Nava-Alexander',studentId:'955128',block:'C'},
+{name:'Charles Podzemny',studentId:'265851',block:'C'},
+{name:'Estefania Prado',studentId:'253847',block:'C'},
+{name:'Ivan Ruiz Torres',studentId:'229998',block:'C'},
+{name:'Anthony Saravia',studentId:'205056',block:'C'},
+{name:'Jayson Trevino',studentId:'201987',block:'C'},
+{name:'Rodney Vidal',studentId:'202881',block:'C'}
+]},
+];
 const enterpriseStudentPositions=['Team Member','Station Lead','Shift Manager','Department Lead','General Manager (Student)','Grill / Hot-Line Lead','Prep Lead','Pastry / Bakery Lead','Host','Server','Cashier','Catering Crew Lead','Marketing Lead','Inventory Lead','Chef Tables Lead'];
 enterpriseStudentPositions.forEach(pos=>{if(!db.positions.includes(pos))db.positions.push(pos)}); if(!db.users.some(u=>u.role==='teacher'))db.users.push({id:Date.now(),name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}); db.users.forEach(u=>{ if(!u.access){u.access=u.role==='manager'?['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup']:(u.role==='teacher'?['clock','inventory','catering','recipes','reports','invoices','development','schedule']:['clock','dining','quick','checkout','kms','inventory','development']);} if(!u.inventoryScope) u.inventoryScope=u.role==='teacher'?'culinary':(u.role==='manager'?'all':'assigned'); if(u.role==='student'){ if(!('studentId' in u)) u.studentId=''; if(!('teacherId' in u)) u.teacherId=''; } });
 // Menu and daily production migration
@@ -418,7 +638,38 @@ db.users.forEach(u=>{
   if(u.role==='manager') u.access=[...new Set([...(u.access||[]),'clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','closeout','setup'])];
   if(u.role==='student') u.access=[...new Set([...(u.access||[]),'clock','dining','quick','checkout','kms','inventory','development'])];
 });
-let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business'};
+// Import 2026-2027 sign-in sheet rosters as Team Member students, matching each
+// roster's teacher against an existing teacher account by name (never inventing
+// a PIN for a teacher) and skipping any student whose PIN is already on file.
+// Exposed on window so firebase-sync.js can re-run it against the shared cloud
+// data after a sync overwrites window.db, since otherwise a cloud snapshot
+// taken before this import ran would wipe the newly added roster users back out.
+function importRosterStudents(){
+  let changed=false;
+  let nextId=(db.users.reduce((max,u)=>Math.max(max,Number(u.id)||0),0))+1;
+  rosterImportData.forEach(group=>{
+    let teacher=db.users.find(u=>u.role==='teacher'&&group.teacherAliases.some(a=>a.toLowerCase()===String(u.name||'').trim().toLowerCase()));
+    if(!teacher){
+      teacher={id:nextId++,name:group.teacherName,pin:'',role:'teacher',pos:'Instructor',active:false,access:['clock','inventory','catering','recipes','reports','invoices','development','schedule'],inventoryScope:'culinary'};
+      db.users.push(teacher);changed=true;
+    }
+    group.students.forEach(s=>{
+      let existing=db.users.find(u=>u.pin===s.studentId||u.studentId===s.studentId);
+      if(existing){
+        if(!existing.teacherId)existing.teacherId=teacher.id;
+        if(!existing.block)existing.block=s.block;
+      }else{
+        db.users.push({id:nextId++,name:s.name,studentId:s.studentId,pin:s.studentId,role:'student',pos:'Team Member',block:s.block,teacherId:teacher.id,active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'});
+        changed=true;
+      }
+    });
+  });
+  if(changed)save();
+  return changed;
+}
+window.importRosterStudents=importRosterStudents;
+importRosterStudents();
+let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();
 function save(){localStorage.setItem('guthrieRMS7A',JSON.stringify(db));}
@@ -1282,16 +1533,35 @@ function settingsTheme(){
     </div>
   </div>`;
 }
+window.filterUsersByName=(val)=>{
+  state.userSearch=val;render();
+  let el=$('#userSearchInput');
+  if(el){el.focus();let pos=val.length;el.setSelectionRange(pos,pos);}
+};
 function settingsUsers(){
   let extra = state.userEditId? userEditForm(state.userEditId) : (state.addingUser? userAddForm() : '');
+  let search=(state.userSearch||'').trim().toLowerCase();
+  let blockFilter=state.userBlockFilter||'';
+  let blocks=[...new Set(db.users.map(u=>u.block).filter(Boolean))].sort();
+  let filtered=db.users.filter(u=>{
+    if(search&&!u.name.toLowerCase().includes(search))return false;
+    if(blockFilter&&u.block!==blockFilter)return false;
+    return true;
+  });
   return `<div class="settings-page">
     <div class="settings-page-head"><h1>Users</h1><p>Managers, teachers, and students who can log in with a PIN.</p></div>
     <div class="settings-card">
       <div class="row"><button class="primary success" onclick="state.addingUser=true;state.userEditId=null;render()">Add User</button></div>
+      <div class="row">
+        <label>Search by name<input id="userSearchInput" class="input" placeholder="Type a student or staff name" value="${search?state.userSearch:''}" oninput="filterUsersByName(this.value)"></label>
+        <label>Block<select id="userBlockFilter" class="input" onchange="state.userBlockFilter=this.value;render()"><option value="">All Blocks</option>${blocks.map(b=>`<option value="${b}" ${blockFilter===b?'selected':''}>Block ${b}</option>`).join('')}</select></label>
+        ${(search||blockFilter)?`<button class="small-btn" onclick="state.userSearch='';state.userBlockFilter='';render()">Clear Filters</button>`:''}
+      </div>
       ${extra}
-      <table class="report-table"><tr><th>Name</th><th>Role</th><th>Position</th><th>Teacher</th><th>PIN</th><th>Active</th><th>Actions</th></tr>
-      ${db.users.map(u=>{let teacherName=u.role==='student'?(db.users.find(t=>t.id===u.teacherId)?.name||'Unassigned'):'';return `<tr><td>${u.name}</td><td>${u.role}</td><td>${u.pos||''}</td><td>${teacherName}</td><td>${u.pin}</td><td>${u.active?'Yes':'No'}</td><td><div class="row"><button class="small-btn" onclick="state.userEditId=${u.id};state.addingUser=false;render()">Edit</button><button class="small-btn danger" onclick="deleteUser(${u.id})">Delete</button></div></td></tr>`;}).join('')}
+      <table class="report-table"><tr><th>Name</th><th>Role</th><th>Position</th><th>Block</th><th>Teacher</th><th>PIN</th><th>Active</th><th>Actions</th></tr>
+      ${filtered.map(u=>{let teacherName=u.role==='student'?(db.users.find(t=>t.id===u.teacherId)?.name||'Unassigned'):'';return `<tr><td>${u.name}</td><td>${u.role}</td><td>${u.pos||''}</td><td>${u.block||''}</td><td>${teacherName}</td><td>${u.pin}</td><td>${u.active?'Yes':'No'}</td><td><div class="row"><button class="small-btn" onclick="state.userEditId=${u.id};state.addingUser=false;render()">Edit</button><button class="small-btn danger" onclick="deleteUser(${u.id})">Delete</button></div></td></tr>`;}).join('')}
       </table>
+      ${filtered.length===0?'<p>No users match your search.</p>':''}
     </div>
   </div>`;
 }
@@ -1303,7 +1573,7 @@ window.toggleNewUserTeacherField=()=>{
   let role=$('#newUserRole')?.value;
   let box=$('#newUserTeacherField');
   if(!box)return;
-  box.innerHTML=role==='student'?`<label>Teacher<select id="newUserTeacher" class="input">${teacherOptionsHtml('')}</select></label>`:'';
+  box.innerHTML=role==='student'?`<label>Teacher<select id="newUserTeacher" class="input">${teacherOptionsHtml('')}</select></label><label>Block<input id="newUserBlock" class="input" placeholder="A, B, C..."></label>`:'';
 };
 function userAddForm(){
   return `<div class="section panel"><h3>Add User</h3><div class="form-grid">
@@ -1320,7 +1590,7 @@ window.saveNewUser=()=>{
   if(!name||!pin){alert('Name and PIN are required.');return;}
   if(db.users.some(u=>u.pin===pin)){alert('That PIN is already in use.');return;}
   let u={id:Date.now(),name,pin,role,pos,active:true};
-  if(role==='student'){u.studentId=pin;u.teacherId=Number($('#newUserTeacher')?.value)||'';u.inventoryScope='assigned';}
+  if(role==='student'){u.studentId=pin;u.teacherId=Number($('#newUserTeacher')?.value)||'';u.block=$('#newUserBlock')?.value.trim()||'';u.inventoryScope='assigned';}
   else if(role==='teacher'){u.inventoryScope='culinary';}
   else{u.inventoryScope='all';}
   normalizeAccessForUser(u);
@@ -1334,7 +1604,7 @@ function userEditForm(id){
     <label>Position<select id="editUserPos" class="input">${db.positions.map(p=>`<option ${u.pos===p?'selected':''}>${p}</option>`).join('')}</select></label>
     <label>PIN<input id="editUserPin" class="input" value="${u.pin}"></label>
     <label>Active<select id="editUserActive" class="input"><option value="true" ${u.active!==false?'selected':''}>Active</option><option value="false" ${u.active===false?'selected':''}>Inactive</option></select></label>
-    ${u.role==='student'?`<label>Teacher<select id="editUserTeacher" class="input">${teacherOptionsHtml(u.teacherId)}</select></label>`:''}
+    ${u.role==='student'?`<label>Teacher<select id="editUserTeacher" class="input">${teacherOptionsHtml(u.teacherId)}</select></label><label>Block<input id="editUserBlock" class="input" value="${u.block||''}" placeholder="A, B, C..."></label>`:''}
   </div>
   <div class="row"><button class="primary success" onclick="saveUserEdit(${id})">Save</button><button class="small-btn danger" onclick="deleteUser(${id})">Delete</button><button class="small-btn" onclick="state.userEditId=null;render()">Cancel</button></div></div>`;
 }
@@ -1343,7 +1613,7 @@ window.saveUserEdit=(id)=>{
   let pin=$('#editUserPin')?.value.trim();
   if(db.users.some(x=>x.pin===pin&&x.id!==id)){alert('That PIN is already in use.');return;}
   u.name=$('#editUserName')?.value.trim()||u.name;u.pos=$('#editUserPos')?.value||u.pos;u.pin=pin||u.pin;u.active=$('#editUserActive')?.value==='true';
-  if(u.role==='student'){u.studentId=u.pin;u.teacherId=Number($('#editUserTeacher')?.value)||'';}
+  if(u.role==='student'){u.studentId=u.pin;u.teacherId=Number($('#editUserTeacher')?.value)||'';u.block=$('#editUserBlock')?.value.trim()||'';}
   state.userEditId=null;save();render();toast('User saved.');
 };
 window.deleteUser=(id)=>{let u=db.users.find(x=>x.id===id);if(!u)return;if(u.id===state.user.id){alert('You cannot delete the account you are logged in as.');return;}if(!confirm(`Delete ${u.name}?`))return;
