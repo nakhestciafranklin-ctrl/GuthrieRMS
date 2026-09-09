@@ -641,7 +641,10 @@ db.users.forEach(u=>{
 // Import 2026-2027 sign-in sheet rosters as Team Member students, matching each
 // roster's teacher against an existing teacher account by name (never inventing
 // a PIN for a teacher) and skipping any student whose PIN is already on file.
-(function importRosterStudents(){
+// Exposed on window so firebase-sync.js can re-run it against the shared cloud
+// data after a sync overwrites window.db, since otherwise a cloud snapshot
+// taken before this import ran would wipe the newly added roster users back out.
+function importRosterStudents(){
   let changed=false;
   let nextId=(db.users.reduce((max,u)=>Math.max(max,Number(u.id)||0),0))+1;
   rosterImportData.forEach(group=>{
@@ -662,7 +665,10 @@ db.users.forEach(u=>{
     });
   });
   if(changed)save();
-})();
+  return changed;
+}
+window.importRosterStudents=importRosterStudents;
+importRosterStudents();
 let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();
