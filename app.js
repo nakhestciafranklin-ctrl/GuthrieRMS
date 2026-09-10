@@ -669,7 +669,7 @@ function importRosterStudents(){
 }
 window.importRosterStudents=importRosterStudents;
 importRosterStudents();
-let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:''};
+let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();
 function save(){localStorage.setItem('guthrieRMS7A',JSON.stringify(db));}
@@ -942,11 +942,13 @@ function kmsButtons(o){let st=o.kmsStage||'sent';let b=[]; if(st==='sent')b.push
 setInterval(()=>{if(state.user&&state.view==='kms')render()},1000); window.ready=id=>kmsStage(id,'ready'); window.kmsStage=(id,stage)=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage=stage; o.kmsLog=o.kmsLog||[]; let label={prepping:'Prep Started',plating:'Moved to Plating',ready:'Marked Ready',completed:'Completed'}[stage]||stage; o.kmsLog.push({stage:label,time:now(),by:state.user.name}); if(stage==='ready')o.status='ready'; if(stage==='completed')o.status='completed'; let t=db.tables.find(x=>x.orderId===id); if(t&&stage==='ready')t.status='ready'; if(t&&stage==='completed')t.status='ready'; save(); render(); toast(label);};
 function inventory(){
  if(state.user.inventoryScope==='culinary') state.invDivision='culinary';
- const items=db.inventory.filter(i=>i.division===state.invDivision);
+ const allItems=db.inventory.filter(i=>i.division===state.invDivision);
+ const search=(state.inventorySearch||'').trim().toLowerCase();
+ const items=search?allItems.filter(i=>[i.name,i.barcode,i.vendor,i.location,i.unit].join(' ').toLowerCase().includes(search)):allItems;
  const tabs=state.user.inventoryScope==='culinary'?`<div class="notice">Teacher access: Culinary Department Inventory only.</div>`:`<div class="tabs"><button class="${state.invDivision==='bistro'?'active':''}" onclick="state.invDivision='bistro';render()">Bistro Inventory</button><button class="${state.invDivision==='culinary'?'active':''}" onclick="state.invDivision='culinary';render()">Culinary Department Inventory</button></div>`;
- const low=items.filter(i=>Number(i.onHand)<Number(i.par));
+ const low=allItems.filter(i=>Number(i.onHand)<Number(i.par));
  return `<section class="card"><h1>Inventory</h1>${tabs}
- <div class="stats"><div><b>${items.length}</b><span>Total Items</span></div><div><b>${low.length}</b><span>Below Par</span></div><div><b>${db.deliveries.filter(d=>d.division===state.invDivision).length}</b><span>Deliveries</span></div></div>
+ <div class="stats"><div><b>${allItems.length}</b><span>Total Items</span></div><div><b>${low.length}</b><span>Below Par</span></div><div><b>${db.deliveries.filter(d=>d.division===state.invDivision).length}</b><span>Deliveries</span></div></div>
  <div class="inventory-actions">
   <button class="primary success" onclick="addInventoryItemForm()">Add Inventory Item</button>
   <button class="primary" onclick="checkDelivery()">Check In Delivery</button>
@@ -959,8 +961,17 @@ function inventory(){
  </div>
  <h2>${state.invDivision==='bistro'?'Bistro':'Culinary Department'} Inventory List</h2>
  <p class="small">Quantities and storage locations can be updated directly below. Use Edit for the full item record.</p>
- <table class="report-table"><tr><th>Item</th><th>Barcode</th><th>Vendor</th><th>Location</th><th>On Hand</th><th>Par</th><th>Unit</th><th>Status</th><th>Actions</th></tr>${items.map(i=>`<tr><td>${i.name}</td><td>${i.barcode||'<span class="small">Not assigned</span>'}</td><td>${i.vendor}</td><td><select class="input inventory-inline" onchange="updInv(${i.id},'location',this.value)">${inventoryLocationOptions(i.location,state.invDivision)}</select></td><td><input class="input inventory-number" type="number" step="0.01" value="${Number(i.onHand)||0}" onchange="updInv(${i.id},'onHand',this.value)"></td><td><input class="input inventory-number" type="number" step="0.01" value="${Number(i.par)||0}" onchange="updInv(${i.id},'par',this.value)"></td><td>${i.unit}</td><td>${Number(i.onHand)<Number(i.par)?'<span class="badge danger">Below Par</span>':'<span class="badge good">OK</span>'}</td><td><div class="row inventory-row-actions"><button class="small-btn" onclick="editInventoryItem(${i.id})">Edit</button><button class="small-btn danger" onclick="deleteInventoryItem(${i.id})">Delete</button></div></td></tr>`).join('')}</table><div id="invExtra"></div></section>`
+ <div class="row">
+  <label>Search<input id="inventorySearchInput" class="input" placeholder="Search by item, barcode, vendor, location, or unit" value="${search?state.inventorySearch:''}" oninput="filterInventoryByText(this.value)"></label>
+  ${search?`<button class="small-btn" onclick="state.inventorySearch='';render()">Clear Search</button>`:''}
+ </div>
+ <table class="report-table"><tr><th>Item</th><th>Barcode</th><th>Vendor</th><th>Location</th><th>On Hand</th><th>Par</th><th>Unit</th><th>Status</th><th>Actions</th></tr>${items.map(i=>`<tr><td>${i.name}</td><td>${i.barcode||'<span class="small">Not assigned</span>'}</td><td>${i.vendor}</td><td><select class="input inventory-inline" onchange="updInv(${i.id},'location',this.value)">${inventoryLocationOptions(i.location,state.invDivision)}</select></td><td><input class="input inventory-number" type="number" step="0.01" value="${Number(i.onHand)||0}" onchange="updInv(${i.id},'onHand',this.value)"></td><td><input class="input inventory-number" type="number" step="0.01" value="${Number(i.par)||0}" onchange="updInv(${i.id},'par',this.value)"></td><td>${i.unit}</td><td>${Number(i.onHand)<Number(i.par)?'<span class="badge danger">Below Par</span>':'<span class="badge good">OK</span>'}</td><td><div class="row inventory-row-actions"><button class="small-btn" onclick="editInventoryItem(${i.id})">Edit</button><button class="small-btn danger" onclick="deleteInventoryItem(${i.id})">Delete</button></div></td></tr>`).join('')||`<tr><td colspan="9">${search?'No inventory items match your search.':'No inventory items yet.'}</td></tr>`}</table><div id="invExtra"></div></section>`
 }
+window.filterInventoryByText=(val)=>{
+  state.inventorySearch=val;render();
+  let el=$('#inventorySearchInput');
+  if(el){el.focus();let pos=val.length;el.setSelectionRange(pos,pos);}
+};
 function inventoryLocationOptions(current,division){let opts=[...new Set([...(locations(division)||[]),current||'Unassigned'])];return opts.map(x=>`<option ${x===current?'selected':''}>${x}</option>`).join('')}
 window.updInv=(id,f,v)=>{let item=db.inventory.find(i=>i.id===id); if(!item)return; item[f]=['onHand','par'].includes(f)?(Number(v)||0):v;save();toast('Inventory item updated.');};
 window.addInventoryItemForm=()=>{$('#invExtra').innerHTML=`<div class="section panel"><h2>Add Inventory Item</h2><div class="camera-scan-row"><label>Barcode<input id="newInvBarcode" class="input" inputmode="numeric" placeholder="Scan or type UPC/EAN" onkeydown="if(event.key==='Enter'){event.preventDefault();lookupBarcodeIntoField('newInvBarcode','newInvName','newInvLookupStatus')}"></label><button class="primary" onclick="openBarcodeCamera('newInvBarcode','newItem')">Scan with Tablet Camera</button></div><div class="row"><button class="small-btn" onclick="lookupBarcodeIntoField('newInvBarcode','newInvName','newInvLookupStatus')">Look Up Product Online</button></div><p id="newInvLookupStatus" class="small"></p><div id="barcodeCameraMount"></div><div class="form-grid"><label>Item Name<input id="newInvName" class="input" placeholder="Item name"></label><label>Vendor<select id="newInvVendor" class="input">${(db.settings?.vendors||[]).map(v=>`<option>${v}</option>`).join('')}</select></label><label>Starting Quantity<input id="newInvQty" type="number" step="0.01" class="input" value="0"></label><label>Par Level<input id="newInvPar" type="number" step="0.01" class="input" value="0"></label><label>Unit<input id="newInvUnit" class="input" placeholder="each, lb, case, gal"></label><label>Storage Location<select id="newInvLocation" class="input">${locations(state.invDivision).map(x=>`<option>${x}</option>`).join('')}</select></label></div><button class="primary success" onclick="saveNewInventoryItem()">Add Item</button></div>`};
@@ -1384,17 +1395,34 @@ function scheduleTeacherView(){
 }
 function scheduleManagerView(){
   let extra=(state.editingShiftId!==undefined&&state.editingShiftId!==null)?shiftForm(state.editingShiftId):'';
+  let search=(state.scheduleSearch||'').trim().toLowerCase();
   let list=(db.scheduledShifts||[]).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  if(search){
+    list=list.filter(s=>{
+      let names=(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} ${a.position||''}`;}).join(' ');
+      let hay=[s.date,s.operation,s.location,s.status,s.notes,names].join(' ').toLowerCase();
+      return hay.includes(search);
+    });
+  }
   return `<section class="card"><h1>Manager Shift Scheduler</h1>
     <div class="row"><button class="primary success" onclick="state.editingShiftId='new';render()">New Scheduled Shift</button><button class="small-btn" onclick="exportScheduleCSV()">Export Schedule CSV</button></div>
+    <div class="row">
+      <label>Search<input id="scheduleSearchInput" class="input" placeholder="Search by date, operation, location, student, position, status, or notes" value="${search?state.scheduleSearch:''}" oninput="filterScheduleByText(this.value)"></label>
+      ${search?`<button class="small-btn" onclick="state.scheduleSearch='';render()">Clear Search</button>`:''}
+    </div>
     ${extra}
     ${list.map(s=>`<div class="ticket"><div class="row"><div><b>${s.date}</b> &bull; ${s.operation} &bull; ${s.startTime}&ndash;${s.endTime} &bull; ${s.location||''}</div><span class="spacer"></span><span class="pill">${s.status}</span></div>
       <p>${(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:'Unassigned'} (${a.position||''})`;}).join(', ')||'No students assigned.'}</p>
       <p class="small">${s.notes||''}</p>
       <div class="row"><button class="small-btn" onclick="state.editingShiftId=${s.id};render()">Edit</button><button class="small-btn" onclick="duplicateShift(${s.id})">Duplicate</button><button class="small-btn success" onclick="toggleShiftPublish(${s.id})">${s.status==='Published'?'Unpublish':'Publish'}</button><button class="small-btn danger" onclick="deleteShift(${s.id})">Delete</button></div>
-    </div>`).join('')||'<p>No shifts scheduled yet.</p>'}
+    </div>`).join('')||(search?'<p>No shifts match your search.</p>':'<p>No shifts scheduled yet.</p>')}
   </section>`;
 }
+window.filterScheduleByText=(val)=>{
+  state.scheduleSearch=val;render();
+  let el=$('#scheduleSearchInput');
+  if(el){el.focus();let pos=val.length;el.setSelectionRange(pos,pos);}
+};
 function shiftForm(id){
   let s=(id&&id!=='new')?db.scheduledShifts.find(x=>x.id===id):null;
   let students=db.users.filter(u=>u.role==='student'&&u.active);
@@ -1428,7 +1456,14 @@ window.toggleShiftPublish=(id)=>{let s=db.scheduledShifts.find(x=>x.id===id);if(
 window.deleteShift=(id)=>{if(!confirm('Delete this scheduled shift?'))return;db.scheduledShifts=db.scheduledShifts.filter(x=>x.id!==id);save();render();};
 window.exportScheduleCSV=()=>{
   let rows=[['Date','Operation','Start','End','Location','Status','Assignments']];
-  (db.scheduledShifts||[]).forEach(s=>rows.push([s.date,s.operation,s.startTime,s.endTime,s.location||'',s.status,(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} (${a.position||''})`;}).join('; ')]));
+  let shifts=(db.scheduledShifts||[]).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  let byOperation={};
+  shifts.forEach(s=>{let op=s.operation||'Unassigned';(byOperation[op]=byOperation[op]||[]).push(s);});
+  Object.keys(byOperation).sort().forEach(op=>{
+    rows.push([`== ${op} ==`]);
+    byOperation[op].forEach(s=>rows.push([s.date,s.operation,s.startTime,s.endTime,s.location||'',s.status,(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} (${a.position||''})`;}).join('; ')]));
+    rows.push([]);
+  });
   downloadCSV('guthrie-rms-schedule.csv',rows);
 };
 
