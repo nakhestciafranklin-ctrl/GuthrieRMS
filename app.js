@@ -1455,13 +1455,20 @@ window.duplicateShift=(id)=>{let s=db.scheduledShifts.find(x=>x.id===id);if(!s)r
 window.toggleShiftPublish=(id)=>{let s=db.scheduledShifts.find(x=>x.id===id);if(!s)return;s.status=s.status==='Published'?'Draft':'Published';save();render();};
 window.deleteShift=(id)=>{if(!confirm('Delete this scheduled shift?'))return;db.scheduledShifts=db.scheduledShifts.filter(x=>x.id!==id);save();render();};
 window.exportScheduleCSV=()=>{
-  let rows=[['Date','Operation','Start','End','Location','Status','Assignments']];
+  let rows=[['Position','Date','Operation','Start','End','Location','Status','Student','Notes']];
   let shifts=(db.scheduledShifts||[]).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
-  let byOperation={};
-  shifts.forEach(s=>{let op=s.operation||'Unassigned';(byOperation[op]=byOperation[op]||[]).push(s);});
-  Object.keys(byOperation).sort().forEach(op=>{
-    rows.push([`== ${op} ==`]);
-    byOperation[op].forEach(s=>rows.push([s.date,s.operation,s.startTime,s.endTime,s.location||'',s.status,(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} (${a.position||''})`;}).join('; ')]));
+  let byPosition={};
+  shifts.forEach(s=>{
+    let assignments=(s.assignments&&s.assignments.length)?s.assignments:[{userId:null,position:''}];
+    assignments.forEach(a=>{
+      let pos=a.position||'Unassigned';
+      let u=db.users.find(x=>x.id===a.userId);
+      (byPosition[pos]=byPosition[pos]||[]).push({shift:s,studentName:u?u.name:''});
+    });
+  });
+  Object.keys(byPosition).sort().forEach(pos=>{
+    rows.push([`== ${pos} ==`]);
+    byPosition[pos].forEach(({shift:s,studentName})=>rows.push([pos,s.date,s.operation,s.startTime,s.endTime,s.location||'',s.status,studentName,s.notes||'']));
     rows.push([]);
   });
   downloadCSV('guthrie-rms-schedule.csv',rows);
