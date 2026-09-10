@@ -669,7 +669,7 @@ function importRosterStudents(){
 }
 window.importRosterStudents=importRosterStudents;
 importRosterStudents();
-let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:''};
+let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();
 function save(){localStorage.setItem('guthrieRMS7A',JSON.stringify(db));}
@@ -1384,17 +1384,34 @@ function scheduleTeacherView(){
 }
 function scheduleManagerView(){
   let extra=(state.editingShiftId!==undefined&&state.editingShiftId!==null)?shiftForm(state.editingShiftId):'';
+  let search=(state.scheduleSearch||'').trim().toLowerCase();
   let list=(db.scheduledShifts||[]).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  if(search){
+    list=list.filter(s=>{
+      let names=(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} ${a.position||''}`;}).join(' ');
+      let hay=[s.date,s.operation,s.location,s.status,s.notes,names].join(' ').toLowerCase();
+      return hay.includes(search);
+    });
+  }
   return `<section class="card"><h1>Manager Shift Scheduler</h1>
     <div class="row"><button class="primary success" onclick="state.editingShiftId='new';render()">New Scheduled Shift</button><button class="small-btn" onclick="exportScheduleCSV()">Export Schedule CSV</button></div>
+    <div class="row">
+      <label>Search<input id="scheduleSearchInput" class="input" placeholder="Search by date, operation, location, student, position, status, or notes" value="${search?state.scheduleSearch:''}" oninput="filterScheduleByText(this.value)"></label>
+      ${search?`<button class="small-btn" onclick="state.scheduleSearch='';render()">Clear Search</button>`:''}
+    </div>
     ${extra}
     ${list.map(s=>`<div class="ticket"><div class="row"><div><b>${s.date}</b> &bull; ${s.operation} &bull; ${s.startTime}&ndash;${s.endTime} &bull; ${s.location||''}</div><span class="spacer"></span><span class="pill">${s.status}</span></div>
       <p>${(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:'Unassigned'} (${a.position||''})`;}).join(', ')||'No students assigned.'}</p>
       <p class="small">${s.notes||''}</p>
       <div class="row"><button class="small-btn" onclick="state.editingShiftId=${s.id};render()">Edit</button><button class="small-btn" onclick="duplicateShift(${s.id})">Duplicate</button><button class="small-btn success" onclick="toggleShiftPublish(${s.id})">${s.status==='Published'?'Unpublish':'Publish'}</button><button class="small-btn danger" onclick="deleteShift(${s.id})">Delete</button></div>
-    </div>`).join('')||'<p>No shifts scheduled yet.</p>'}
+    </div>`).join('')||(search?'<p>No shifts match your search.</p>':'<p>No shifts scheduled yet.</p>')}
   </section>`;
 }
+window.filterScheduleByText=(val)=>{
+  state.scheduleSearch=val;render();
+  let el=$('#scheduleSearchInput');
+  if(el){el.focus();let pos=val.length;el.setSelectionRange(pos,pos);}
+};
 function shiftForm(id){
   let s=(id&&id!=='new')?db.scheduledShifts.find(x=>x.id===id):null;
   let students=db.users.filter(u=>u.role==='student'&&u.active);
@@ -1428,7 +1445,14 @@ window.toggleShiftPublish=(id)=>{let s=db.scheduledShifts.find(x=>x.id===id);if(
 window.deleteShift=(id)=>{if(!confirm('Delete this scheduled shift?'))return;db.scheduledShifts=db.scheduledShifts.filter(x=>x.id!==id);save();render();};
 window.exportScheduleCSV=()=>{
   let rows=[['Date','Operation','Start','End','Location','Status','Assignments']];
-  (db.scheduledShifts||[]).forEach(s=>rows.push([s.date,s.operation,s.startTime,s.endTime,s.location||'',s.status,(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} (${a.position||''})`;}).join('; ')]));
+  let shifts=(db.scheduledShifts||[]).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  let byOperation={};
+  shifts.forEach(s=>{let op=s.operation||'Unassigned';(byOperation[op]=byOperation[op]||[]).push(s);});
+  Object.keys(byOperation).sort().forEach(op=>{
+    rows.push([`== ${op} ==`]);
+    byOperation[op].forEach(s=>rows.push([s.date,s.operation,s.startTime,s.endTime,s.location||'',s.status,(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} (${a.position||''})`;}).join('; ')]));
+    rows.push([]);
+  });
   downloadCSV('guthrie-rms-schedule.csv',rows);
 };
 
