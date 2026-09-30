@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Daily Pars
+- Added a Daily Pars screen (managers and teachers) to set how many of each menu item are available for the day, grouped by category with All / Counter + To-Go / Dining Room filters.
+- Shows sold and remaining counts, marks items Sold Out at 0, and adds 86 / Un-86 buttons plus Refill All to Par and Clear All Pars.
+- Pars carry over day to day; counts refill and manual 86s clear automatically on the first use each morning (local date), with the previous day logged to production history.
+
 ## Common Grounds Café Menu
 - Added 14 Common Grounds café items (cookies, protein muffins, wraps/quesadilla/bowl, refreshers, Iced Latte, Hot Coffee with Syrup) to Counter + To-Go ordering, priced at cookies $1, muffins $2, refreshers $3, Iced Latte / Hot Coffee with Syrup $3, and entrées $4.
 - Added modifiers for each café item, including Vanilla / Mocha / Caramel / Pumpkin flavor choices for Iced Latte and Hot Coffee with Syrup.

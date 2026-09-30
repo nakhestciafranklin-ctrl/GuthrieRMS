@@ -742,8 +742,8 @@ function normalizeOrders(){
 function toast(msg){let old=document.querySelector('.toast'); if(old)old.remove(); document.body.insertAdjacentHTML('beforeend',`<div class="toast">${msg}</div>`); setTimeout(()=>{let t=document.querySelector('.toast'); if(t)t.remove()},2200);}
 function normalizeAccessForUser(u){
   const roleDefaults={
-    manager:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],
-    teacher:['clock','inventory','catering','recipes','reports','invoices','development','schedule'],
+    manager:['clock','dining','quick','pars','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],
+    teacher:['clock','pars','inventory','catering','recipes','reports','invoices','development','schedule'],
     student:['clock','dining','quick','checkout','kms','inventory','development']
   };
   const defaults=roleDefaults[u.role]||roleDefaults.student;
@@ -788,11 +788,11 @@ function login(){applyTheme();app.innerHTML=`<div class="login"><div class="card
 function allowedViews(){
   if(!state.user) return [];
   normalizeAccessForUser(state.user);
-  const order=['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'];
+  const order=['clock','dining','quick','pars','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'];
   return order.filter(v=>(state.user.access||[]).includes(v) || state.user.role==='manager');
 }
 function canView(v){return allowedViews().includes(v)||state.user.role==='manager';}
-function topbar(){let labels={clock:'Clock In/Out',dining:'Dining Room',quick:'Counter + To-Go',checkout:'Checkout',kms:'KMS',inventory:'Inventory',catering:'Catering',recipes:'Recipes/Labs',recipes:'Recipes/Labs',reports:'Reports',invoices:'Invoices',development:'Student Development',schedule:'Scheduling',setup:'Settings',closeout:'End of Day'}; let nav=allowedViews().filter(v=>labels[v]).map(v=>v+':'+labels[v]); return `<header class="topbar"><img src="assets/guthrie-center-logo.jpg"><b>${db.settings?.businessName||'Guthrie RMS'}</b><span>${state.user.name} • ${state.user.pos}</span><span class="spacer"></span><nav class="nav"><button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">🏠 Dashboard</button>${nav.map(x=>{let [v,l]=x.split(':');return `<button data-view="${v}" class="${state.view===v?'active':''}">${l}</button>`}).join('')}<button data-logout>Log Out</button></nav></header>`}
+function topbar(){let labels={clock:'Clock In/Out',dining:'Dining Room',quick:'Counter + To-Go',pars:'Daily Pars',checkout:'Checkout',kms:'KMS',inventory:'Inventory',catering:'Catering',recipes:'Recipes/Labs',recipes:'Recipes/Labs',reports:'Reports',invoices:'Invoices',development:'Student Development',schedule:'Scheduling',setup:'Settings',closeout:'End of Day'}; let nav=allowedViews().filter(v=>labels[v]).map(v=>v+':'+labels[v]); return `<header class="topbar"><img src="assets/guthrie-center-logo.jpg"><b>${db.settings?.businessName||'Guthrie RMS'}</b><span>${state.user.name} • ${state.user.pos}</span><span class="spacer"></span><nav class="nav"><button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">🏠 Dashboard</button>${nav.map(x=>{let [v,l]=x.split(':');return `<button data-view="${v}" class="${state.view===v?'active':''}">${l}</button>`}).join('')}<button data-logout>Log Out</button></nav></header>`}
 function bindCommon(){
   document.querySelectorAll('[data-view]').forEach(b=>{
     b.onclick=(e)=>{e.preventDefault();let v=b.dataset.view;if(v==='dashboard'||canView(v)){state.view=v;render()}else alert('Access not assigned for this area.')}
@@ -815,10 +815,10 @@ function dashboardScheduleWidget(){
 }
 
 const activeShift=()=>db.shifts.find(s=>s.userId===state.user.id&&!s.out);
-function roleTiles(){let tiles=allowedViews(); return tiles.map(v=>`<button class="tile" data-view="${v}">${({clock:'Clock In / Out',dining:'Dining Room',quick:'Counter + To-Go',checkout:'Checkout',kms:'KMS',inventory:'Inventory',catering:'Catering',recipes:'Recipes/Labs',recipes:'Recipes/Labs',reports:'Reports',invoices:'Invoices',development:'Student Development',schedule:'Scheduling',setup:'Settings',closeout:'End of Day Closeout'})[v]}</button>`).join('')}
+function roleTiles(){let tiles=allowedViews(); return tiles.map(v=>`<button class="tile" data-view="${v}">${({clock:'Clock In / Out',dining:'Dining Room',quick:'Counter + To-Go',pars:'Daily Pars',checkout:'Checkout',kms:'KMS',inventory:'Inventory',catering:'Catering',recipes:'Recipes/Labs',recipes:'Recipes/Labs',reports:'Reports',invoices:'Invoices',development:'Student Development',schedule:'Scheduling',setup:'Settings',closeout:'End of Day Closeout'})[v]}</button>`).join('')}
 const views={dashboard:()=>`<section class="card"><h1>Welcome, ${state.user.name}</h1><p>${activeShift()?'Clocked in: '+new Date(activeShift().in).toLocaleTimeString():'Not clocked in'}</p>${dashboardScheduleWidget()}<div class="grid">${roleTiles()}</div></section>`,
 clock:()=>`<section class="card"><h1>Clock In / Clock Out</h1><p>${activeShift()?`You clocked in at ${new Date(activeShift().in).toLocaleString()}`:'You are not clocked in.'}</p><button class="primary ${activeShift()?'danger':'success'}" onclick="toggleClock()">${activeShift()?'Clock Out':'Clock In'}</button></section>`,
-dining:()=>dining(), quick:()=>quick(), order:()=>orderScreen(), checkout:()=>checkout(), kms:()=>kms(), inventory:()=>inventory(), catering:()=>catering(), recipes:()=>recipesLab(), reports:()=>reports(), invoices:()=>invoiceCenter(), development:()=>development(), schedule:()=>scheduleCenter(), closeout:()=>closeout(), setup:()=>setup()};
+dining:()=>dining(), quick:()=>quick(), pars:()=>parsScreen(), order:()=>orderScreen(), checkout:()=>checkout(), kms:()=>kms(), inventory:()=>inventory(), catering:()=>catering(), recipes:()=>recipesLab(), reports:()=>reports(), invoices:()=>invoiceCenter(), development:()=>development(), schedule:()=>scheduleCenter(), closeout:()=>closeout(), setup:()=>setup()};
 window.toggleClock=()=>{let s=activeShift(); if(s){s.out=now(); s.hours=shiftHours(s);}else db.shifts.push({id:Date.now(),userId:state.user.id,name:state.user.name,pos:state.user.pos,teacherId:state.user.teacherId||'',serviceType:'Shift',in:now(),out:null}); save();render()};
 function dining(){return `<section class="card"><h1>Dining Room</h1><div class="table-grid">${db.tables.map(t=>`<div class="table-card status-${t.status==='open'?'open':t.status==='ready'?'ready':'active'}" onclick="openTable(${t.id})"><h3>Table ${t.id}</h3><p>${t.seats} seats</p><p>${t.status}</p></div>`).join('')}</div></section>`}
 window.openTable=id=>{let t=db.tables.find(x=>x.id===id); if(!t.orderId){let o={id:Date.now(),type:'table',tableId:id,customer:'Table '+id,items:[],status:'open',created:now(),sent:null,paid:false}; db.orders.push(o); t.orderId=o.id;t.status='active';save()} state.activeOrder=t.orderId; state.seat=1; state.view='order'; render()};
@@ -1117,7 +1117,24 @@ async function startHtml5QrcodeScanner(targetInputId,mode,mount){if(typeof Html5
 window.openBarcodeCamera=async(targetInputId,mode='inventory')=>{ensureAudioContext();await stopBarcodeCamera();let mount=$('#barcodeCameraMount');if(!mount)return;if(!navigator.mediaDevices?.getUserMedia){mount.innerHTML='<div class="notice danger">Camera access is not available in this browser. Use Bluetooth scanner or manual barcode entry.</div>';return;}if(isAppleMobile()){return startHtml5QrcodeScanner(targetInputId,mode,mount);}if('BarcodeDetector' in window){try{barcodeDetectorInstance=barcodeDetectorInstance||new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});barcodeCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});mount.innerHTML=`<div class="barcode-camera"><video id="barcodeVideo" autoplay playsinline muted></video><div class="barcode-frame"></div><p id="barcodeStatus" class="small">Point the rear camera at the barcode.</p><button class="small-btn danger" onclick="stopBarcodeCamera()">Cancel Camera</button></div>`;let video=$('#barcodeVideo');video.srcObject=barcodeCameraStream;await video.play();let scan=async()=>{if(!barcodeCameraStream||!video)return;try{let codes=await barcodeDetectorInstance.detect(video);if(codes?.length){handleScannedBarcode(codes[0].rawValue,targetInputId,mode);return;}}catch(e){}barcodeCameraTimer=setTimeout(scan,250);};scan();return;}catch(err){}}return startHtml5QrcodeScanner(targetInputId,mode,mount);};
 
 // ---- Production / 86 tracking ----
+// Local calendar date so the daily par count doesn't reset mid-evening at UTC midnight.
+function productionToday(){return new Date().toLocaleDateString('en-CA');}
+// On the first use each day, log yesterday's counts to history, refill every item to its
+// par (pars carry forward day to day), and clear manual 86s.
+function rollProductionDay(){
+  let today=productionToday();
+  if(db.production.date===today) return false;
+  db.production.items=db.production.items||{};
+  db.production.history=db.production.history||[];
+  if(db.production.date) db.production.history.push({date:db.production.date,items:JSON.parse(JSON.stringify(db.production.items))});
+  db.production.history=db.production.history.slice(-30);
+  Object.values(db.production.items).forEach(p=>{p.remaining=Number(p.startingPar)||0;p.manual86=false;p.reason='';});
+  db.production.date=today;
+  save();
+  return true;
+}
 function productionItem(menuId){
+  rollProductionDay();
   db.production.items=db.production.items||{};
   if(!db.production.items[menuId]){
     let m=db.menu.find(x=>x.id===menuId);
@@ -1157,6 +1174,50 @@ function renderBistroMenuButtons(orderType){
     return `<button class="menu-item ${d86?'disabled86':''}" onclick="modifierModal(${m.id},state.seat)">${m.name}<br><span class="small">${money(m.price)}${d86?' &bull; Sold Out':''}</span></button>`;
   }).join('');
 }
+
+// ---- Daily Pars ----
+function parsScreen(){
+  rollProductionDay();
+  let filter=state.parsFilter||'all';
+  let filters=[['all','All Items'],['togo','Counter + To-Go'],['table','Dining Room']];
+  let items=db.menu.filter(m=>m.active!==false&&(filter==='all'||!Array.isArray(m.services)||m.services.includes(filter)));
+  let categories=[...new Set(items.map(m=>m.category||'Other'))];
+  let withPar=items.filter(m=>productionItem(m.id).startingPar>0);
+  let soldOut=items.filter(m=>isMenu86(m));
+  let row=m=>{
+    let p=productionItem(m.id), par=Number(p.startingPar)||0, d86=isMenu86(m);
+    let sold=par>0?par-p.remaining:null;
+    return `<tr><td><b>${m.name}</b></td><td><input class="input par-input" type="number" min="0" step="1" inputmode="numeric" data-par-id="${m.id}" value="${par||''}" placeholder="No limit" style="max-width:120px"></td><td>${sold==null?'—':sold}</td><td>${par>0?p.remaining:'No limit'}</td><td>${d86?`<b style="color:var(--red)">${p.manual86?'86\'d':'Sold Out'}</b>`:'Available'}</td><td><button class="small-btn ${p.manual86?'':'danger'}" onclick="toggleManual86(${m.id})">${p.manual86?'Un-86':'86 Item'}</button></td></tr>`;
+  };
+  return `<section class="card"><h1>Daily Pars</h1>
+    <p class="notice">Set how many of each item are available today (${productionToday()}). Leave a par blank or 0 for no limit. When an item's count reaches 0 it shows as Sold Out on the order screens. Pars carry over to the next day and counts refill automatically each morning.</p>
+    <div class="stats"><div><b>${withPar.length}</b><span>Items with a Par</span></div><div><b>${soldOut.length}</b><span>Sold Out / 86'd</span></div></div>
+    <div class="row section">${filters.map(([k,l])=>`<button class="${filter===k?'primary':'small-btn'}" onclick="state.parsFilter='${k}';render()">${l}</button>`).join('')}</div>
+    ${categories.map(c=>`<h2>${c}</h2><table class="report-table" style="table-layout:fixed;width:100%"><colgroup><col style="width:32%"><col style="width:18%"><col style="width:10%"><col style="width:14%"><col style="width:12%"><col style="width:14%"></colgroup><tr><th>Item</th><th>Today's Par</th><th>Sold</th><th>Remaining</th><th>Status</th><th>86</th></tr>${items.filter(m=>(m.category||'Other')===c).map(row).join('')}</table>`).join('')||'<p>No menu items configured.</p>'}
+    <div class="row section"><button class="primary success" onclick="saveDailyPars()">Save Pars</button><button class="primary" onclick="refillDailyPars()">Refill All to Par</button><button class="primary danger" onclick="clearDailyPars()">Clear All Pars</button></div>
+  </section>`;
+}
+// Changing a par mid-day keeps what has already sold: remaining = new par − sold so far.
+window.saveDailyPars=()=>{
+  document.querySelectorAll('[data-par-id]').forEach(inp=>{
+    let id=Number(inp.dataset.parId), m=db.menu.find(x=>x.id===id); if(!m)return;
+    let p=productionItem(id), par=Math.max(0,Math.floor(Number(inp.value)||0));
+    let sold=p.startingPar>0?p.startingPar-p.remaining:0;
+    p.startingPar=par; p.remaining=Math.max(0,par-sold); m.dailyPar=par;
+  });
+  save(); render(); alert('Daily pars saved.');
+};
+window.refillDailyPars=()=>{
+  if(!confirm('Reset every item\'s remaining count back to its full par? Use this only at the start of service.'))return;
+  Object.values(db.production.items||{}).forEach(p=>{p.remaining=Number(p.startingPar)||0;});
+  save(); render();
+};
+window.clearDailyPars=()=>{
+  if(!confirm('Remove the par from every item so nothing has a limit today?'))return;
+  db.menu.forEach(m=>{let p=productionItem(m.id); p.startingPar=0; p.remaining=0; m.dailyPar=0;});
+  save(); render();
+};
+window.toggleManual86=id=>{let p=productionItem(id); p.manual86=!p.manual86; p.reason=p.manual86?'Manual 86':''; save(); render();};
 
 // ---- Shared inventory / CSV helpers ----
 function locations(division){
