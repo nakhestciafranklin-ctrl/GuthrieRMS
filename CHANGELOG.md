@@ -1,5 +1,12 @@
 # Guthrie RMS Changelog
 
+## KMS Build-Out
+- Expo now sees every line on every ticket, with its station, seat, each modifier as its own tag (allergy alerts in red), and custom notes.
+- Stations mark their own items done (per item or with a station Done button); Expo sees a check mark on finished lines and an items-done count.
+- Items added after a ticket was sent show a NEW tag; the log records "Added Items Sent".
+- Counter and to-go tickets paid before they are made stay on the KMS (marked PAID) until completed.
+- Added a Recently Completed list with Recall, oldest-first ticket order, and timers that tick without redrawing the screen (the action log stays open).
+
 ## Sales by Item Report
 - Added a Sales by Item table to Reports: quantity sold, sales, % of sales, category, and a count of each modifier (e.g. Iced Latte flavors).
 - Added Today / Last 7 Days / This Month / All Time / Custom date ranges to the sales figures, sales by order type, and CSV exports.

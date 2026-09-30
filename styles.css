@@ -56,3 +56,22 @@ button,.primary,.secondary,.small-btn,.tile,.menu-item,.input,.tabs button,.seat
 /* iPad / Safari barcode inventory workflow */
 .ipad-scan-panel{max-width:900px;margin-inline:auto}.scan-workflow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 18px}.scan-step{display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;border-radius:12px;background:#f2f6fb;color:#53627c;font-weight:800}.scan-step b{display:flex;width:25px;height:25px;border-radius:50%;align-items:center;justify-content:center;background:#d6e1ef;color:#23456f}.scan-step.active{background:#eaf2ff;color:var(--blue)}.scan-step.active b{background:var(--blue);color:#fff}.ipad-scan-button{min-height:52px;font-size:16px}.ipad-barcode-input,.ipad-qty{min-height:52px;font-size:20px}.ipad-scan-result{padding:20px}.ipad-action-row button{min-height:50px;min-width:150px}.ipad-camera{max-width:760px}.ipad-camera-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:0 0 10px}.ipad-camera-head .small{color:#dce7ff}.scan-guidance{padding:10px;margin:10px 0;border-radius:10px;background:#17243a;color:#fff;font-weight:700}.ipad-camera #html5BarcodeReader{background:#000;border-radius:12px;overflow:hidden}.ipad-camera #html5BarcodeReader video{width:100%!important;max-height:520px!important;object-fit:cover!important}.ipad-camera #html5BarcodeReader img{display:none!important}.ipad-camera #html5BarcodeReader select,.ipad-camera #html5BarcodeReader button{font-size:16px!important;min-height:44px!important}
 @media(max-width:820px){.ipad-scan-panel{padding:16px}.scan-workflow{grid-template-columns:repeat(2,1fr)}.camera-scan-row{grid-template-columns:1fr}.ipad-scan-button{width:100%}.ipad-action-row{display:grid;grid-template-columns:1fr}.ipad-action-row button{width:100%}.ipad-camera{max-width:none;margin:10px 0}.ipad-camera-head{align-items:flex-start;flex-direction:column}.ipad-barcode-input,.ipad-qty{font-size:22px}}
+
+/* KMS item lines */
+.kms-lines{display:grid;gap:8px;margin:10px 0}
+.kms-line{display:flex;gap:12px;align-items:flex-start;border:1px solid #d7e1ee;border-radius:12px;padding:10px 12px;background:#fbfdff}
+.kms-line.done{background:#eef7ef;border-color:#b9dcbc}
+.kms-line.done .kms-line-head b{text-decoration:line-through;color:#4b5f4d}
+.kms-check{flex:0 0 36px;width:36px;height:36px;border:2px solid var(--blue);background:white;color:var(--green);font-size:22px;font-weight:900;cursor:pointer;padding:0}
+.kms-line.done .kms-check{border-color:var(--green);background:var(--green);color:white}
+.kms-line-body{flex:1;min-width:0}
+.kms-line-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:18px}
+.kms-mods{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.kms-mod{background:#eef5ff;border:1px solid #cfe1ff;color:#0b2d6b;border-radius:999px;padding:3px 10px;font-weight:700;font-size:14px}
+.kms-mod.alert{background:#fdecea;border-color:var(--red);color:var(--red);font-weight:900}
+.kms-note{background:#fff8e1;border:1px solid #f3d27a;color:#6b4a00;border-radius:8px;padding:3px 10px;font-weight:700;font-size:14px;font-style:italic}
+.kms-station{font-size:11px;font-weight:800;letter-spacing:.04em;background:#43556d;color:white;border-radius:6px;padding:2px 6px}
+.kms-new{font-size:11px;font-weight:900;background:var(--gold);color:#102033;border-radius:6px;padding:2px 6px}
+.kms-paid{font-size:12px;font-weight:900;background:var(--green);color:white;border-radius:6px;padding:2px 8px;vertical-align:middle}
+.ticket.station-done{opacity:.6}
+.kms-recent{justify-content:space-between;align-items:center;border-top:1px solid #e3e9f2;padding:8px 0}

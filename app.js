@@ -841,8 +841,11 @@ window.sendKitchen=(orderId)=>{
   o.sent=now();
   o.status='sent';
   o.kmsStage='sent';
+  // Number each send so lines added after the first send show as NEW on the KMS.
+  o.sendCount=(Number(o.sendCount)||0)+1;
+  items.forEach(i=>{if(!i.sendRound)i.sendRound=o.sendCount;});
   o.kmsLog=o.kmsLog||[];
-  o.kmsLog.push({stage:'Sent to Kitchen',time:o.sent,by:state.user?.name||'System'});
+  o.kmsLog.push({stage:o.sendCount>1?'Added Items Sent':'Sent to Kitchen',time:o.sent,by:state.user?.name||'System'});
   if(o.type==='table'&&o.tableId){
     const t=db.tables.find(t=>t.id===o.tableId);
     if(t){t.status='sent';t.orderId=o.id;}
@@ -933,15 +936,28 @@ window.submitRefund=(orderId)=>{
  state.refundOrder=null; save(); render(); toast('Refund recorded.');
 };
 
-function kms(){
- const stations=[
-  ['all','All Tickets'],['expo','Expo'],['grill','Grill'],['salad','Salad'],['beverage','Beverage'],['dessert','Dessert'],['catering','Catering']
- ];
- let list=db.orders.filter(o=>o.sent&&!['paid','closed','completed'].includes(o.status));
- if(state.kmsStation!=='all') list=list.filter(o=>stationItems(o,state.kmsStation).length);
- let counts=Object.fromEntries(stations.map(([key])=>[key,key==='all'?db.orders.filter(o=>o.sent&&!['paid','closed','completed'].includes(o.status)).length:db.orders.filter(o=>o.sent&&!['paid','closed','completed'].includes(o.status)&&stationItems(o,key).length).length]));
- return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Kitchen students select their station, then move tickets through Start Prep → Plating → Ready → Complete. Station routing will be expanded in a later phase.</p><div class="station-grid">${stations.map(([key,label])=>`<button class="station-tile ${state.kmsStation===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${stations.find(x=>x[0]===state.kmsStation)?.[1]||'All Tickets'}</h2><span>${list.length} active ticket(s)</span></div>${list.map(kmsTicket).join('')||'<p>No tickets for this station.</p>'}</section>`
+const kmsStationList=[['all','All Tickets'],['expo','Expo'],['grill','Grill'],['salad','Salad'],['beverage','Beverage'],['dessert','Dessert'],['catering','Catering']];
+// A ticket stays on the KMS until it is completed. Table tickets also drop off once paid;
+// counter/to-go tickets are often paid first, so they stay until completed (same day only).
+function kmsActive(o){
+ if(!o.sent||o.kmsStage==='completed'||['closed','completed','refunded'].includes(o.status)) return false;
+ if(!o.paid) return true;
+ return o.type!=='table'&&new Date(o.paidAt||0).toLocaleDateString('en-CA')===productionToday();
 }
+// Expo and All Tickets see every line on the ticket; other stations see only their own lines.
+function kmsVisibleItems(o,station){return (station==='all'||station==='expo')?validItems(o):stationItems(o,station);}
+function kmsStationDone(o,station){let items=kmsVisibleItems(o,station);return items.length>0&&items.every(i=>i.kmsDone);}
+function kms(){
+ let station=state.kmsStation||'all', label=kmsStationList.find(x=>x[0]===station)?.[1]||'All Tickets';
+ let active=db.orders.filter(kmsActive).sort((a,b)=>new Date(a.sent)-new Date(b.sent));
+ let list=active.filter(o=>kmsVisibleItems(o,station).length);
+ let perStation=!['all','expo'].includes(station);
+ let open=perStation?list.filter(o=>!kmsStationDone(o,station)):list, done=perStation?list.filter(o=>kmsStationDone(o,station)):[];
+ let counts=Object.fromEntries(kmsStationList.map(([key])=>[key,active.filter(o=>kmsVisibleItems(o,key).length&&(['all','expo'].includes(key)||!kmsStationDone(o,key))).length]));
+ let recent=db.orders.filter(o=>o.kmsStage==='completed'&&o.sent).sort((a,b)=>kmsLastTime(b)-kmsLastTime(a)).slice(0,5);
+ return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Select your station. Tap the box next to an item when it is made, or use the station Done button. Expo sees every item, modifier, and note on each ticket, with a check mark on lines stations have finished, and moves tickets through Start Prep → Plating → Ready → Complete.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${recent.length?`<details class="section"><summary><b>Recently Completed</b> (${recent.length})</summary>${recent.map(o=>`<div class="row kms-recent"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • completed ${new Date(kmsLastTime(o)).toLocaleTimeString()}</span><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}</details>`:''}</section>`;
+}
+function kmsLastTime(o){let l=(o.kmsLog||[]).slice(-1)[0];return new Date(l?.time||o.sent||0).getTime();}
 function itemStation(item,order){
  let name=(item?.name||'').toLowerCase();
  if(order?.type==='catering'||name.includes('catering')||name.includes('box lunch')) return 'catering';
@@ -961,26 +977,49 @@ function stationSummary(order){
  let stations=[...new Set(validItems(order).map(i=>itemStation(i,order)))];
  return stations.map(s=>labels[s]||s).join(' • ');
 }
-function kmsTicket(o){
+function kmsElapsed(sent){
+ let elapsed=Math.max(0,Date.now()-new Date(sent).getTime()), mins=Math.floor(elapsed/60000), secs=String(Math.floor(elapsed/1000)%60).padStart(2,'0');
+ return {text:`${mins}:${secs}`,cls:mins>=15?'late':mins>=10?'warn':''};
+}
+function kmsTicket(o,station){
  o.kmsStage=o.kmsStage||'sent';
- let elapsed=Date.now()-new Date(o.sent).getTime(), mins=Math.floor(elapsed/60000), secs=String(Math.floor(elapsed/1000)%60).padStart(2,'0'), cls=mins>=15?'late':mins>=10?'warn':'';
- let items=stationItems(o,state.kmsStation);
- return `<div class="ticket ${cls}"><div class="row"><div><h2>${o.customer}</h2><p class="small">${o.type.toUpperCase()} • ${stationSummary(o)}</p></div><span class="spacer"></span><div class="timer">${mins}:${secs}</div></div>${kmsProgress(o)}${kmsItemsTable(o,items)}<div class="row section">${kmsButtons(o)}</div>${kmsLog(o)}</div>`;
+ let t=kmsElapsed(o.sent), items=kmsVisibleItems(o,station), all=validItems(o), doneCount=all.filter(i=>i.kmsDone).length;
+ let perStation=!['all','expo'].includes(station), stationLabel=kmsStationList.find(x=>x[0]===station)?.[1]||station;
+ let where=o.type==='table'&&o.tableId?`TABLE ${o.tableId}`:o.type==='togo'?'TO-GO':o.type.toUpperCase();
+ let bump=perStation&&items.some(i=>!i.kmsDone)?`<button class="primary success" onclick="markStationDone(${o.id},'${station}')">${stationLabel} Items Done</button>`:'';
+ return `<div class="ticket ${t.cls} ${perStation&&kmsStationDone(o,station)?'station-done':''}"><div class="row"><div><h2>${o.customer}${o.paid?' <span class="kms-paid">PAID</span>':''}</h2><p class="small">${where} • ${stationSummary(o)} • ${doneCount}/${all.length} items done</p></div><span class="spacer"></span><div class="timer" data-kms-sent="${o.sent}">${t.text}</div></div>${kmsProgress(o)}${kmsItemsList(o,items,station)}<div class="row section">${bump}${kmsButtons(o)}</div>${kmsLog(o)}</div>`;
 }
 function kmsProgress(o){
  let stages=['sent','prepping','plating','ready'];let labels={sent:'Sent',prepping:'Prep',plating:'Plating',ready:'Ready'};
  return `<div class="progress">${stages.map(st=>`<div class="step ${stages.indexOf(st)<=stages.indexOf(o.kmsStage)?'done':''}">${labels[st]}</div>`).join('')}</div>`;
 }
-function kmsItemsTable(o,items){
+// One row per line: done box, item, station, seat, NEW badge for items added after the first send,
+// and every modifier as its own chip (allergy alerts in red) plus the custom note.
+function kmsItemsList(o,items,station){
  items=items||validItems(o);
- return items.length?`<table class="report-table"><tr><th>Station</th><th>Seat</th><th>Item</th><th>Mods / Notes</th></tr>${items.map(i=>`<tr><td>${itemStation(i,o).toUpperCase()}</td><td>${i.seat||'-'}</td><td><b>${i.name}</b></td><td>${[...(i.mods||[]),i.note].filter(Boolean).join(', ')}</td></tr>`).join('')}</table>`:'<p>No station items.</p>';
+ if(!items.length) return '<p>No station items.</p>';
+ let showStation=['all','expo'].includes(station);
+ return `<div class="kms-lines">${items.map(i=>{
+  let isNew=(Number(i.sendRound)||1)>1&&i.sendRound===o.sendCount;
+  let mods=(i.mods||[]).map(md=>`<span class="kms-mod ${/allerg/i.test(md)?'alert':''}">${md}</span>`).join('');
+  let note=i.note?`<span class="kms-note">Note: ${i.note}</span>`:'';
+  return `<div class="kms-line ${i.kmsDone?'done':''}"><button class="kms-check" title="Mark item done" onclick="toggleKmsItem(${o.id},'${i.lineId}')">${i.kmsDone?'✓':''}</button><div class="kms-line-body"><div class="kms-line-head"><b>${i.name}</b>${isNew?'<span class="kms-new">NEW</span>':''}${showStation?`<span class="kms-station">${itemStation(i,o).toUpperCase()}</span>`:''}${o.type==='table'?`<span class="small">Seat ${i.seat||'-'}</span>`:''}</div>${mods||note?`<div class="kms-mods">${mods}${note}</div>`:''}</div></div>`;
+ }).join('')}</div>`;
 }
 function kmsLog(o){
  let logs=(o.kmsLog||[]).slice(-4).reverse();
  return logs.length?`<details class="small"><summary>Ticket action log</summary>${logs.map(l=>`<p>${new Date(l.time).toLocaleTimeString()} • ${l.stage} • ${l.by||''}</p>`).join('')}</details>`:'';
 }
 function kmsButtons(o){let st=o.kmsStage||'sent';let b=[]; if(st==='sent')b.push(`<button class="primary" onclick="kmsStage(${o.id},'prepping')">Start Prep</button>`); if(st==='prepping')b.push(`<button class="primary" onclick="kmsStage(${o.id},'plating')">Move to Plating</button>`); if(st==='plating')b.push(`<button class="primary success" onclick="kmsStage(${o.id},'ready')">Mark Ready</button>`); if(st==='ready')b.push(`<button class="primary success" onclick="kmsStage(${o.id},'completed')">Complete Ticket</button>`); return b.join('')}
-setInterval(()=>{if(state.user&&state.view==='kms')render()},1000); window.ready=id=>kmsStage(id,'ready'); window.kmsStage=(id,stage)=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage=stage; o.kmsLog=o.kmsLog||[]; let label={prepping:'Prep Started',plating:'Moved to Plating',ready:'Marked Ready',completed:'Completed'}[stage]||stage; o.kmsLog.push({stage:label,time:now(),by:state.user.name}); if(stage==='ready')o.status='ready'; if(stage==='completed')o.status='completed'; let t=db.tables.find(x=>x.orderId===id); if(t&&stage==='ready')t.status='ready'; if(t&&stage==='completed')t.status='ready'; save(); render(); toast(label);};
+// Tick the timers in place instead of re-rendering, so open logs and scroll position stay put.
+setInterval(()=>{
+ if(!(state.user&&state.view==='kms'))return;
+ document.querySelectorAll('[data-kms-sent]').forEach(el=>{let t=kmsElapsed(el.dataset.kmsSent), tk=el.closest('.ticket'); el.textContent=t.text; if(tk){tk.classList.toggle('warn',t.cls==='warn');tk.classList.toggle('late',t.cls==='late');}});
+},1000);
+window.toggleKmsItem=(orderId,lineId)=>{let o=db.orders.find(x=>x.id===orderId), i=o&&validItems(o).find(x=>x.lineId===lineId); if(!i)return; i.kmsDone=!i.kmsDone; i.kmsDoneBy=i.kmsDone?state.user.name:''; i.kmsDoneAt=i.kmsDone?now():''; save(); render();};
+window.markStationDone=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationList.find(x=>x[0]===station)?.[1]||station; stationItems(o,station).forEach(i=>{if(!i.kmsDone){i.kmsDone=true;i.kmsDoneBy=state.user.name;i.kmsDoneAt=now();}}); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Items Done`,time:now(),by:state.user.name}); save(); render(); toast(`${label} items done`);};
+window.recallKmsTicket=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage='ready'; if(!o.paid)o.status='ready'; o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:'Recalled',time:now(),by:state.user.name}); save(); render(); toast('Ticket recalled');};
+window.ready=id=>kmsStage(id,'ready'); window.kmsStage=(id,stage)=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage=stage; o.kmsLog=o.kmsLog||[]; let label={prepping:'Prep Started',plating:'Moved to Plating',ready:'Marked Ready',completed:'Completed'}[stage]||stage; o.kmsLog.push({stage:label,time:now(),by:state.user.name}); if(!o.paid&&stage==='ready')o.status='ready'; if(!o.paid&&stage==='completed')o.status='completed'; let t=db.tables.find(x=>x.orderId===id); if(t&&stage==='ready')t.status='ready'; if(t&&stage==='completed')t.status='ready'; save(); render(); toast(label);};
 function inventory(){
  if(state.user.inventoryScope==='culinary') state.invDivision='culinary';
  const allItems=db.inventory.filter(i=>i.division===state.invDivision);
