@@ -103,6 +103,7 @@ if(!isConfigured(firebaseConfig)){
               // migration (e.g. roster imports) has to be re-applied here or it
               // gets silently discarded the moment cloud data arrives.
               if(typeof window.importRosterStudents==='function') window.importRosterStudents();
+              if(typeof window.importCafeMenu==='function') window.importCafeMenu();
               if(window.__guthrieRMSBooted){
                 if(typeof window.normalizeOrders==='function') window.normalizeOrders();
                 if(typeof window.render==='function') window.render();

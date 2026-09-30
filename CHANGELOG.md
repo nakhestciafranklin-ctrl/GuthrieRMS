@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Common Grounds Café Menu
+- Added 14 Common Grounds café items (cookies, protein muffins, wraps/quesadilla/bowl, refreshers, Iced Latte, Hot Coffee with Syrup) to Counter + To-Go ordering, priced from the Common Grounds Version 2.0 costing workbook.
+- Added modifiers for each café item, including Vanilla / Mocha / Caramel / Pumpkin flavor choices for Iced Latte and Hot Coffee with Syrup.
+- Café items are hidden from Dining Room table orders and route to the Beverage, Dessert, and Grill KMS stations.
+
 ## Phase 8C
 - Restored Recipes / Labs tools.
 - Added recipe ingredient lines tied to Culinary Inventory.

@@ -669,6 +669,39 @@ function importRosterStudents(){
 }
 window.importRosterStudents=importRosterStudents;
 importRosterStudents();
+// Common Grounds café items from the Common Grounds Version 2.0 recipe workbook.
+// Prices are the workbook's "Selling price / 1" (total cost per serving × 1.33).
+// services limits these to Counter + To-Go orders so they stay off the Bistro
+// dining-room menu. Fixed ids let the import skip items already on file.
+const cafeMenuData=[
+ {id:101,name:'Chocolate Chip Cookie',price:0.22,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:102,name:'Snickerdoodle Cookie',price:0.26,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:103,name:'Red Velvet Cookie',price:0.19,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:104,name:'Protein Banana Oat Muffin',price:0.96,category:'Dessert',mods:['Warm Muffin','Allergy Alert']},
+ {id:105,name:'Protein Pumpkin Muffin',price:1.51,category:'Dessert',mods:['Warm Muffin','Allergy Alert']},
+ {id:106,name:'Hot Honey Chicken Wrap',price:2.60,category:'Entree',mods:['No Cheese','No Tomato','No Cabbage','No Lettuce','No Sauce','Sauce on Side','Not Toasted (Cold)','Allergy Alert']},
+ {id:107,name:'Chicken Quesadilla',price:2.15,category:'Entree',mods:['No Cheese','No Beans','No Corn','No Pico','Pico on Side','No Cilantro','Allergy Alert']},
+ {id:108,name:'Street Corn Chicken Bowl',price:3.02,category:'Entree',mods:['No Beans','No Corn','No Pico','No Lettuce','No Crema','Crema on Side','No Cilantro','No Feta','Allergy Alert']},
+ {id:109,name:'Strawberry Lemon Refresher',price:0.70,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
+ {id:110,name:'Peach Berry Refresher',price:0.74,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
+ {id:111,name:'Mango Citrus Refresher',price:0.66,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
+ {id:112,name:'Blue Raspberry Lemon Refresher',price:0.92,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
+ {id:113,name:'Iced Latte',price:1.59,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice']},
+ {id:114,name:'Hot Coffee with Syrup',price:1.39,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream']}
+];
+function importCafeMenu(){
+  let changed=false;
+  if(!Array.isArray(db.menu))db.menu=[];
+  cafeMenuData.forEach(item=>{
+    if(db.menu.some(m=>m.id===item.id))return;
+    db.menu.push({...item,mods:[...item.mods],inv:'bistro',services:['counter','togo'],active:true,dailyPar:0});
+    changed=true;
+  });
+  if(changed)save();
+  return changed;
+}
+window.importCafeMenu=importCafeMenu;
+importCafeMenu();
 let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();
@@ -781,7 +814,7 @@ dining:()=>dining(), quick:()=>quick(), order:()=>orderScreen(), checkout:()=>ch
 window.toggleClock=()=>{let s=activeShift(); if(s){s.out=now(); s.hours=shiftHours(s);}else db.shifts.push({id:Date.now(),userId:state.user.id,name:state.user.name,pos:state.user.pos,teacherId:state.user.teacherId||'',serviceType:'Shift',in:now(),out:null}); save();render()};
 function dining(){return `<section class="card"><h1>Dining Room</h1><div class="table-grid">${db.tables.map(t=>`<div class="table-card status-${t.status==='open'?'open':t.status==='ready'?'ready':'active'}" onclick="openTable(${t.id})"><h3>Table ${t.id}</h3><p>${t.seats} seats</p><p>${t.status}</p></div>`).join('')}</div></section>`}
 window.openTable=id=>{let t=db.tables.find(x=>x.id===id); if(!t.orderId){let o={id:Date.now(),type:'table',tableId:id,customer:'Table '+id,items:[],status:'open',created:now(),sent:null,paid:false}; db.orders.push(o); t.orderId=o.id;t.status='active';save()} state.activeOrder=t.orderId; state.seat=1; state.view='order'; render()};
-function orderScreen(){let o=db.orders.find(x=>x.id===state.activeOrder); if(!o)return `<section class="card"><h1>Order Not Found</h1><button class="primary" onclick="state.view='dashboard';render()">Return</button></section>`; let t=o.type==='table'?db.tables.find(x=>x.id===o.tableId):null; let seats=t?Number(t.seats)||1:1; let checkoutType=o.type==='table'?'table':o.type; return `<section class="card"><h1>${o.customer}</h1>${t?`<div class="seat-tabs">${Array.from({length:seats},(_,i)=>`<button class="${state.seat===i+1?'active':''}" onclick="state.seat=${i+1};render()">Seat ${i+1}</button>`).join('')}</div>`:`<p class="notice">${o.type==='togo'?'To-Go':'Counter'} order entry</p>`}<h3>Add Item ${t?`to Seat ${state.seat}`:''}</h3><div class="menu-grid">${renderBistroMenuButtons()}</div><h3>Ticket</h3>${ticketItems(o)}<div class="row"><button class="primary" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="primary" onclick="state.view='checkout';state.checkoutType='${checkoutType}';state.selectedOrder=${o.id};render()">Checkout</button><button class="primary" onclick="state.view='${t?'dining':'quick'}';render()">Back</button></div></section>`}
+function orderScreen(){let o=db.orders.find(x=>x.id===state.activeOrder); if(!o)return `<section class="card"><h1>Order Not Found</h1><button class="primary" onclick="state.view='dashboard';render()">Return</button></section>`; let t=o.type==='table'?db.tables.find(x=>x.id===o.tableId):null; let seats=t?Number(t.seats)||1:1; let checkoutType=o.type==='table'?'table':o.type; return `<section class="card"><h1>${o.customer}</h1>${t?`<div class="seat-tabs">${Array.from({length:seats},(_,i)=>`<button class="${state.seat===i+1?'active':''}" onclick="state.seat=${i+1};render()">Seat ${i+1}</button>`).join('')}</div>`:`<p class="notice">${o.type==='togo'?'To-Go':'Counter'} order entry</p>`}<h3>Add Item ${t?`to Seat ${state.seat}`:''}</h3><div class="menu-grid">${renderBistroMenuButtons(o.type)}</div><h3>Ticket</h3>${ticketItems(o)}<div class="row"><button class="primary" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="primary" onclick="state.view='checkout';state.checkoutType='${checkoutType}';state.selectedOrder=${o.id};render()">Checkout</button><button class="primary" onclick="state.view='${t?'dining':'quick'}';render()">Back</button></div></section>`}
 function quick(){let list=db.orders.filter(o=>!o.paid&&(o.type==='counter'||o.type==='togo'));return `<section class="card"><h1>Counter + To-Go Order Entry</h1><p class="notice">Create, edit, send, and checkout counter or to-go orders from this page.</p><div class="row"><button class="primary success" onclick="createQuickOrder('counter')">New Counter Order</button><button class="primary success" onclick="createQuickOrder('togo')">New To-Go Order</button></div><h2>Open Counter + To-Go Orders</h2><div class="grid">${list.map(o=>`<div class="order-card"><h3>${o.type==='togo'?'To-Go':'Counter'}: ${o.customer}</h3><p>${validItems(o).length} item(s) • ${money(total(o))} • ${o.status}</p><div class="row"><button class="small-btn" onclick="openQuickOrder(${o.id})">Edit Order</button><button class="small-btn" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="small-btn" onclick="state.checkoutType='${o.type}';state.selectedOrder=${o.id};state.view='checkout';render()">Checkout</button></div></div>`).join('')||'<p>No open counter or to-go orders.</p>'}</div></section>`}
 window.createQuickOrder=(type)=>{let label=type==='togo'?'To-Go':'Counter';let customer=prompt(`Enter customer/order name for ${label}:`, type==='togo'?'To-Go Customer':'Walk-In')||label+' Order';let o={id:Date.now(),type,customer,items:[],status:'open',created:now(),sent:null,paid:false};db.orders.push(o);state.activeOrder=o.id;state.seat=1;state.view='order';save();render();};
 window.openQuickOrder=id=>{let o=db.orders.find(x=>x.id===id);if(!o)return;state.activeOrder=id;state.seat=1;state.view='order';render();};
@@ -904,10 +937,10 @@ function kms(){
 function itemStation(item,order){
  let name=(item?.name||'').toLowerCase();
  if(order?.type==='catering'||name.includes('catering')||name.includes('box lunch')) return 'catering';
- if(name.includes('tea')||name.includes('drink')||name.includes('beverage')||name.includes('lemonade')||name.includes('coffee')) return 'beverage';
- if(name.includes('cookie')||name.includes('dessert')||name.includes('tray')||name.includes('cake')) return 'dessert';
+ if(name.includes('tea')||name.includes('drink')||name.includes('beverage')||name.includes('lemonade')||name.includes('coffee')||name.includes('latte')||name.includes('refresher')) return 'beverage';
+ if(name.includes('cookie')||name.includes('dessert')||name.includes('tray')||name.includes('cake')||name.includes('muffin')) return 'dessert';
  if(name.includes('salad')||name.includes('cobb')) return 'salad';
- if(name.includes('burger')||name.includes('sandwich')||name.includes('grill')) return 'grill';
+ if(name.includes('burger')||name.includes('sandwich')||name.includes('grill')||name.includes('wrap')||name.includes('quesadilla')||name.includes('bowl')) return 'grill';
  return 'expo';
 }
 function stationItems(order,station){
@@ -1107,8 +1140,9 @@ function restoreProduction(menuId,qty){
   let p=productionItem(menuId);
   if(p.startingPar>0) p.remaining=Math.min(p.startingPar,p.remaining+qty);
 }
-function renderBistroMenuButtons(){
-  let items=db.menu.filter(m=>m.active!==false);
+// Items with a services list only show on those order types (e.g. café items on counter/to-go).
+function renderBistroMenuButtons(orderType){
+  let items=db.menu.filter(m=>m.active!==false&&(!Array.isArray(m.services)||m.services.includes(orderType)));
   if(!items.length) return '<p>No menu items configured.</p>';
   return items.map(m=>{
     let d86=isMenu86(m);
