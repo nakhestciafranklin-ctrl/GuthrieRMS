@@ -670,33 +670,41 @@ function importRosterStudents(){
 window.importRosterStudents=importRosterStudents;
 importRosterStudents();
 // Common Grounds café items from the Common Grounds Version 2.0 recipe workbook.
-// Prices are the workbook's "Selling price / 1" (total cost per serving × 1.33).
+// Prices are the Common Grounds café menu prices (cookies $1, muffins $2,
+// refreshers/lattes/coffee $3, entrées $4). Bump cafeMenuVersion when prices change.
 // services limits these to Counter + To-Go orders so they stay off the Bistro
 // dining-room menu. Fixed ids let the import skip items already on file.
 const cafeMenuData=[
- {id:101,name:'Chocolate Chip Cookie',price:0.22,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:102,name:'Snickerdoodle Cookie',price:0.26,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:103,name:'Red Velvet Cookie',price:0.19,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:104,name:'Protein Banana Oat Muffin',price:0.96,category:'Dessert',mods:['Warm Muffin','Allergy Alert']},
- {id:105,name:'Protein Pumpkin Muffin',price:1.51,category:'Dessert',mods:['Warm Muffin','Allergy Alert']},
- {id:106,name:'Hot Honey Chicken Wrap',price:2.60,category:'Entree',mods:['No Cheese','No Tomato','No Cabbage','No Lettuce','No Sauce','Sauce on Side','Not Toasted (Cold)','Allergy Alert']},
- {id:107,name:'Chicken Quesadilla',price:2.15,category:'Entree',mods:['No Cheese','No Beans','No Corn','No Pico','Pico on Side','No Cilantro','Allergy Alert']},
- {id:108,name:'Street Corn Chicken Bowl',price:3.02,category:'Entree',mods:['No Beans','No Corn','No Pico','No Lettuce','No Crema','Crema on Side','No Cilantro','No Feta','Allergy Alert']},
- {id:109,name:'Strawberry Lemon Refresher',price:0.70,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:110,name:'Peach Berry Refresher',price:0.74,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:111,name:'Mango Citrus Refresher',price:0.66,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:112,name:'Blue Raspberry Lemon Refresher',price:0.92,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:113,name:'Iced Latte',price:1.59,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice']},
- {id:114,name:'Hot Coffee with Syrup',price:1.39,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream']}
+ {id:101,name:'Chocolate Chip Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:102,name:'Snickerdoodle Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:103,name:'Red Velvet Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:104,name:'Protein Banana Oat Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert']},
+ {id:105,name:'Protein Pumpkin Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert']},
+ {id:106,name:'Hot Honey Chicken Wrap',price:4,category:'Entree',mods:['No Cheese','No Tomato','No Cabbage','No Lettuce','No Sauce','Sauce on Side','Not Toasted (Cold)','Allergy Alert']},
+ {id:107,name:'Chicken Quesadilla',price:4,category:'Entree',mods:['No Cheese','No Beans','No Corn','No Pico','Pico on Side','No Cilantro','Allergy Alert']},
+ {id:108,name:'Street Corn Chicken Bowl',price:4,category:'Entree',mods:['No Beans','No Corn','No Pico','No Lettuce','No Crema','Crema on Side','No Cilantro','No Feta','Allergy Alert']},
+ {id:109,name:'Strawberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
+ {id:110,name:'Peach Berry Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
+ {id:111,name:'Mango Citrus Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
+ {id:112,name:'Blue Raspberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
+ {id:113,name:'Iced Latte',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice']},
+ {id:114,name:'Hot Coffee with Syrup',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream']}
 ];
+const cafeMenuVersion=2;
 function importCafeMenu(){
   let changed=false;
   if(!Array.isArray(db.menu))db.menu=[];
+  let repriceExisting=(Number(db.cafeMenuVersion)||0)<cafeMenuVersion;
   cafeMenuData.forEach(item=>{
-    if(db.menu.some(m=>m.id===item.id))return;
+    let existing=db.menu.find(m=>m.id===item.id);
+    if(existing){
+      if(repriceExisting&&existing.price!==item.price){existing.price=item.price;changed=true;}
+      return;
+    }
     db.menu.push({...item,mods:[...item.mods],inv:'bistro',services:['counter','togo'],active:true,dailyPar:0});
     changed=true;
   });
+  if(repriceExisting){db.cafeMenuVersion=cafeMenuVersion;changed=true;}
   if(changed)save();
   return changed;
 }
