@@ -1351,32 +1351,75 @@ window.logLabUsage=(id)=>{
 };
 
 // ---- Reports ----
+// Local-date bounds (YYYY-MM-DD) for the report's selected range; null means no bound.
+function reportRange(){
+  let r=state.reportRange||'today', d=new Date(), ymd=x=>x.toLocaleDateString('en-CA'), today=ymd(d);
+  if(r==='today') return {from:today,to:today,label:'Today'};
+  if(r==='week'){let s=new Date(d);s.setDate(s.getDate()-6);return {from:ymd(s),to:today,label:'Last 7 Days'};}
+  if(r==='month') return {from:today.slice(0,8)+'01',to:today,label:'This Month'};
+  if(r==='custom') return {from:state.reportFrom||null,to:state.reportTo||null,label:`${state.reportFrom||'Start'} to ${state.reportTo||'Today'}`};
+  return {from:null,to:null,label:'All Time'};
+}
+function inReportRange(iso){
+  if(!iso) return state.reportRange==='all';
+  let {from,to}=reportRange(), day=new Date(iso).toLocaleDateString('en-CA');
+  return (!from||day>=from)&&(!to||day<=to);
+}
+// Paid order lines grouped by item name, with quantity, sales, and a count of each modifier.
+function itemSalesBreakdown(orders){
+  let map={};
+  orders.forEach(o=>validItems(o).forEach(i=>{
+    let m=db.menu.find(x=>x.id===i.menuId);
+    let row=map[i.name]||(map[i.name]={name:i.name,category:m?.category||(o.type==='catering'?'Catering':'Other'),qty:0,sales:0,mods:{}});
+    row.qty++; row.sales+=Number(i.price)||0;
+    (i.mods||[]).forEach(md=>{row.mods[md]=(row.mods[md]||0)+1;});
+  }));
+  return Object.values(map).sort((a,b)=>b.sales-a.sales||b.qty-a.qty);
+}
 function reports(){
-  let paidOrders=db.orders.filter(o=>o.paid);
+  let range=reportRange();
+  let paidOrders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
   let sales=paidOrders.reduce((a,o)=>a+total(o),0);
-  let refunds=(db.refunds||[]).reduce((a,r)=>a+(Number(r.amount)||0),0);
+  let refunds=(db.refunds||[]).filter(r=>inReportRange(r.processedAt)).reduce((a,r)=>a+(Number(r.amount)||0),0);
   let byType={};paidOrders.forEach(o=>{byType[o.type]=(byType[o.type]||0)+total(o);});
+  let items=itemSalesBreakdown(paidOrders);
+  let itemCount=items.reduce((a,r)=>a+r.qty,0);
   let hours=db.shifts.filter(s=>s.out).reduce((a,s)=>a+(Number(s.hours)||0),0);
   let low=db.inventory.filter(i=>Number(i.onHand)<Number(i.par));
+  let ranges=[['today','Today'],['week','Last 7 Days'],['month','This Month'],['all','All Time'],['custom','Custom']];
+  let modText=r=>Object.entries(r.mods).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k} ×${v}`).join(', ');
   return `<section class="card"><h1>Reports</h1>
+    <div class="row">${ranges.map(([k,l])=>`<button class="${(state.reportRange||'today')===k?'primary':'small-btn'}" onclick="state.reportRange='${k}';render()">${l}</button>`).join('')}</div>
+    ${(state.reportRange==='custom')?`<div class="row section"><label>From<input type="date" class="input" value="${state.reportFrom||''}" onchange="state.reportFrom=this.value;render()"></label><label>To<input type="date" class="input" value="${state.reportTo||''}" onchange="state.reportTo=this.value;render()"></label></div>`:''}
+    <p class="notice">Showing sales for <b>${range.label}</b>. Labor hours and inventory are current totals.</p>
     <div class="stats">
       <div><b>${money(sales)}</b><span>Total Sales</span></div>
       <div><b>${money(refunds)}</b><span>Total Refunds</span></div>
       <div><b>${paidOrders.length}</b><span>Paid Orders</span></div>
+      <div><b>${itemCount}</b><span>Items Sold</span></div>
       <div><b>${hours.toFixed(2)}</b><span>Labor Hours</span></div>
       <div><b>${low.length}</b><span>Items Below Par</span></div>
     </div>
+    <h2>Sales by Item</h2>
+    <table class="report-table"><tr><th>Item</th><th>Category</th><th>Qty Sold</th><th>Sales</th><th>% of Sales</th><th>Modifiers</th></tr>${items.map(r=>`<tr><td><b>${r.name}</b></td><td>${r.category}</td><td>${r.qty}</td><td>${money(r.sales)}</td><td>${sales>0?(r.sales/sales*100).toFixed(1)+'%':'—'}</td><td class="small">${modText(r)||'—'}</td></tr>`).join('')}${items.length?`<tr><td colspan="2"><b>Total</b></td><td><b>${itemCount}</b></td><td><b>${money(sales)}</b></td><td></td><td></td></tr>`:'<tr><td colspan="6">No items sold in this range.</td></tr>'}</table>
+    <p class="small">Item sales are before refunds; refunds are recorded per order and shown in Total Refunds.</p>
     <h2>Sales by Order Type</h2>
-    <table class="report-table"><tr><th>Type</th><th>Total</th></tr>${Object.entries(byType).map(([t,v])=>`<tr><td>${t.toUpperCase()}</td><td>${money(v)}</td></tr>`).join('')||'<tr><td colspan="2">No paid orders yet.</td></tr>'}</table>
+    <table class="report-table"><tr><th>Type</th><th>Total</th></tr>${Object.entries(byType).map(([t,v])=>`<tr><td>${t.toUpperCase()}</td><td>${money(v)}</td></tr>`).join('')||'<tr><td colspan="2">No paid orders in this range.</td></tr>'}</table>
     <h2>Recent Shifts</h2>
     <table class="report-table"><tr><th>Name</th><th>Position</th><th>In</th><th>Out</th><th>Hours</th></tr>${db.shifts.slice(-10).reverse().map(s=>`<tr><td>${s.name}</td><td>${s.pos||''}</td><td>${new Date(s.in).toLocaleString()}</td><td>${s.out?new Date(s.out).toLocaleString():'&mdash;'}</td><td>${(Number(s.hours)||0).toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="5">No shifts recorded yet.</td></tr>'}</table>
-    <div class="row section"><button class="primary" onclick="exportReportCSV()">Export Sales CSV</button></div>
+    <div class="row section"><button class="primary" onclick="exportReportCSV()">Export Sales CSV</button><button class="primary" onclick="exportItemSalesCSV()">Export Item Sales CSV</button></div>
   </section>`;
 }
 window.exportReportCSV=()=>{
   let rows=[['Order ID','Type','Customer','Total','Status','Paid At']];
-  db.orders.filter(o=>o.paid).forEach(o=>rows.push([o.id,o.type,o.customer,total(o).toFixed(2),o.status,o.paidAt||'']));
+  db.orders.filter(o=>o.paid&&inReportRange(o.paidAt)).forEach(o=>rows.push([o.id,o.type,o.customer,total(o).toFixed(2),o.status,o.paidAt||'']));
   downloadCSV('guthrie-rms-sales.csv',rows);
+};
+window.exportItemSalesCSV=()=>{
+  let {label}=reportRange(), orders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
+  let rows=[['Range','Item','Category','Qty Sold','Sales','Modifiers']];
+  itemSalesBreakdown(orders).forEach(r=>rows.push([label,r.name,r.category,r.qty,r.sales.toFixed(2),Object.entries(r.mods).map(([k,v])=>`${k} x${v}`).join('; ')]));
+  downloadCSV(`guthrie-rms-item-sales-${label.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,rows);
 };
 
 // ---- Invoices ----

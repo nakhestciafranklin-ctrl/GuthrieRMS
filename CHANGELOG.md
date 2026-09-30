@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Sales by Item Report
+- Added a Sales by Item table to Reports: quantity sold, sales, % of sales, category, and a count of each modifier (e.g. Iced Latte flavors).
+- Added Today / Last 7 Days / This Month / All Time / Custom date ranges to the sales figures, sales by order type, and CSV exports.
+- Added an Export Item Sales CSV button.
+
 ## Daily Pars
 - Added a Daily Pars screen (managers and teachers) to set how many of each menu item are available for the day, grouped by category with All / Counter + To-Go / Dining Room filters.
 - Shows sold and remaining counts, marks items Sold Out at 0, and adds 86 / Un-86 buttons plus Refill All to Par and Clear All Pars.
