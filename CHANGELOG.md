@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Café Services Scheduling
+- Added Café Services as a scheduling Operation option, listed after Counter + To-Go (added once to existing installs; can still be removed in Settings).
+
 ## KMS Build-Out
 - Expo now sees every line on every ticket, with its station, seat, each modifier as its own tag (allergy alerts in red), and custom notes.
 - Stations mark their own items done (per item or with a station Done button); Expo sees a check mark on finished lines and an items-done count.

@@ -357,7 +357,7 @@ if(!db.settings.businessSubtitle)db.settings.businessSubtitle='Restaurant Manage
 if(!db.settings.vendors)db.settings.vendors=['Armstrong Chemicals','HEB','Ben E. Keith','Amazon'];
 if(!db.settings.inventoryLocations)db.settings.inventoryLocations=['Bistro Dry Storage','Bistro Reach-In Cooler','Bistro Freezer','FOH Storage','Kitchen 1','Kitchen 2','Kitchen 3','Bakeshop','Catering Kitchen','Dry Storage','Fine Dining Storage'];
 ['Walk-In Fridge','Walk-In Freezer'].forEach(loc=>{if(!db.settings.inventoryLocations.includes(loc))db.settings.inventoryLocations.push(loc)});
-if(!db.settings.kmsStations)db.settings.kmsStations=['Expo','Grill','Salad','Beverage','Dessert','Catering']; if(!db.settings.operations)db.settings.operations=['Bistro Service','Counter + To-Go','Catering Event','Culinary Lab','Inventory / Receiving','Special Event','Training','Competition Prep'];
+if(!db.settings.kmsStations)db.settings.kmsStations=['Expo','Grill','Salad','Beverage','Dessert','Catering']; if(!db.settings.operations)db.settings.operations=['Bistro Service','Counter + To-Go','Café Services','Catering Event','Culinary Lab','Inventory / Receiving','Special Event','Training','Competition Prep'];
 (db.inventory||[]).forEach(i=>{if(i.barcode==null)i.barcode='';});
 {
   let bekChanged=false;
@@ -710,6 +710,19 @@ function importCafeMenu(){
 }
 window.importCafeMenu=importCafeMenu;
 importCafeMenu();
+// Add Café Services to the scheduling Operation list once (right after Counter + To-Go),
+// so a manager who later removes it in Settings doesn't see it come back.
+function addCafeServicesOperation(){
+  db.settings=db.settings||{};
+  if(db.settings.cafeServicesOperationAdded)return false;
+  let ops=Array.isArray(db.settings.operations)?db.settings.operations:(db.settings.operations=[]);
+  if(!ops.includes('Café Services')){let at=ops.indexOf('Counter + To-Go');ops.splice(at>=0?at+1:ops.length,0,'Café Services');}
+  db.settings.cafeServicesOperationAdded=true;
+  save();
+  return true;
+}
+window.addCafeServicesOperation=addCafeServicesOperation;
+addCafeServicesOperation();
 let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();

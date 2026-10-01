@@ -104,6 +104,7 @@ if(!isConfigured(firebaseConfig)){
               // gets silently discarded the moment cloud data arrives.
               if(typeof window.importRosterStudents==='function') window.importRosterStudents();
               if(typeof window.importCafeMenu==='function') window.importCafeMenu();
+              if(typeof window.addCafeServicesOperation==='function') window.addCafeServicesOperation();
               if(window.__guthrieRMSBooted){
                 if(typeof window.normalizeOrders==='function') window.normalizeOrders();
                 if(typeof window.render==='function') window.render();
