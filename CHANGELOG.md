@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## KMS Ticket Fixes
+- Paying a check no longer clears its KMS ticket (including Dining Room tables); tickets stay until Expo completes them.
+- Station screens (Grill, Beverage, etc.) only mark their own items done; Start Prep / Plating / Ready / Complete are on Expo and All Tickets only, so a station can't close the ticket for the kitchen.
+- Expo is asked to confirm before marking a ticket Ready or Complete while station items are still open.
+
 ## Café Services Scheduling
 - Added Café Services as a scheduling Operation option, listed after Counter + To-Go (added once to existing installs; can still be removed in Settings).
 
