@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Cash Change Calculator
+- Cash checkout shows the amount due, an "Amount Given by Guest" box, and quick buttons (Exact, next dollar, $5/$10/$20/$50/$100).
+- Shows the change to give back live, or how much the guest is short.
+- Mark Paid requires the amount given and blocks short payments; after paying, a pop-up reminds the student how much change to give.
+
 ## KMS Ticket Fixes
 - Paying a check no longer clears its KMS ticket (including Dining Room tables); tickets stay until Expo completes them.
 - Station screens (Grill, Beverage, etc.) only mark their own items done; Start Prep / Plating / Ready / Complete are on Expo and All Tickets only, so a station can't close the ticket for the kitchen.
