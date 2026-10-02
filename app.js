@@ -886,16 +886,31 @@ function checkoutTicketItems(o){
   let items=validItems(o);
   return items.length?`<table class="report-table"><tr><th>Seat</th><th>Item</th><th>Mods</th><th>Price</th><th>Remove</th></tr>${items.map((i,idx)=>`<tr><td>${i.seat||'-'}</td><td>${i.name}</td><td>${[...(i.mods||[]),i.note].filter(Boolean).join(', ')}</td><td>${money(i.price)}</td><td><button class="small-btn danger" onclick="removeCheckoutLine(${o.id},'${i.lineId||''}',${idx})">Remove</button></td></tr>`).join('')}<tr><td colspan="3"><b>Total</b></td><td colspan="2"><b>${money(total(o))}</b></td></tr></table><div class="row section"><button class="small-btn danger" onclick="clearCheckoutOrder(${o.id})">Clear All Items</button></div>`:'<p>No items left on this order.</p>'
 }
-function payPanel(o){if(!o||!validItems(o).length){return '<div class="card"><p>This order has no items and was removed from checkout.</p></div>';}return `<div class="card"><h2>${o.customer}</h2><p class="notice">Review the order before payment. Remove any incorrect items here, then mark paid when the ticket is correct.</p>${checkoutTicketItems(o)}<label>Payment Type</label><select class="input" id="paytype" onchange="renderPaymentFields()"><option>Cash</option><option>Card</option><option>Check</option><option>District Account</option><option>Donation</option></select><div id="paymentFields">${paymentFieldsHtml('Cash')}</div><button class="primary success" onclick="pay(${o.id})">Mark Paid</button></div>`}
-function paymentFieldsHtml(type){
+function payPanel(o){if(!o||!validItems(o).length){return '<div class="card"><p>This order has no items and was removed from checkout.</p></div>';}return `<div class="card"><h2>${o.customer}</h2><p class="notice">Review the order before payment. Remove any incorrect items here, then mark paid when the ticket is correct.</p>${checkoutTicketItems(o)}<label>Payment Type</label><select class="input" id="paytype" onchange="renderPaymentFields()"><option>Cash</option><option>Card</option><option>Check</option><option>District Account</option><option>Donation</option></select><div id="paymentFields" data-total="${total(o).toFixed(2)}">${paymentFieldsHtml('Cash',total(o))}</div><button class="primary success" onclick="pay(${o.id})">Mark Paid</button></div>`}
+// Cash: amount due, quick-tender buttons, and a live change / short-by readout.
+function cashFieldsHtml(due){
+ due=Math.round((Number(due)||0)*100)/100;
+ let quick=[...new Set([due,Math.ceil(due),5,10,20,50,100].filter(v=>v>=due).map(v=>Math.round(v*100)/100))].slice(0,5);
+ return `<div class="cash-box"><div class="cash-due"><span>Amount Due</span><b>${money(due)}</b></div><label>Amount Given by Guest<input class="input cash-input" id="tender" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" oninput="updateCashChange()"></label><div class="row cash-quick">${quick.map(v=>`<button type="button" class="small-btn" onclick="setTender(${v})">${v===due?'Exact '+money(v):money(v)}</button>`).join('')}</div><div id="cashChange" class="cash-change">Enter the amount the guest gave you.</div></div>`;
+}
+window.setTender=v=>{let i=$('#tender'); if(i){i.value=Number(v).toFixed(2); updateCashChange();}};
+window.updateCashChange=()=>{
+ let box=$('#cashChange'), due=Number($('#paymentFields')?.dataset.total)||0, raw=$('#tender')?.value; if(!box)return;
+ if(raw===''||raw==null){box.className='cash-change';box.textContent='Enter the amount the guest gave you.';return;}
+ let diff=Math.round(((Number(raw)||0)-due)*100)/100;
+ if(diff<0){box.className='cash-change short';box.innerHTML=`Short by <b>${money(-diff)}</b> — collect more cash`;}
+ else if(diff===0){box.className='cash-change exact';box.innerHTML='Exact amount — <b>no change</b>';}
+ else{box.className='cash-change give';box.innerHTML=`Give change: <b>${money(diff)}</b>`;}
+};
+function paymentFieldsHtml(type,due){
  if(type==='Check') return `<input class="input" id="checkNumber" placeholder="Check Number *"><input class="input" id="payor" placeholder="Payor / Organization"><input class="input" id="checkDate" type="date"><input class="input" id="paymentNotes" placeholder="Notes">`;
- if(type==='Cash') return `<input class="input" id="tender" type="number" placeholder="Amount Tendered">`;
+ if(type==='Cash') return cashFieldsHtml(due);
  if(type==='Card') return `<input class="input" id="transactionRef" placeholder="Card Transaction Reference / Last 4 Optional">`;
  if(type==='District Account') return `<input class="input" id="payor" placeholder="Department / Account Name"><input class="input" id="paymentNotes" placeholder="Transfer / PO / Notes">`;
  if(type==='Donation') return `<input class="input" id="payor" placeholder="Donor Name / Organization"><input class="input" id="paymentNotes" placeholder="Donation Notes">`;
  return '';
 }
-window.renderPaymentFields=()=>{let type=$('#paytype')?.value||'Cash'; let box=$('#paymentFields'); if(box) box.innerHTML=paymentFieldsHtml(type);};
+window.renderPaymentFields=()=>{let type=$('#paytype')?.value||'Cash'; let box=$('#paymentFields'); if(box) box.innerHTML=paymentFieldsHtml(type,Number(box.dataset.total)||0);};
 
 window.clearEmptyCheckoutOrders=()=>{
   normalizeOrders();
@@ -916,13 +931,17 @@ window.pay=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let paymentTyp
    if(!checkNumber){alert('Check number required before completing payment.');return;}
    payment.checkNumber=checkNumber; payment.payor=$('#payor')?.value||''; payment.checkDate=$('#checkDate')?.value||''; payment.notes=$('#paymentNotes')?.value||'';
  } else if(paymentType==='Cash'){
-   payment.tendered=Number($('#tender')?.value)||0; payment.change=Math.max(0,payment.tendered-payment.amount);
+   let raw=$('#tender')?.value;
+   if(raw===''||raw==null){alert('Enter the amount of cash the guest gave you.');return;}
+   payment.tendered=Math.round((Number(raw)||0)*100)/100;
+   if(payment.tendered+0.001<payment.amount){alert(`Not enough cash. The guest still owes ${money(payment.amount-payment.tendered)}.`);return;}
+   payment.change=Math.round((payment.tendered-payment.amount)*100)/100;
  } else if(paymentType==='Card'){
    payment.transactionRef=$('#transactionRef')?.value||'';
  } else if(paymentType==='District Account' || paymentType==='Donation'){
    payment.payor=$('#payor')?.value||''; payment.notes=$('#paymentNotes')?.value||'';
  }
- o.payment=payment; o.paid=true;o.status='paid';o.paidAt=now(); let t=db.tables.find(x=>x.orderId===id); if(t){t.status='open';t.orderId=null} save();toast(`${paymentType} payment recorded.`);render()};
+ o.payment=payment; o.paid=true;o.status='paid';o.paidAt=now(); let t=db.tables.find(x=>x.orderId===id); if(t){t.status='open';t.orderId=null} save();render();if(paymentType==='Cash'&&payment.change>0){alert(`Cash received: ${money(payment.tendered)}\nGive the guest ${money(payment.change)} in change.`);}toast(paymentType==='Cash'&&payment.change>0?`Cash payment recorded. Change: ${money(payment.change)}`:`${paymentType} payment recorded.`);};
 
 function refundTotal(o){return (o.refunds||[]).reduce((a,r)=>a+(Number(r.amount)||0),0)}
 function remainingRefundable(o){return Math.max(0,total(o)-refundTotal(o))}

@@ -75,3 +75,15 @@ button,.primary,.secondary,.small-btn,.tile,.menu-item,.input,.tabs button,.seat
 .kms-paid{font-size:12px;font-weight:900;background:var(--green);color:white;border-radius:6px;padding:2px 8px;vertical-align:middle}
 .ticket.station-done{opacity:.6}
 .kms-recent{justify-content:space-between;align-items:center;border-top:1px solid #e3e9f2;padding:8px 0}
+
+/* Cash checkout */
+.cash-box{border:1px solid #cfe1ff;background:#f6f9ff;border-radius:14px;padding:12px 14px;margin:10px 0;display:grid;gap:10px}
+.cash-due{display:flex;justify-content:space-between;align-items:baseline;font-weight:700}
+.cash-due b{font-size:26px;color:var(--blue)}
+.cash-input{font-size:22px;font-weight:700}
+.cash-quick{flex-wrap:wrap;gap:8px}
+.cash-change{border-radius:12px;padding:12px 14px;font-size:18px;background:#eef2f7;color:#43556d;font-weight:600}
+.cash-change b{font-size:26px}
+.cash-change.give{background:#e8f5e9;color:#1b5e20;border:2px solid var(--green)}
+.cash-change.exact{background:#eef5ff;color:#0b2d6b}
+.cash-change.short{background:#fdecea;color:var(--red);border:2px solid var(--red)}
