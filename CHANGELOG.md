@@ -1,5 +1,17 @@
 # Guthrie RMS Changelog
 
+## Separate Café and Bistro Menus
+- Added the Bistro dining menu from the Guthrie Bistro Menu insert (Handhelds, Greens & Bowls, Weekly Chef Special, Sides, Beverages, Bake Shop) with its prices and modifiers.
+- Dining Room tables show only the Bistro menu; Counter + To-Go orders have Café Menu / Bistro Menu tabs (Café by default). Menu buttons are grouped by category.
+- Retired the starter demo items (Bistro Burger, Southern Cobb Salad, Peach Tea, Cookie); they stay saved so old orders and reports read correctly.
+- Menu items carry their KMS station; Daily Pars filters by Café / Bistro menu.
+- Modifiers can carry a price: swapping the included pommes frites for Charred Broccolini or Gruyère Mac & Cheese adds $1.00 to the sandwich.
+
+## Two-Step KMS
+- Replaced Start Prep → Plating → Ready → Complete with two steps: Start, then Complete.
+- Each item has a Start button that turns into Complete; finished items show ✓ Done (tap to undo). Stations get Start All / Complete All.
+- Starting any item starts the ticket automatically; Expo has Start Ticket / Complete Ticket. Tickets saved in the old Prep / Plating / Ready stages show as Started.
+
 ## Cash Change Calculator
 - Cash checkout shows the amount due, an "Amount Given by Guest" box, and quick buttons (Exact, next dollar, $5/$10/$20/$50/$100).
 - Shows the change to give back live, or how much the guest is short.

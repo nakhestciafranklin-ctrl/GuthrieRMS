@@ -672,23 +672,23 @@ importRosterStudents();
 // Common Grounds café items from the Common Grounds Version 2.0 recipe workbook.
 // Prices are the Common Grounds café menu prices (cookies $1, muffins $2,
 // refreshers/lattes/coffee $3, entrées $4). Bump cafeMenuVersion when prices change.
-// services limits these to Counter + To-Go orders so they stay off the Bistro
-// dining-room menu. Fixed ids let the import skip items already on file.
+// They belong to the café menu (Counter + To-Go only). station routes them on the KMS.
+// Fixed ids let the import skip items already on file.
 const cafeMenuData=[
- {id:101,name:'Chocolate Chip Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:102,name:'Snickerdoodle Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:103,name:'Red Velvet Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:104,name:'Protein Banana Oat Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert']},
- {id:105,name:'Protein Pumpkin Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert']},
- {id:106,name:'Hot Honey Chicken Wrap',price:4,category:'Entree',mods:['No Cheese','No Tomato','No Cabbage','No Lettuce','No Sauce','Sauce on Side','Not Toasted (Cold)','Allergy Alert']},
- {id:107,name:'Chicken Quesadilla',price:4,category:'Entree',mods:['No Cheese','No Beans','No Corn','No Pico','Pico on Side','No Cilantro','Allergy Alert']},
- {id:108,name:'Street Corn Chicken Bowl',price:4,category:'Entree',mods:['No Beans','No Corn','No Pico','No Lettuce','No Crema','Crema on Side','No Cilantro','No Feta','Allergy Alert']},
- {id:109,name:'Strawberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:110,name:'Peach Berry Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:111,name:'Mango Citrus Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:112,name:'Blue Raspberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:113,name:'Iced Latte',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice']},
- {id:114,name:'Hot Coffee with Syrup',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream']}
+ {id:101,name:'Chocolate Chip Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert'],station:'dessert'},
+ {id:102,name:'Snickerdoodle Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert'],station:'dessert'},
+ {id:103,name:'Red Velvet Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert'],station:'dessert'},
+ {id:104,name:'Protein Banana Oat Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert'],station:'dessert'},
+ {id:105,name:'Protein Pumpkin Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert'],station:'dessert'},
+ {id:106,name:'Hot Honey Chicken Wrap',price:4,category:'Entree',mods:['No Cheese','No Tomato','No Cabbage','No Lettuce','No Sauce','Sauce on Side','Not Toasted (Cold)','Allergy Alert'],station:'grill'},
+ {id:107,name:'Chicken Quesadilla',price:4,category:'Entree',mods:['No Cheese','No Beans','No Corn','No Pico','Pico on Side','No Cilantro','Allergy Alert'],station:'grill'},
+ {id:108,name:'Street Corn Chicken Bowl',price:4,category:'Entree',mods:['No Beans','No Corn','No Pico','No Lettuce','No Crema','Crema on Side','No Cilantro','No Feta','Allergy Alert'],station:'grill'},
+ {id:109,name:'Strawberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:110,name:'Peach Berry Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:111,name:'Mango Citrus Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:112,name:'Blue Raspberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:113,name:'Iced Latte',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice'],station:'beverage'},
+ {id:114,name:'Hot Coffee with Syrup',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream'],station:'beverage'}
 ];
 const cafeMenuVersion=2;
 function importCafeMenu(){
@@ -701,7 +701,7 @@ function importCafeMenu(){
       if(repriceExisting&&existing.price!==item.price){existing.price=item.price;changed=true;}
       return;
     }
-    db.menu.push({...item,mods:[...item.mods],inv:'bistro',services:['counter','togo'],active:true,dailyPar:0});
+    db.menu.push({...item,mods:[...item.mods],inv:'bistro',menu:'cafe',services:['counter','togo'],active:true,dailyPar:0});
     changed=true;
   });
   if(repriceExisting){db.cafeMenuVersion=cafeMenuVersion;changed=true;}
@@ -710,6 +710,62 @@ function importCafeMenu(){
 }
 window.importCafeMenu=importCafeMenu;
 importCafeMenu();
+// The Bistro dining menu from the Guthrie Bistro Menu insert. Bistro items show on Dining Room
+// tables and on the Bistro tab of Counter + To-Go orders; café items only on Counter + To-Go.
+// Swapping the included pommes frites for another side is $1 extra.
+const sideSwapPrices={'Sub Charred Broccolini':1,'Sub Gruyère Mac & Cheese':1};
+const bistroMenuData=[
+ {id:201,name:'Guthrie Bistro Burger',price:12,category:'Handhelds',station:'grill',mods:['No Cheese','No Pickles','No Sauce','Sauce on Side','Medium','Medium Well','Well Done','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices},
+ {id:202,name:'Smoked Turkey Club',price:10,category:'Handhelds',station:'grill',mods:['No Ham','No Gruyère','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices},
+ {id:203,name:'Buttermilk-Brined Chicken',price:11,category:'Handhelds',station:'grill',mods:['No Aioli','Aioli on Side','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices},
+ {id:204,name:'Southern Cobb Salad',price:12,category:'Greens & Bowls',station:'salad',mods:['No Chicken','No Bacon','No Egg','No Avocado','No Feta','No Corn','Dressing on Side','Allergy Alert']},
+ {id:205,name:'Baby Spinach Salad',price:8,category:'Greens & Bowls',station:'salad',mods:['No Goat Cheese','No Pecans','Dressing on Side','Allergy Alert']},
+ {id:206,name:'Tomato Basil Soup',price:3,category:'Greens & Bowls',station:'grill',mods:['Allergy Alert']},
+ {id:207,name:'Chicken & Sausage Gumbo',price:6,category:'Greens & Bowls',station:'grill',mods:['No Rice','Allergy Alert']},
+ {id:208,name:"Chef's Weekly Feature",price:12,category:'Weekly Chef Special',station:'grill',mods:['Allergy Alert']},
+ {id:209,name:'Charred Broccolini',price:2,category:'Sides',station:'grill',mods:['No Parmesan','No Lemon']},
+ {id:210,name:'Gruyère Mac & Cheese',price:2,category:'Sides',station:'grill',mods:['Allergy Alert']},
+ {id:211,name:'Oven-Baked Pommes Frites',price:2,category:'Sides',station:'grill',mods:['No Aioli','Aioli on Side']},
+ {id:212,name:'Signature Peach Tea',price:3,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice','Extra Peach']},
+ {id:213,name:'House-Brewed Sweet Tea',price:2,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice']},
+ {id:214,name:'Italian Cream Soda',price:2,category:'Beverages',station:'beverage',mods:['No Cream','Light Ice','No Ice']},
+ {id:215,name:'Strawberry Mint Lemonade',price:2,category:'Beverages',station:'beverage',mods:['No Mint','Light Ice','No Ice']},
+ {id:216,name:'Chocolate Chunk Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:217,name:'Snickerdoodle Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:218,name:'Sprinkle Sugar Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:219,name:'Salted Caramel Brownie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm','Allergy Alert']},
+ {id:220,name:'Brown Butter Pecan Blondie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm','Allergy Alert']},
+ {id:221,name:'Warm Peach Cobbler',price:3,category:'Bake Shop',station:'dessert',mods:['No Ice Cream','Ice Cream on Side','Allergy Alert']}
+];
+// Starter demo items replaced by the real Bistro menu (kept, inactive, so old orders still read right).
+const retiredBistroSeedIds=[1,2,3,4];
+function importBistroMenu(){
+  let changed=false;
+  if(!Array.isArray(db.menu))db.menu=[];
+  bistroMenuData.forEach(item=>{
+    let existing=db.menu.find(m=>m.id===item.id);
+    if(existing){if(item.modPrices&&!existing.modPrices){existing.modPrices={...item.modPrices};changed=true;}return;}
+    db.menu.push({...item,mods:[...item.mods],...(item.modPrices?{modPrices:{...item.modPrices}}:{}),inv:'bistro',menu:'bistro',active:true,dailyPar:0});
+    changed=true;
+  });
+  if(!db.bistroMenuImported){
+    db.menu.forEach(m=>{if(retiredBistroSeedIds.includes(m.id)&&m.active!==false){m.active=false;changed=true;}});
+    // Box Lunch / Catering Dessert Tray aren't on the Bistro insert; list them under Catering.
+    db.menu.forEach(m=>{if([5,6].includes(m.id)&&m.inv==='culinary'){m.category='Catering';changed=true;}});
+    db.bistroMenuImported=true; changed=true;
+  }
+  // Label every item with its menu: café items (and anything limited to counter/to-go) vs. Bistro.
+  db.menu.forEach(m=>{
+    if(m.menu)return;
+    m.menu=(m.id>=101&&m.id<=199)||(Array.isArray(m.services)&&!m.services.includes('table'))?'cafe':'bistro';
+    let c=cafeMenuData.find(x=>x.id===m.id); if(c&&!m.station)m.station=c.station;
+    changed=true;
+  });
+  if(changed)save();
+  return changed;
+}
+window.importBistroMenu=importBistroMenu;
+importBistroMenu();
 // Add Café Services to the scheduling Operation list once (right after Counter + To-Go),
 // so a manager who later removes it in Settings doesn't see it come back.
 function addCafeServicesOperation(){
@@ -835,12 +891,12 @@ dining:()=>dining(), quick:()=>quick(), pars:()=>parsScreen(), order:()=>orderSc
 window.toggleClock=()=>{let s=activeShift(); if(s){s.out=now(); s.hours=shiftHours(s);}else db.shifts.push({id:Date.now(),userId:state.user.id,name:state.user.name,pos:state.user.pos,teacherId:state.user.teacherId||'',serviceType:'Shift',in:now(),out:null}); save();render()};
 function dining(){return `<section class="card"><h1>Dining Room</h1><div class="table-grid">${db.tables.map(t=>`<div class="table-card status-${t.status==='open'?'open':t.status==='ready'?'ready':'active'}" onclick="openTable(${t.id})"><h3>Table ${t.id}</h3><p>${t.seats} seats</p><p>${t.status}</p></div>`).join('')}</div></section>`}
 window.openTable=id=>{let t=db.tables.find(x=>x.id===id); if(!t.orderId){let o={id:Date.now(),type:'table',tableId:id,customer:'Table '+id,items:[],status:'open',created:now(),sent:null,paid:false}; db.orders.push(o); t.orderId=o.id;t.status='active';save()} state.activeOrder=t.orderId; state.seat=1; state.view='order'; render()};
-function orderScreen(){let o=db.orders.find(x=>x.id===state.activeOrder); if(!o)return `<section class="card"><h1>Order Not Found</h1><button class="primary" onclick="state.view='dashboard';render()">Return</button></section>`; let t=o.type==='table'?db.tables.find(x=>x.id===o.tableId):null; let seats=t?Number(t.seats)||1:1; let checkoutType=o.type==='table'?'table':o.type; return `<section class="card"><h1>${o.customer}</h1>${t?`<div class="seat-tabs">${Array.from({length:seats},(_,i)=>`<button class="${state.seat===i+1?'active':''}" onclick="state.seat=${i+1};render()">Seat ${i+1}</button>`).join('')}</div>`:`<p class="notice">${o.type==='togo'?'To-Go':'Counter'} order entry</p>`}<h3>Add Item ${t?`to Seat ${state.seat}`:''}</h3><div class="menu-grid">${renderBistroMenuButtons(o.type)}</div><h3>Ticket</h3>${ticketItems(o)}<div class="row"><button class="primary" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="primary" onclick="state.view='checkout';state.checkoutType='${checkoutType}';state.selectedOrder=${o.id};render()">Checkout</button><button class="primary" onclick="state.view='${t?'dining':'quick'}';render()">Back</button></div></section>`}
+function orderScreen(){let o=db.orders.find(x=>x.id===state.activeOrder); if(!o)return `<section class="card"><h1>Order Not Found</h1><button class="primary" onclick="state.view='dashboard';render()">Return</button></section>`; let t=o.type==='table'?db.tables.find(x=>x.id===o.tableId):null; let seats=t?Number(t.seats)||1:1; let checkoutType=o.type==='table'?'table':o.type; return `<section class="card"><h1>${o.customer}</h1>${t?`<div class="seat-tabs">${Array.from({length:seats},(_,i)=>`<button class="${state.seat===i+1?'active':''}" onclick="state.seat=${i+1};render()">Seat ${i+1}</button>`).join('')}</div>`:`<p class="notice">${o.type==='togo'?'To-Go':'Counter'} order entry</p>`}<h3>Add Item ${t?`to Seat ${state.seat}`:''}</h3>${o.type==='table'?'':`<div class="row menu-tabs"><button class="${menuTabFor(o)==='cafe'?'primary':'small-btn'}" onclick="state.menuTab='cafe';render()">Café Menu</button><button class="${menuTabFor(o)==='bistro'?'primary':'small-btn'}" onclick="state.menuTab='bistro';render()">Bistro Menu</button></div>`}${renderBistroMenuButtons(o.type,menuTabFor(o))}<h3>Ticket</h3>${ticketItems(o)}<div class="row"><button class="primary" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="primary" onclick="state.view='checkout';state.checkoutType='${checkoutType}';state.selectedOrder=${o.id};render()">Checkout</button><button class="primary" onclick="state.view='${t?'dining':'quick'}';render()">Back</button></div></section>`}
 function quick(){let list=db.orders.filter(o=>!o.paid&&(o.type==='counter'||o.type==='togo'));return `<section class="card"><h1>Counter + To-Go Order Entry</h1><p class="notice">Create, edit, send, and checkout counter or to-go orders from this page.</p><div class="row"><button class="primary success" onclick="createQuickOrder('counter')">New Counter Order</button><button class="primary success" onclick="createQuickOrder('togo')">New To-Go Order</button></div><h2>Open Counter + To-Go Orders</h2><div class="grid">${list.map(o=>`<div class="order-card"><h3>${o.type==='togo'?'To-Go':'Counter'}: ${o.customer}</h3><p>${validItems(o).length} item(s) • ${money(total(o))} • ${o.status}</p><div class="row"><button class="small-btn" onclick="openQuickOrder(${o.id})">Edit Order</button><button class="small-btn" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="small-btn" onclick="state.checkoutType='${o.type}';state.selectedOrder=${o.id};state.view='checkout';render()">Checkout</button></div></div>`).join('')||'<p>No open counter or to-go orders.</p>'}</div></section>`}
-window.createQuickOrder=(type)=>{let label=type==='togo'?'To-Go':'Counter';let customer=prompt(`Enter customer/order name for ${label}:`, type==='togo'?'To-Go Customer':'Walk-In')||label+' Order';let o={id:Date.now(),type,customer,items:[],status:'open',created:now(),sent:null,paid:false};db.orders.push(o);state.activeOrder=o.id;state.seat=1;state.view='order';save();render();};
+window.createQuickOrder=(type)=>{let label=type==='togo'?'To-Go':'Counter';let customer=prompt(`Enter customer/order name for ${label}:`, type==='togo'?'To-Go Customer':'Walk-In')||label+' Order';let o={id:Date.now(),type,customer,items:[],status:'open',created:now(),sent:null,paid:false};db.orders.push(o);state.activeOrder=o.id;state.seat=1;state.menuTab='cafe';state.view='order';save();render();};
 window.openQuickOrder=id=>{let o=db.orders.find(x=>x.id===id);if(!o)return;state.activeOrder=id;state.seat=1;state.view='order';render();};
-function modifierModal(menuId,seat){let m=db.menu.find(x=>x.id===menuId); if(!m||isMenu86(m)){alert('This item is currently 86\'d or unavailable.');return;} app.insertAdjacentHTML('beforeend',`<div class="modal" id="mod"><div class="card"><h2>${m.name} Modifiers</h2><p class="small">Remaining today: ${productionRemaining(m.id)}</p><div class="modifier-list">${(m.mods||[]).map(md=>`<button onclick="this.classList.toggle('selected')">${md}</button>`).join('')||'<p class="small">No modifiers set up yet.</p>'}</div><h3>Custom Note</h3><input class="input" id="note" placeholder="Optional"><div class="row section"><button class="primary" onclick="addItem(${menuId},${seat})">Add Item</button><button class="primary danger" onclick="document.getElementById('mod').remove()">Cancel</button></div></div></div>`)}
-window.modifierModal=modifierModal; window.addItem=(menuId,seat)=>{let o=db.orders.find(x=>x.id===state.activeOrder), m=db.menu.find(x=>x.id===menuId); if(!o||!m)return; if(!deductProduction(menuId,1)){alert('This item is 86\'d or no longer available.');return;} let mods=[...document.querySelectorAll('#mod .modifier-list .selected')].map(b=>b.textContent);let note=$('#note').value; o.items.push({id:Date.now(),lineId:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),menuId,name:m.name,price:m.price,seat,mods,note}); document.getElementById('mod').remove(); save();render()};
+function modifierModal(menuId,seat){let m=db.menu.find(x=>x.id===menuId); if(!m||isMenu86(m)){alert('This item is currently 86\'d or unavailable.');return;} app.insertAdjacentHTML('beforeend',`<div class="modal" id="mod"><div class="card"><h2>${m.name} Modifiers</h2><p class="small">Remaining today: ${productionRemaining(m.id)}</p><div class="modifier-list">${(m.mods||[]).map(md=>{let up=Number(m.modPrices?.[md])||0;return `<button data-mod="${md}" onclick="this.classList.toggle('selected')">${md}${up?` <b>+${money(up)}</b>`:''}</button>`;}).join('')||'<p class="small">No modifiers set up yet.</p>'}</div><h3>Custom Note</h3><input class="input" id="note" placeholder="Optional"><div class="row section"><button class="primary" onclick="addItem(${menuId},${seat})">Add Item</button><button class="primary danger" onclick="document.getElementById('mod').remove()">Cancel</button></div></div></div>`)}
+window.modifierModal=modifierModal; window.addItem=(menuId,seat)=>{let o=db.orders.find(x=>x.id===state.activeOrder), m=db.menu.find(x=>x.id===menuId); if(!o||!m)return; if(!deductProduction(menuId,1)){alert('This item is 86\'d or no longer available.');return;} let mods=[...document.querySelectorAll('#mod .modifier-list .selected')].map(b=>b.dataset.mod||b.textContent);let note=$('#note').value; let upcharge=mods.reduce((a,md)=>a+(Number(m.modPrices?.[md])||0),0); o.items.push({id:Date.now(),lineId:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),menuId,name:m.name,price:Math.round((Number(m.price)+upcharge)*100)/100,basePrice:m.price,modCharge:upcharge,seat,mods,note}); document.getElementById('mod').remove(); save();render()};
 function ticketItems(o){let items=validItems(o);return items.length?`<table class="report-table"><tr><th>Seat</th><th>Item</th><th>Mods</th><th>Price</th></tr>${items.map(i=>`<tr><td>${i.seat||'-'}</td><td>${i.name}</td><td>${[...(i.mods||[]),i.note].filter(Boolean).join(', ')}</td><td>${money(i.price)}</td></tr>`).join('')}<tr><td colspan="3"><b>Total</b></td><td><b>${money(total(o))}</b></td></tr></table>`:'<p>No items yet.</p>'}
 function total(o){return validItems(o).reduce((a,i)=>a+(Number(i.price)||0),0)}
 
@@ -987,11 +1043,13 @@ function kms(){
  let open=perStation?list.filter(o=>!kmsStationDone(o,station)):list, done=perStation?list.filter(o=>kmsStationDone(o,station)):[];
  let counts=Object.fromEntries(kmsStationList.map(([key])=>[key,active.filter(o=>kmsVisibleItems(o,key).length&&(['all','expo'].includes(key)||!kmsStationDone(o,key))).length]));
  let recent=db.orders.filter(o=>o.kmsStage==='completed'&&o.sent).sort((a,b)=>kmsLastTime(b)-kmsLastTime(a)).slice(0,5);
- return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Select your station. Tap the box next to an item when it is made, or use the station Done button — this only marks your station's items, the ticket stays up for the other stations. Expo sees every item, modifier, and note, and is the only screen that moves tickets through Start Prep → Plating → Ready → Complete. Paying a check does not clear its ticket; Expo completes it.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${recent.length?`<details class="section"><summary><b>Recently Completed</b> (${recent.length})</summary>${recent.map(o=>`<div class="row kms-recent"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • completed ${new Date(kmsLastTime(o)).toLocaleTimeString()}</span><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}</details>`:''}</section>`;
+ return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). This only marks your station's items; the ticket stays up for the other stations. Expo sees every item, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${recent.length?`<details class="section"><summary><b>Recently Completed</b> (${recent.length})</summary>${recent.map(o=>`<div class="row kms-recent"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • completed ${new Date(kmsLastTime(o)).toLocaleTimeString()}</span><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}</details>`:''}</section>`;
 }
 function kmsLastTime(o){let l=(o.kmsLog||[]).slice(-1)[0];return new Date(l?.time||o.sent||0).getTime();}
 function itemStation(item,order){
  let name=(item?.name||'').toLowerCase();
+ let m=item?.menuId!=null?db.menu.find(x=>x.id===item.menuId):null;
+ if(order?.type!=='catering'&&m?.station) return m.station;
  if(order?.type==='catering'||name.includes('catering')||name.includes('box lunch')) return 'catering';
  if(name.includes('tea')||name.includes('drink')||name.includes('beverage')||name.includes('lemonade')||name.includes('coffee')||name.includes('latte')||name.includes('refresher')) return 'beverage';
  if(name.includes('cookie')||name.includes('dessert')||name.includes('tray')||name.includes('cake')||name.includes('muffin')) return 'dessert';
@@ -1014,16 +1072,19 @@ function kmsElapsed(sent){
  return {text:`${mins}:${secs}`,cls:mins>=15?'late':mins>=10?'warn':''};
 }
 function kmsTicket(o,station){
- o.kmsStage=o.kmsStage||'sent';
+ o.kmsStage=kmsStageOf(o);
  let t=kmsElapsed(o.sent), items=kmsVisibleItems(o,station), all=validItems(o), doneCount=all.filter(i=>i.kmsDone).length;
  let perStation=!['all','expo'].includes(station), stationLabel=kmsStationList.find(x=>x[0]===station)?.[1]||station;
  let where=o.type==='table'&&o.tableId?`TABLE ${o.tableId}`:o.type==='togo'?'TO-GO':o.type.toUpperCase();
- let bump=perStation&&items.some(i=>!i.kmsDone)?`<button class="primary success" onclick="markStationDone(${o.id},'${station}')">${stationLabel} Items Done</button>`:'';
+ let bump=!perStation?'':items.some(i=>!i.kmsStarted&&!i.kmsDone)?`<button class="primary" onclick="markStationStarted(${o.id},'${station}')">Start All ${stationLabel}</button>`:items.some(i=>!i.kmsDone)?`<button class="primary success" onclick="markStationDone(${o.id},'${station}')">Complete All ${stationLabel}</button>`:'';
  return `<div class="ticket ${t.cls} ${perStation&&kmsStationDone(o,station)?'station-done':''}"><div class="row"><div><h2>${o.customer}${o.paid?' <span class="kms-paid">PAID</span>':''}</h2><p class="small">${where} • ${stationSummary(o)} • ${doneCount}/${all.length} items done</p></div><span class="spacer"></span><div class="timer" data-kms-sent="${o.sent}">${t.text}</div></div>${kmsProgress(o)}${kmsItemsList(o,items,station)}<div class="row section">${bump}${perStation?'':kmsButtons(o)}</div>${kmsLog(o)}</div>`;
 }
+// Two-step flow: sent → started → completed. Tickets saved under the old
+// Prep / Plating / Ready stages count as started.
+function kmsStageOf(o){let st=o.kmsStage||'sent';return ['prepping','plating','ready'].includes(st)?'started':st;}
 function kmsProgress(o){
- let stages=['sent','prepping','plating','ready'];let labels={sent:'Sent',prepping:'Prep',plating:'Plating',ready:'Ready'};
- return `<div class="progress">${stages.map(st=>`<div class="step ${stages.indexOf(st)<=stages.indexOf(o.kmsStage)?'done':''}">${labels[st]}</div>`).join('')}</div>`;
+ let stages=['sent','started','completed'], labels={sent:'Sent',started:'Started',completed:'Complete'}, at=stages.indexOf(kmsStageOf(o));
+ return `<div class="progress kms-progress-2">${stages.map((st,ix)=>`<div class="step ${ix<=at?'done':''}">${labels[st]}</div>`).join('')}</div>`;
 }
 // One row per line: done box, item, station, seat, NEW badge for items added after the first send,
 // and every modifier as its own chip (allergy alerts in red) plus the custom note.
@@ -1035,23 +1096,32 @@ function kmsItemsList(o,items,station){
   let isNew=(Number(i.sendRound)||1)>1&&i.sendRound===o.sendCount;
   let mods=(i.mods||[]).map(md=>`<span class="kms-mod ${/allerg/i.test(md)?'alert':''}">${md}</span>`).join('');
   let note=i.note?`<span class="kms-note">Note: ${i.note}</span>`:'';
-  return `<div class="kms-line ${i.kmsDone?'done':''}"><button class="kms-check" title="Mark item done" onclick="toggleKmsItem(${o.id},'${i.lineId}')">${i.kmsDone?'✓':''}</button><div class="kms-line-body"><div class="kms-line-head"><b>${i.name}</b>${isNew?'<span class="kms-new">NEW</span>':''}${showStation?`<span class="kms-station">${itemStation(i,o).toUpperCase()}</span>`:''}${o.type==='table'?`<span class="small">Seat ${i.seat||'-'}</span>`:''}</div>${mods||note?`<div class="kms-mods">${mods}${note}</div>`:''}</div></div>`;
+  let step=i.kmsDone?`<button class="kms-step done" title="Tap to undo" onclick="undoKmsItem(${o.id},'${i.lineId}')">✓ Done</button>`:i.kmsStarted?`<button class="kms-step complete" onclick="completeKmsItem(${o.id},'${i.lineId}')">Complete</button>`:`<button class="kms-step start" onclick="startKmsItem(${o.id},'${i.lineId}')">Start</button>`;
+  return `<div class="kms-line ${i.kmsDone?'done':i.kmsStarted?'started':''}">${step}<div class="kms-line-body"><div class="kms-line-head"><b>${i.name}</b>${isNew?'<span class="kms-new">NEW</span>':''}${showStation?`<span class="kms-station">${itemStation(i,o).toUpperCase()}</span>`:''}${o.type==='table'?`<span class="small">Seat ${i.seat||'-'}</span>`:''}</div>${mods||note?`<div class="kms-mods">${mods}${note}</div>`:''}</div></div>`;
  }).join('')}</div>`;
 }
 function kmsLog(o){
  let logs=(o.kmsLog||[]).slice(-4).reverse();
  return logs.length?`<details class="small"><summary>Ticket action log</summary>${logs.map(l=>`<p>${new Date(l.time).toLocaleTimeString()} • ${l.stage} • ${l.by||''}</p>`).join('')}</details>`:'';
 }
-function kmsButtons(o){let st=o.kmsStage||'sent';let b=[]; if(st==='sent')b.push(`<button class="primary" onclick="kmsStage(${o.id},'prepping')">Start Prep</button>`); if(st==='prepping')b.push(`<button class="primary" onclick="kmsStage(${o.id},'plating')">Move to Plating</button>`); if(st==='plating')b.push(`<button class="primary success" onclick="kmsStage(${o.id},'ready')">Mark Ready</button>`); if(st==='ready')b.push(`<button class="primary success" onclick="kmsStage(${o.id},'completed')">Complete Ticket</button>`); return b.join('')}
+function kmsButtons(o){let st=kmsStageOf(o); if(st==='sent')return `<button class="primary" onclick="kmsStage(${o.id},'started')">Start Ticket</button>`; if(st==='started')return `<button class="primary success" onclick="kmsStage(${o.id},'completed')">Complete Ticket</button>`; return '';}
 // Tick the timers in place instead of re-rendering, so open logs and scroll position stay put.
 setInterval(()=>{
  if(!(state.user&&state.view==='kms'))return;
  document.querySelectorAll('[data-kms-sent]').forEach(el=>{let t=kmsElapsed(el.dataset.kmsSent), tk=el.closest('.ticket'); el.textContent=t.text; if(tk){tk.classList.toggle('warn',t.cls==='warn');tk.classList.toggle('late',t.cls==='late');}});
 },1000);
-window.toggleKmsItem=(orderId,lineId)=>{let o=db.orders.find(x=>x.id===orderId), i=o&&validItems(o).find(x=>x.lineId===lineId); if(!i)return; i.kmsDone=!i.kmsDone; i.kmsDoneBy=i.kmsDone?state.user.name:''; i.kmsDoneAt=i.kmsDone?now():''; save(); render();};
-window.markStationDone=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationList.find(x=>x[0]===station)?.[1]||station; stationItems(o,station).forEach(i=>{if(!i.kmsDone){i.kmsDone=true;i.kmsDoneBy=state.user.name;i.kmsDoneAt=now();}}); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Items Done`,time:now(),by:state.user.name}); save(); render(); toast(`${label} items done`);};
-window.recallKmsTicket=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage='ready'; if(!o.paid)o.status='ready'; o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:'Recalled',time:now(),by:state.user.name}); save(); render(); toast('Ticket recalled');};
-window.ready=id=>kmsStage(id,'ready'); window.kmsStage=(id,stage)=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let open=validItems(o).filter(i=>!i.kmsDone).length; if(['ready','completed'].includes(stage)&&open&&!confirm(`${open} item(s) on this ticket are not marked done by their station yet. ${stage==='ready'?'Mark Ready':'Complete'} anyway?`))return; o.kmsStage=stage; o.kmsLog=o.kmsLog||[]; let label={prepping:'Prep Started',plating:'Moved to Plating',ready:'Marked Ready',completed:'Completed'}[stage]||stage; o.kmsLog.push({stage:label,time:now(),by:state.user.name}); if(!o.paid&&stage==='ready')o.status='ready'; if(!o.paid&&stage==='completed')o.status='completed'; let t=db.tables.find(x=>x.orderId===id); if(t&&stage==='ready')t.status='ready'; if(t&&stage==='completed')t.status='ready'; save(); render(); toast(label);};
+function kmsLine(orderId,lineId){let o=db.orders.find(x=>x.id===orderId);return {o,i:o&&validItems(o).find(x=>x.lineId===lineId)};}
+// Starting any item starts the ticket, so Expo doesn't need a separate tap.
+function kmsAutoStart(o){if(kmsStageOf(o)==='sent'){o.kmsStage='started';o.kmsLog=o.kmsLog||[];o.kmsLog.push({stage:'Started',time:now(),by:state.user.name});}}
+function kmsStartItem(o,i){if(i.kmsStarted||i.kmsDone)return;i.kmsStarted=true;i.kmsStartedBy=state.user.name;i.kmsStartedAt=now();kmsAutoStart(o);}
+function kmsDoneItem(o,i){if(i.kmsDone)return;if(!i.kmsStarted){i.kmsStarted=true;i.kmsStartedAt=now();i.kmsStartedBy=state.user.name;}i.kmsDone=true;i.kmsDoneBy=state.user.name;i.kmsDoneAt=now();kmsAutoStart(o);}
+window.startKmsItem=(orderId,lineId)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; kmsStartItem(o,i); save(); render();};
+window.completeKmsItem=(orderId,lineId)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; kmsDoneItem(o,i); save(); render();};
+window.undoKmsItem=(orderId,lineId)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; i.kmsDone=false; i.kmsDoneBy=''; i.kmsDoneAt=''; save(); render();};
+window.markStationStarted=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationList.find(x=>x[0]===station)?.[1]||station; stationItems(o,station).forEach(i=>kmsStartItem(o,i)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Started`,time:now(),by:state.user.name}); save(); render(); toast(`${label} started`);};
+window.markStationDone=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationList.find(x=>x[0]===station)?.[1]||station; stationItems(o,station).forEach(i=>kmsDoneItem(o,i)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Complete`,time:now(),by:state.user.name}); save(); render(); toast(`${label} complete`);};
+window.recallKmsTicket=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage='started'; if(!o.paid)o.status='sent'; o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:'Recalled',time:now(),by:state.user.name}); save(); render(); toast('Ticket recalled');};
+window.ready=id=>kmsStage(id,'completed'); window.kmsStage=(id,stage)=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let open=validItems(o).filter(i=>!i.kmsDone).length; if(stage==='completed'&&open&&!confirm(`${open} item(s) on this ticket are not marked complete by their station yet. Complete the ticket anyway?`))return; o.kmsStage=stage; o.kmsLog=o.kmsLog||[]; let label={started:'Started',completed:'Completed'}[stage]||stage; o.kmsLog.push({stage:label,time:now(),by:state.user.name}); if(!o.paid&&stage==='completed')o.status='completed'; let t=db.tables.find(x=>x.orderId===id); if(t&&stage==='completed')t.status='ready'; save(); render(); toast(label);};
 function inventory(){
  if(state.user.inventoryScope==='culinary') state.invDivision='culinary';
  const allItems=db.inventory.filter(i=>i.division===state.invDivision);
@@ -1236,22 +1306,28 @@ function restoreProduction(menuId,qty){
   let p=productionItem(menuId);
   if(p.startingPar>0) p.remaining=Math.min(p.startingPar,p.remaining+qty);
 }
-// Items with a services list only show on those order types (e.g. café items on counter/to-go).
-function renderBistroMenuButtons(orderType){
-  let items=db.menu.filter(m=>m.active!==false&&(!Array.isArray(m.services)||m.services.includes(orderType)));
+// Dining Room tables always use the Bistro menu; Counter + To-Go defaults to the Café menu
+// with a tab to switch to Bistro.
+function menuTabFor(o){return o.type==='table'?'bistro':(state.menuTab||'cafe');}
+function menuOf(m){return m.menu||'bistro';}
+function renderBistroMenuButtons(orderType,menu){
+  menu=menu||(orderType==='table'?'bistro':'cafe');
+  let items=db.menu.filter(m=>m.active!==false&&menuOf(m)===menu&&(menu==='bistro'||!Array.isArray(m.services)||m.services.includes(orderType)));
   if(!items.length) return '<p>No menu items configured.</p>';
-  return items.map(m=>{
+  let categories=[...new Set(items.map(m=>m.category||'Other'))].sort((a,b)=>(a==='Catering')-(b==='Catering'));
+  return categories.map(c=>`<h4 class="menu-category">${c}</h4><div class="menu-grid">${items.filter(m=>(m.category||'Other')===c).map(m=>{
     let d86=isMenu86(m);
     return `<button class="menu-item ${d86?'disabled86':''}" onclick="modifierModal(${m.id},state.seat)">${m.name}<br><span class="small">${money(m.price)}${d86?' &bull; Sold Out':''}</span></button>`;
-  }).join('');
+  }).join('')}</div>`).join('');
 }
 
 // ---- Daily Pars ----
 function parsScreen(){
   rollProductionDay();
   let filter=state.parsFilter||'all';
-  let filters=[['all','All Items'],['togo','Counter + To-Go'],['table','Dining Room']];
-  let items=db.menu.filter(m=>m.active!==false&&(filter==='all'||!Array.isArray(m.services)||m.services.includes(filter)));
+  if(!['all','cafe','bistro'].includes(filter))filter='all';
+  let filters=[['all','All Items'],['cafe','Café Menu'],['bistro','Bistro Menu']];
+  let items=db.menu.filter(m=>m.active!==false&&(filter==='all'||menuOf(m)===filter));
   let categories=[...new Set(items.map(m=>m.category||'Other'))];
   let withPar=items.filter(m=>productionItem(m.id).startingPar>0);
   let soldOut=items.filter(m=>isMenu86(m));
