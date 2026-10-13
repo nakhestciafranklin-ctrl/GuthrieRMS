@@ -5,6 +5,7 @@
 - Dining Room tables show only the Bistro menu; Counter + To-Go orders have Café Menu / Bistro Menu tabs (Café by default). Menu buttons are grouped by category.
 - Retired the starter demo items (Bistro Burger, Southern Cobb Salad, Peach Tea, Cookie); they stay saved so old orders and reports read correctly.
 - Menu items carry their KMS station; Daily Pars filters by Café / Bistro menu.
+- Modifiers can carry a price: swapping the included pommes frites for Charred Broccolini or Gruyère Mac & Cheese adds $1.00 to the sandwich.
 
 ## Two-Step KMS
 - Replaced Start Prep → Plating → Ready → Complete with two steps: Start, then Complete.
