@@ -87,3 +87,11 @@ button,.primary,.secondary,.small-btn,.tile,.menu-item,.input,.tabs button,.seat
 .cash-change.give{background:#e8f5e9;color:#1b5e20;border:2px solid var(--green)}
 .cash-change.exact{background:#eef5ff;color:#0b2d6b}
 .cash-change.short{background:#fdecea;color:var(--red);border:2px solid var(--red)}
+
+/* KMS two-step item buttons */
+.kms-progress-2{grid-template-columns:repeat(3,1fr)}
+.kms-step{flex:0 0 auto;min-width:104px;min-height:44px;padding:8px 14px;font-size:16px;font-weight:900;cursor:pointer;border:2px solid var(--blue)}
+.kms-step.start{background:white;color:var(--blue)}
+.kms-step.complete{background:var(--gold);border-color:#c48a00;color:#102033}
+.kms-step.done{background:var(--green);border-color:var(--green);color:white}
+.kms-line.started{background:#fffaf0;border-color:#f3d27a}

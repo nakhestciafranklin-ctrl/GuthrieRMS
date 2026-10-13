@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Two-Step KMS
+- Replaced Start Prep → Plating → Ready → Complete with two steps: Start, then Complete.
+- Each item has a Start button that turns into Complete; finished items show ✓ Done (tap to undo). Stations get Start All / Complete All.
+- Starting any item starts the ticket automatically; Expo has Start Ticket / Complete Ticket. Tickets saved in the old Prep / Plating / Ready stages show as Started.
+
 ## Cash Change Calculator
 - Cash checkout shows the amount due, an "Amount Given by Guest" box, and quick buttons (Exact, next dollar, $5/$10/$20/$50/$100).
 - Shows the change to give back live, or how much the guest is short.

@@ -987,7 +987,7 @@ function kms(){
  let open=perStation?list.filter(o=>!kmsStationDone(o,station)):list, done=perStation?list.filter(o=>kmsStationDone(o,station)):[];
  let counts=Object.fromEntries(kmsStationList.map(([key])=>[key,active.filter(o=>kmsVisibleItems(o,key).length&&(['all','expo'].includes(key)||!kmsStationDone(o,key))).length]));
  let recent=db.orders.filter(o=>o.kmsStage==='completed'&&o.sent).sort((a,b)=>kmsLastTime(b)-kmsLastTime(a)).slice(0,5);
- return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Select your station. Tap the box next to an item when it is made, or use the station Done button — this only marks your station's items, the ticket stays up for the other stations. Expo sees every item, modifier, and note, and is the only screen that moves tickets through Start Prep → Plating → Ready → Complete. Paying a check does not clear its ticket; Expo completes it.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${recent.length?`<details class="section"><summary><b>Recently Completed</b> (${recent.length})</summary>${recent.map(o=>`<div class="row kms-recent"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • completed ${new Date(kmsLastTime(o)).toLocaleTimeString()}</span><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}</details>`:''}</section>`;
+ return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). This only marks your station's items; the ticket stays up for the other stations. Expo sees every item, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${recent.length?`<details class="section"><summary><b>Recently Completed</b> (${recent.length})</summary>${recent.map(o=>`<div class="row kms-recent"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • completed ${new Date(kmsLastTime(o)).toLocaleTimeString()}</span><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}</details>`:''}</section>`;
 }
 function kmsLastTime(o){let l=(o.kmsLog||[]).slice(-1)[0];return new Date(l?.time||o.sent||0).getTime();}
 function itemStation(item,order){
@@ -1014,16 +1014,19 @@ function kmsElapsed(sent){
  return {text:`${mins}:${secs}`,cls:mins>=15?'late':mins>=10?'warn':''};
 }
 function kmsTicket(o,station){
- o.kmsStage=o.kmsStage||'sent';
+ o.kmsStage=kmsStageOf(o);
  let t=kmsElapsed(o.sent), items=kmsVisibleItems(o,station), all=validItems(o), doneCount=all.filter(i=>i.kmsDone).length;
  let perStation=!['all','expo'].includes(station), stationLabel=kmsStationList.find(x=>x[0]===station)?.[1]||station;
  let where=o.type==='table'&&o.tableId?`TABLE ${o.tableId}`:o.type==='togo'?'TO-GO':o.type.toUpperCase();
- let bump=perStation&&items.some(i=>!i.kmsDone)?`<button class="primary success" onclick="markStationDone(${o.id},'${station}')">${stationLabel} Items Done</button>`:'';
+ let bump=!perStation?'':items.some(i=>!i.kmsStarted&&!i.kmsDone)?`<button class="primary" onclick="markStationStarted(${o.id},'${station}')">Start All ${stationLabel}</button>`:items.some(i=>!i.kmsDone)?`<button class="primary success" onclick="markStationDone(${o.id},'${station}')">Complete All ${stationLabel}</button>`:'';
  return `<div class="ticket ${t.cls} ${perStation&&kmsStationDone(o,station)?'station-done':''}"><div class="row"><div><h2>${o.customer}${o.paid?' <span class="kms-paid">PAID</span>':''}</h2><p class="small">${where} • ${stationSummary(o)} • ${doneCount}/${all.length} items done</p></div><span class="spacer"></span><div class="timer" data-kms-sent="${o.sent}">${t.text}</div></div>${kmsProgress(o)}${kmsItemsList(o,items,station)}<div class="row section">${bump}${perStation?'':kmsButtons(o)}</div>${kmsLog(o)}</div>`;
 }
+// Two-step flow: sent → started → completed. Tickets saved under the old
+// Prep / Plating / Ready stages count as started.
+function kmsStageOf(o){let st=o.kmsStage||'sent';return ['prepping','plating','ready'].includes(st)?'started':st;}
 function kmsProgress(o){
- let stages=['sent','prepping','plating','ready'];let labels={sent:'Sent',prepping:'Prep',plating:'Plating',ready:'Ready'};
- return `<div class="progress">${stages.map(st=>`<div class="step ${stages.indexOf(st)<=stages.indexOf(o.kmsStage)?'done':''}">${labels[st]}</div>`).join('')}</div>`;
+ let stages=['sent','started','completed'], labels={sent:'Sent',started:'Started',completed:'Complete'}, at=stages.indexOf(kmsStageOf(o));
+ return `<div class="progress kms-progress-2">${stages.map((st,ix)=>`<div class="step ${ix<=at?'done':''}">${labels[st]}</div>`).join('')}</div>`;
 }
 // One row per line: done box, item, station, seat, NEW badge for items added after the first send,
 // and every modifier as its own chip (allergy alerts in red) plus the custom note.
@@ -1035,23 +1038,32 @@ function kmsItemsList(o,items,station){
   let isNew=(Number(i.sendRound)||1)>1&&i.sendRound===o.sendCount;
   let mods=(i.mods||[]).map(md=>`<span class="kms-mod ${/allerg/i.test(md)?'alert':''}">${md}</span>`).join('');
   let note=i.note?`<span class="kms-note">Note: ${i.note}</span>`:'';
-  return `<div class="kms-line ${i.kmsDone?'done':''}"><button class="kms-check" title="Mark item done" onclick="toggleKmsItem(${o.id},'${i.lineId}')">${i.kmsDone?'✓':''}</button><div class="kms-line-body"><div class="kms-line-head"><b>${i.name}</b>${isNew?'<span class="kms-new">NEW</span>':''}${showStation?`<span class="kms-station">${itemStation(i,o).toUpperCase()}</span>`:''}${o.type==='table'?`<span class="small">Seat ${i.seat||'-'}</span>`:''}</div>${mods||note?`<div class="kms-mods">${mods}${note}</div>`:''}</div></div>`;
+  let step=i.kmsDone?`<button class="kms-step done" title="Tap to undo" onclick="undoKmsItem(${o.id},'${i.lineId}')">✓ Done</button>`:i.kmsStarted?`<button class="kms-step complete" onclick="completeKmsItem(${o.id},'${i.lineId}')">Complete</button>`:`<button class="kms-step start" onclick="startKmsItem(${o.id},'${i.lineId}')">Start</button>`;
+  return `<div class="kms-line ${i.kmsDone?'done':i.kmsStarted?'started':''}">${step}<div class="kms-line-body"><div class="kms-line-head"><b>${i.name}</b>${isNew?'<span class="kms-new">NEW</span>':''}${showStation?`<span class="kms-station">${itemStation(i,o).toUpperCase()}</span>`:''}${o.type==='table'?`<span class="small">Seat ${i.seat||'-'}</span>`:''}</div>${mods||note?`<div class="kms-mods">${mods}${note}</div>`:''}</div></div>`;
  }).join('')}</div>`;
 }
 function kmsLog(o){
  let logs=(o.kmsLog||[]).slice(-4).reverse();
  return logs.length?`<details class="small"><summary>Ticket action log</summary>${logs.map(l=>`<p>${new Date(l.time).toLocaleTimeString()} • ${l.stage} • ${l.by||''}</p>`).join('')}</details>`:'';
 }
-function kmsButtons(o){let st=o.kmsStage||'sent';let b=[]; if(st==='sent')b.push(`<button class="primary" onclick="kmsStage(${o.id},'prepping')">Start Prep</button>`); if(st==='prepping')b.push(`<button class="primary" onclick="kmsStage(${o.id},'plating')">Move to Plating</button>`); if(st==='plating')b.push(`<button class="primary success" onclick="kmsStage(${o.id},'ready')">Mark Ready</button>`); if(st==='ready')b.push(`<button class="primary success" onclick="kmsStage(${o.id},'completed')">Complete Ticket</button>`); return b.join('')}
+function kmsButtons(o){let st=kmsStageOf(o); if(st==='sent')return `<button class="primary" onclick="kmsStage(${o.id},'started')">Start Ticket</button>`; if(st==='started')return `<button class="primary success" onclick="kmsStage(${o.id},'completed')">Complete Ticket</button>`; return '';}
 // Tick the timers in place instead of re-rendering, so open logs and scroll position stay put.
 setInterval(()=>{
  if(!(state.user&&state.view==='kms'))return;
  document.querySelectorAll('[data-kms-sent]').forEach(el=>{let t=kmsElapsed(el.dataset.kmsSent), tk=el.closest('.ticket'); el.textContent=t.text; if(tk){tk.classList.toggle('warn',t.cls==='warn');tk.classList.toggle('late',t.cls==='late');}});
 },1000);
-window.toggleKmsItem=(orderId,lineId)=>{let o=db.orders.find(x=>x.id===orderId), i=o&&validItems(o).find(x=>x.lineId===lineId); if(!i)return; i.kmsDone=!i.kmsDone; i.kmsDoneBy=i.kmsDone?state.user.name:''; i.kmsDoneAt=i.kmsDone?now():''; save(); render();};
-window.markStationDone=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationList.find(x=>x[0]===station)?.[1]||station; stationItems(o,station).forEach(i=>{if(!i.kmsDone){i.kmsDone=true;i.kmsDoneBy=state.user.name;i.kmsDoneAt=now();}}); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Items Done`,time:now(),by:state.user.name}); save(); render(); toast(`${label} items done`);};
-window.recallKmsTicket=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage='ready'; if(!o.paid)o.status='ready'; o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:'Recalled',time:now(),by:state.user.name}); save(); render(); toast('Ticket recalled');};
-window.ready=id=>kmsStage(id,'ready'); window.kmsStage=(id,stage)=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let open=validItems(o).filter(i=>!i.kmsDone).length; if(['ready','completed'].includes(stage)&&open&&!confirm(`${open} item(s) on this ticket are not marked done by their station yet. ${stage==='ready'?'Mark Ready':'Complete'} anyway?`))return; o.kmsStage=stage; o.kmsLog=o.kmsLog||[]; let label={prepping:'Prep Started',plating:'Moved to Plating',ready:'Marked Ready',completed:'Completed'}[stage]||stage; o.kmsLog.push({stage:label,time:now(),by:state.user.name}); if(!o.paid&&stage==='ready')o.status='ready'; if(!o.paid&&stage==='completed')o.status='completed'; let t=db.tables.find(x=>x.orderId===id); if(t&&stage==='ready')t.status='ready'; if(t&&stage==='completed')t.status='ready'; save(); render(); toast(label);};
+function kmsLine(orderId,lineId){let o=db.orders.find(x=>x.id===orderId);return {o,i:o&&validItems(o).find(x=>x.lineId===lineId)};}
+// Starting any item starts the ticket, so Expo doesn't need a separate tap.
+function kmsAutoStart(o){if(kmsStageOf(o)==='sent'){o.kmsStage='started';o.kmsLog=o.kmsLog||[];o.kmsLog.push({stage:'Started',time:now(),by:state.user.name});}}
+function kmsStartItem(o,i){if(i.kmsStarted||i.kmsDone)return;i.kmsStarted=true;i.kmsStartedBy=state.user.name;i.kmsStartedAt=now();kmsAutoStart(o);}
+function kmsDoneItem(o,i){if(i.kmsDone)return;if(!i.kmsStarted){i.kmsStarted=true;i.kmsStartedAt=now();i.kmsStartedBy=state.user.name;}i.kmsDone=true;i.kmsDoneBy=state.user.name;i.kmsDoneAt=now();kmsAutoStart(o);}
+window.startKmsItem=(orderId,lineId)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; kmsStartItem(o,i); save(); render();};
+window.completeKmsItem=(orderId,lineId)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; kmsDoneItem(o,i); save(); render();};
+window.undoKmsItem=(orderId,lineId)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; i.kmsDone=false; i.kmsDoneBy=''; i.kmsDoneAt=''; save(); render();};
+window.markStationStarted=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationList.find(x=>x[0]===station)?.[1]||station; stationItems(o,station).forEach(i=>kmsStartItem(o,i)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Started`,time:now(),by:state.user.name}); save(); render(); toast(`${label} started`);};
+window.markStationDone=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationList.find(x=>x[0]===station)?.[1]||station; stationItems(o,station).forEach(i=>kmsDoneItem(o,i)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Complete`,time:now(),by:state.user.name}); save(); render(); toast(`${label} complete`);};
+window.recallKmsTicket=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage='started'; if(!o.paid)o.status='sent'; o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:'Recalled',time:now(),by:state.user.name}); save(); render(); toast('Ticket recalled');};
+window.ready=id=>kmsStage(id,'completed'); window.kmsStage=(id,stage)=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let open=validItems(o).filter(i=>!i.kmsDone).length; if(stage==='completed'&&open&&!confirm(`${open} item(s) on this ticket are not marked complete by their station yet. Complete the ticket anyway?`))return; o.kmsStage=stage; o.kmsLog=o.kmsLog||[]; let label={started:'Started',completed:'Completed'}[stage]||stage; o.kmsLog.push({stage:label,time:now(),by:state.user.name}); if(!o.paid&&stage==='completed')o.status='completed'; let t=db.tables.find(x=>x.orderId===id); if(t&&stage==='completed')t.status='ready'; save(); render(); toast(label);};
 function inventory(){
  if(state.user.inventoryScope==='culinary') state.invDivision='culinary';
  const allItems=db.inventory.filter(i=>i.division===state.invDivision);
