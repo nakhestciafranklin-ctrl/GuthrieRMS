@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Golden Melt Grilled Cheese
+- Added Golden Melt Grilled Cheese ($3) to the Bistro menu under Handhelds (Grill station).
+
 ## Separate Café and Bistro Menus
 - Added the Bistro dining menu from the Guthrie Bistro Menu insert (Handhelds, Greens & Bowls, Weekly Chef Special, Sides, Beverages, Bake Shop) with its prices and modifiers.
 - Dining Room tables show only the Bistro menu; Counter + To-Go orders have Café Menu / Bistro Menu tabs (Café by default). Menu buttons are grouped by category.
