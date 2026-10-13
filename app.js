@@ -672,23 +672,23 @@ importRosterStudents();
 // Common Grounds café items from the Common Grounds Version 2.0 recipe workbook.
 // Prices are the Common Grounds café menu prices (cookies $1, muffins $2,
 // refreshers/lattes/coffee $3, entrées $4). Bump cafeMenuVersion when prices change.
-// services limits these to Counter + To-Go orders so they stay off the Bistro
-// dining-room menu. Fixed ids let the import skip items already on file.
+// They belong to the café menu (Counter + To-Go only). station routes them on the KMS.
+// Fixed ids let the import skip items already on file.
 const cafeMenuData=[
- {id:101,name:'Chocolate Chip Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:102,name:'Snickerdoodle Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:103,name:'Red Velvet Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:104,name:'Protein Banana Oat Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert']},
- {id:105,name:'Protein Pumpkin Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert']},
- {id:106,name:'Hot Honey Chicken Wrap',price:4,category:'Entree',mods:['No Cheese','No Tomato','No Cabbage','No Lettuce','No Sauce','Sauce on Side','Not Toasted (Cold)','Allergy Alert']},
- {id:107,name:'Chicken Quesadilla',price:4,category:'Entree',mods:['No Cheese','No Beans','No Corn','No Pico','Pico on Side','No Cilantro','Allergy Alert']},
- {id:108,name:'Street Corn Chicken Bowl',price:4,category:'Entree',mods:['No Beans','No Corn','No Pico','No Lettuce','No Crema','Crema on Side','No Cilantro','No Feta','Allergy Alert']},
- {id:109,name:'Strawberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:110,name:'Peach Berry Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:111,name:'Mango Citrus Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:112,name:'Blue Raspberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener']},
- {id:113,name:'Iced Latte',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice']},
- {id:114,name:'Hot Coffee with Syrup',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream']}
+ {id:101,name:'Chocolate Chip Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert'],station:'dessert'},
+ {id:102,name:'Snickerdoodle Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert'],station:'dessert'},
+ {id:103,name:'Red Velvet Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert'],station:'dessert'},
+ {id:104,name:'Protein Banana Oat Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert'],station:'dessert'},
+ {id:105,name:'Protein Pumpkin Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert'],station:'dessert'},
+ {id:106,name:'Hot Honey Chicken Wrap',price:4,category:'Entree',mods:['No Cheese','No Tomato','No Cabbage','No Lettuce','No Sauce','Sauce on Side','Not Toasted (Cold)','Allergy Alert'],station:'grill'},
+ {id:107,name:'Chicken Quesadilla',price:4,category:'Entree',mods:['No Cheese','No Beans','No Corn','No Pico','Pico on Side','No Cilantro','Allergy Alert'],station:'grill'},
+ {id:108,name:'Street Corn Chicken Bowl',price:4,category:'Entree',mods:['No Beans','No Corn','No Pico','No Lettuce','No Crema','Crema on Side','No Cilantro','No Feta','Allergy Alert'],station:'grill'},
+ {id:109,name:'Strawberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:110,name:'Peach Berry Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:111,name:'Mango Citrus Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:112,name:'Blue Raspberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:113,name:'Iced Latte',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice'],station:'beverage'},
+ {id:114,name:'Hot Coffee with Syrup',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream'],station:'beverage'}
 ];
 const cafeMenuVersion=2;
 function importCafeMenu(){
@@ -701,7 +701,7 @@ function importCafeMenu(){
       if(repriceExisting&&existing.price!==item.price){existing.price=item.price;changed=true;}
       return;
     }
-    db.menu.push({...item,mods:[...item.mods],inv:'bistro',services:['counter','togo'],active:true,dailyPar:0});
+    db.menu.push({...item,mods:[...item.mods],inv:'bistro',menu:'cafe',services:['counter','togo'],active:true,dailyPar:0});
     changed=true;
   });
   if(repriceExisting){db.cafeMenuVersion=cafeMenuVersion;changed=true;}
@@ -710,6 +710,59 @@ function importCafeMenu(){
 }
 window.importCafeMenu=importCafeMenu;
 importCafeMenu();
+// The Bistro dining menu from the Guthrie Bistro Menu insert. Bistro items show on Dining Room
+// tables and on the Bistro tab of Counter + To-Go orders; café items only on Counter + To-Go.
+const bistroMenuData=[
+ {id:201,name:'Guthrie Bistro Burger',price:12,category:'Handhelds',station:'grill',mods:['No Cheese','No Pickles','No Sauce','Sauce on Side','Medium','Medium Well','Well Done','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert']},
+ {id:202,name:'Smoked Turkey Club',price:10,category:'Handhelds',station:'grill',mods:['No Ham','No Gruyère','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert']},
+ {id:203,name:'Buttermilk-Brined Chicken',price:11,category:'Handhelds',station:'grill',mods:['No Aioli','Aioli on Side','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert']},
+ {id:204,name:'Southern Cobb Salad',price:12,category:'Greens & Bowls',station:'salad',mods:['No Chicken','No Bacon','No Egg','No Avocado','No Feta','No Corn','Dressing on Side','Allergy Alert']},
+ {id:205,name:'Baby Spinach Salad',price:8,category:'Greens & Bowls',station:'salad',mods:['No Goat Cheese','No Pecans','Dressing on Side','Allergy Alert']},
+ {id:206,name:'Tomato Basil Soup',price:3,category:'Greens & Bowls',station:'grill',mods:['Allergy Alert']},
+ {id:207,name:'Chicken & Sausage Gumbo',price:6,category:'Greens & Bowls',station:'grill',mods:['No Rice','Allergy Alert']},
+ {id:208,name:"Chef's Weekly Feature",price:12,category:'Weekly Chef Special',station:'grill',mods:['Allergy Alert']},
+ {id:209,name:'Charred Broccolini',price:2,category:'Sides',station:'grill',mods:['No Parmesan','No Lemon']},
+ {id:210,name:'Gruyère Mac & Cheese',price:2,category:'Sides',station:'grill',mods:['Allergy Alert']},
+ {id:211,name:'Oven-Baked Pommes Frites',price:2,category:'Sides',station:'grill',mods:['No Aioli','Aioli on Side']},
+ {id:212,name:'Signature Peach Tea',price:3,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice','Extra Peach']},
+ {id:213,name:'House-Brewed Sweet Tea',price:2,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice']},
+ {id:214,name:'Italian Cream Soda',price:2,category:'Beverages',station:'beverage',mods:['No Cream','Light Ice','No Ice']},
+ {id:215,name:'Strawberry Mint Lemonade',price:2,category:'Beverages',station:'beverage',mods:['No Mint','Light Ice','No Ice']},
+ {id:216,name:'Chocolate Chunk Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:217,name:'Snickerdoodle Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:218,name:'Sprinkle Sugar Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:219,name:'Salted Caramel Brownie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm','Allergy Alert']},
+ {id:220,name:'Brown Butter Pecan Blondie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm','Allergy Alert']},
+ {id:221,name:'Warm Peach Cobbler',price:3,category:'Bake Shop',station:'dessert',mods:['No Ice Cream','Ice Cream on Side','Allergy Alert']}
+];
+// Starter demo items replaced by the real Bistro menu (kept, inactive, so old orders still read right).
+const retiredBistroSeedIds=[1,2,3,4];
+function importBistroMenu(){
+  let changed=false;
+  if(!Array.isArray(db.menu))db.menu=[];
+  bistroMenuData.forEach(item=>{
+    if(db.menu.some(m=>m.id===item.id))return;
+    db.menu.push({...item,mods:[...item.mods],inv:'bistro',menu:'bistro',active:true,dailyPar:0});
+    changed=true;
+  });
+  if(!db.bistroMenuImported){
+    db.menu.forEach(m=>{if(retiredBistroSeedIds.includes(m.id)&&m.active!==false){m.active=false;changed=true;}});
+    // Box Lunch / Catering Dessert Tray aren't on the Bistro insert; list them under Catering.
+    db.menu.forEach(m=>{if([5,6].includes(m.id)&&m.inv==='culinary'){m.category='Catering';changed=true;}});
+    db.bistroMenuImported=true; changed=true;
+  }
+  // Label every item with its menu: café items (and anything limited to counter/to-go) vs. Bistro.
+  db.menu.forEach(m=>{
+    if(m.menu)return;
+    m.menu=(m.id>=101&&m.id<=199)||(Array.isArray(m.services)&&!m.services.includes('table'))?'cafe':'bistro';
+    let c=cafeMenuData.find(x=>x.id===m.id); if(c&&!m.station)m.station=c.station;
+    changed=true;
+  });
+  if(changed)save();
+  return changed;
+}
+window.importBistroMenu=importBistroMenu;
+importBistroMenu();
 // Add Café Services to the scheduling Operation list once (right after Counter + To-Go),
 // so a manager who later removes it in Settings doesn't see it come back.
 function addCafeServicesOperation(){
@@ -835,9 +888,9 @@ dining:()=>dining(), quick:()=>quick(), pars:()=>parsScreen(), order:()=>orderSc
 window.toggleClock=()=>{let s=activeShift(); if(s){s.out=now(); s.hours=shiftHours(s);}else db.shifts.push({id:Date.now(),userId:state.user.id,name:state.user.name,pos:state.user.pos,teacherId:state.user.teacherId||'',serviceType:'Shift',in:now(),out:null}); save();render()};
 function dining(){return `<section class="card"><h1>Dining Room</h1><div class="table-grid">${db.tables.map(t=>`<div class="table-card status-${t.status==='open'?'open':t.status==='ready'?'ready':'active'}" onclick="openTable(${t.id})"><h3>Table ${t.id}</h3><p>${t.seats} seats</p><p>${t.status}</p></div>`).join('')}</div></section>`}
 window.openTable=id=>{let t=db.tables.find(x=>x.id===id); if(!t.orderId){let o={id:Date.now(),type:'table',tableId:id,customer:'Table '+id,items:[],status:'open',created:now(),sent:null,paid:false}; db.orders.push(o); t.orderId=o.id;t.status='active';save()} state.activeOrder=t.orderId; state.seat=1; state.view='order'; render()};
-function orderScreen(){let o=db.orders.find(x=>x.id===state.activeOrder); if(!o)return `<section class="card"><h1>Order Not Found</h1><button class="primary" onclick="state.view='dashboard';render()">Return</button></section>`; let t=o.type==='table'?db.tables.find(x=>x.id===o.tableId):null; let seats=t?Number(t.seats)||1:1; let checkoutType=o.type==='table'?'table':o.type; return `<section class="card"><h1>${o.customer}</h1>${t?`<div class="seat-tabs">${Array.from({length:seats},(_,i)=>`<button class="${state.seat===i+1?'active':''}" onclick="state.seat=${i+1};render()">Seat ${i+1}</button>`).join('')}</div>`:`<p class="notice">${o.type==='togo'?'To-Go':'Counter'} order entry</p>`}<h3>Add Item ${t?`to Seat ${state.seat}`:''}</h3><div class="menu-grid">${renderBistroMenuButtons(o.type)}</div><h3>Ticket</h3>${ticketItems(o)}<div class="row"><button class="primary" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="primary" onclick="state.view='checkout';state.checkoutType='${checkoutType}';state.selectedOrder=${o.id};render()">Checkout</button><button class="primary" onclick="state.view='${t?'dining':'quick'}';render()">Back</button></div></section>`}
+function orderScreen(){let o=db.orders.find(x=>x.id===state.activeOrder); if(!o)return `<section class="card"><h1>Order Not Found</h1><button class="primary" onclick="state.view='dashboard';render()">Return</button></section>`; let t=o.type==='table'?db.tables.find(x=>x.id===o.tableId):null; let seats=t?Number(t.seats)||1:1; let checkoutType=o.type==='table'?'table':o.type; return `<section class="card"><h1>${o.customer}</h1>${t?`<div class="seat-tabs">${Array.from({length:seats},(_,i)=>`<button class="${state.seat===i+1?'active':''}" onclick="state.seat=${i+1};render()">Seat ${i+1}</button>`).join('')}</div>`:`<p class="notice">${o.type==='togo'?'To-Go':'Counter'} order entry</p>`}<h3>Add Item ${t?`to Seat ${state.seat}`:''}</h3>${o.type==='table'?'':`<div class="row menu-tabs"><button class="${menuTabFor(o)==='cafe'?'primary':'small-btn'}" onclick="state.menuTab='cafe';render()">Café Menu</button><button class="${menuTabFor(o)==='bistro'?'primary':'small-btn'}" onclick="state.menuTab='bistro';render()">Bistro Menu</button></div>`}${renderBistroMenuButtons(o.type,menuTabFor(o))}<h3>Ticket</h3>${ticketItems(o)}<div class="row"><button class="primary" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="primary" onclick="state.view='checkout';state.checkoutType='${checkoutType}';state.selectedOrder=${o.id};render()">Checkout</button><button class="primary" onclick="state.view='${t?'dining':'quick'}';render()">Back</button></div></section>`}
 function quick(){let list=db.orders.filter(o=>!o.paid&&(o.type==='counter'||o.type==='togo'));return `<section class="card"><h1>Counter + To-Go Order Entry</h1><p class="notice">Create, edit, send, and checkout counter or to-go orders from this page.</p><div class="row"><button class="primary success" onclick="createQuickOrder('counter')">New Counter Order</button><button class="primary success" onclick="createQuickOrder('togo')">New To-Go Order</button></div><h2>Open Counter + To-Go Orders</h2><div class="grid">${list.map(o=>`<div class="order-card"><h3>${o.type==='togo'?'To-Go':'Counter'}: ${o.customer}</h3><p>${validItems(o).length} item(s) • ${money(total(o))} • ${o.status}</p><div class="row"><button class="small-btn" onclick="openQuickOrder(${o.id})">Edit Order</button><button class="small-btn" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="small-btn" onclick="state.checkoutType='${o.type}';state.selectedOrder=${o.id};state.view='checkout';render()">Checkout</button></div></div>`).join('')||'<p>No open counter or to-go orders.</p>'}</div></section>`}
-window.createQuickOrder=(type)=>{let label=type==='togo'?'To-Go':'Counter';let customer=prompt(`Enter customer/order name for ${label}:`, type==='togo'?'To-Go Customer':'Walk-In')||label+' Order';let o={id:Date.now(),type,customer,items:[],status:'open',created:now(),sent:null,paid:false};db.orders.push(o);state.activeOrder=o.id;state.seat=1;state.view='order';save();render();};
+window.createQuickOrder=(type)=>{let label=type==='togo'?'To-Go':'Counter';let customer=prompt(`Enter customer/order name for ${label}:`, type==='togo'?'To-Go Customer':'Walk-In')||label+' Order';let o={id:Date.now(),type,customer,items:[],status:'open',created:now(),sent:null,paid:false};db.orders.push(o);state.activeOrder=o.id;state.seat=1;state.menuTab='cafe';state.view='order';save();render();};
 window.openQuickOrder=id=>{let o=db.orders.find(x=>x.id===id);if(!o)return;state.activeOrder=id;state.seat=1;state.view='order';render();};
 function modifierModal(menuId,seat){let m=db.menu.find(x=>x.id===menuId); if(!m||isMenu86(m)){alert('This item is currently 86\'d or unavailable.');return;} app.insertAdjacentHTML('beforeend',`<div class="modal" id="mod"><div class="card"><h2>${m.name} Modifiers</h2><p class="small">Remaining today: ${productionRemaining(m.id)}</p><div class="modifier-list">${(m.mods||[]).map(md=>`<button onclick="this.classList.toggle('selected')">${md}</button>`).join('')||'<p class="small">No modifiers set up yet.</p>'}</div><h3>Custom Note</h3><input class="input" id="note" placeholder="Optional"><div class="row section"><button class="primary" onclick="addItem(${menuId},${seat})">Add Item</button><button class="primary danger" onclick="document.getElementById('mod').remove()">Cancel</button></div></div></div>`)}
 window.modifierModal=modifierModal; window.addItem=(menuId,seat)=>{let o=db.orders.find(x=>x.id===state.activeOrder), m=db.menu.find(x=>x.id===menuId); if(!o||!m)return; if(!deductProduction(menuId,1)){alert('This item is 86\'d or no longer available.');return;} let mods=[...document.querySelectorAll('#mod .modifier-list .selected')].map(b=>b.textContent);let note=$('#note').value; o.items.push({id:Date.now(),lineId:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),menuId,name:m.name,price:m.price,seat,mods,note}); document.getElementById('mod').remove(); save();render()};
@@ -992,6 +1045,8 @@ function kms(){
 function kmsLastTime(o){let l=(o.kmsLog||[]).slice(-1)[0];return new Date(l?.time||o.sent||0).getTime();}
 function itemStation(item,order){
  let name=(item?.name||'').toLowerCase();
+ let m=item?.menuId!=null?db.menu.find(x=>x.id===item.menuId):null;
+ if(order?.type!=='catering'&&m?.station) return m.station;
  if(order?.type==='catering'||name.includes('catering')||name.includes('box lunch')) return 'catering';
  if(name.includes('tea')||name.includes('drink')||name.includes('beverage')||name.includes('lemonade')||name.includes('coffee')||name.includes('latte')||name.includes('refresher')) return 'beverage';
  if(name.includes('cookie')||name.includes('dessert')||name.includes('tray')||name.includes('cake')||name.includes('muffin')) return 'dessert';
@@ -1248,22 +1303,28 @@ function restoreProduction(menuId,qty){
   let p=productionItem(menuId);
   if(p.startingPar>0) p.remaining=Math.min(p.startingPar,p.remaining+qty);
 }
-// Items with a services list only show on those order types (e.g. café items on counter/to-go).
-function renderBistroMenuButtons(orderType){
-  let items=db.menu.filter(m=>m.active!==false&&(!Array.isArray(m.services)||m.services.includes(orderType)));
+// Dining Room tables always use the Bistro menu; Counter + To-Go defaults to the Café menu
+// with a tab to switch to Bistro.
+function menuTabFor(o){return o.type==='table'?'bistro':(state.menuTab||'cafe');}
+function menuOf(m){return m.menu||'bistro';}
+function renderBistroMenuButtons(orderType,menu){
+  menu=menu||(orderType==='table'?'bistro':'cafe');
+  let items=db.menu.filter(m=>m.active!==false&&menuOf(m)===menu&&(menu==='bistro'||!Array.isArray(m.services)||m.services.includes(orderType)));
   if(!items.length) return '<p>No menu items configured.</p>';
-  return items.map(m=>{
+  let categories=[...new Set(items.map(m=>m.category||'Other'))].sort((a,b)=>(a==='Catering')-(b==='Catering'));
+  return categories.map(c=>`<h4 class="menu-category">${c}</h4><div class="menu-grid">${items.filter(m=>(m.category||'Other')===c).map(m=>{
     let d86=isMenu86(m);
     return `<button class="menu-item ${d86?'disabled86':''}" onclick="modifierModal(${m.id},state.seat)">${m.name}<br><span class="small">${money(m.price)}${d86?' &bull; Sold Out':''}</span></button>`;
-  }).join('');
+  }).join('')}</div>`).join('');
 }
 
 // ---- Daily Pars ----
 function parsScreen(){
   rollProductionDay();
   let filter=state.parsFilter||'all';
-  let filters=[['all','All Items'],['togo','Counter + To-Go'],['table','Dining Room']];
-  let items=db.menu.filter(m=>m.active!==false&&(filter==='all'||!Array.isArray(m.services)||m.services.includes(filter)));
+  if(!['all','cafe','bistro'].includes(filter))filter='all';
+  let filters=[['all','All Items'],['cafe','Café Menu'],['bistro','Bistro Menu']];
+  let items=db.menu.filter(m=>m.active!==false&&(filter==='all'||menuOf(m)===filter));
   let categories=[...new Set(items.map(m=>m.category||'Other'))];
   let withPar=items.filter(m=>productionItem(m.id).startingPar>0);
   let soldOut=items.filter(m=>isMenu86(m));

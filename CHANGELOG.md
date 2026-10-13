@@ -1,5 +1,11 @@
 # Guthrie RMS Changelog
 
+## Separate Café and Bistro Menus
+- Added the Bistro dining menu from the Guthrie Bistro Menu insert (Handhelds, Greens & Bowls, Weekly Chef Special, Sides, Beverages, Bake Shop) with its prices and modifiers.
+- Dining Room tables show only the Bistro menu; Counter + To-Go orders have Café Menu / Bistro Menu tabs (Café by default). Menu buttons are grouped by category.
+- Retired the starter demo items (Bistro Burger, Southern Cobb Salad, Peach Tea, Cookie); they stay saved so old orders and reports read correctly.
+- Menu items carry their KMS station; Daily Pars filters by Café / Bistro menu.
+
 ## Two-Step KMS
 - Replaced Start Prep → Plating → Ready → Complete with two steps: Start, then Complete.
 - Each item has a Start button that turns into Complete; finished items show ✓ Done (tap to undo). Stations get Start All / Complete All.

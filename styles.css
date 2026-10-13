@@ -95,3 +95,7 @@ button,.primary,.secondary,.small-btn,.tile,.menu-item,.input,.tabs button,.seat
 .kms-step.complete{background:var(--gold);border-color:#c48a00;color:#102033}
 .kms-step.done{background:var(--green);border-color:var(--green);color:white}
 .kms-line.started{background:#fffaf0;border-color:#f3d27a}
+
+/* Order screen menu tabs and categories */
+.menu-tabs{margin:8px 0}
+.menu-category{margin:14px 0 6px;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;font-size:14px}
