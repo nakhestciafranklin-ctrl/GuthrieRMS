@@ -800,6 +800,32 @@ function addBistroTeamPositions(){
 }
 window.addBistroTeamPositions=addBistroTeamPositions;
 addBistroTeamPositions();
+// C-Block Bistro Team chart assignments, matched by student ID. Applied once, so position
+// changes made later in Settings are kept. (Jason isn't on the roster yet.)
+const bistroTeamAssignments=[
+ ['205031','Executive Chef'],['001879','Sous Chef'],['229998','Kitchen Shift Manager'],
+ ['205589','Kitchen Department Lead'],
+ ['204140','Hot Station Lead'],['204594','Hot Station Team'],['209039','Hot Station Team'],
+ ['205056','Fry Station Lead'],['244767','Fry Station Team'],
+ ['265851','Cold/Garde Manger Lead'],['201912','Cold/Garde Manger Team'],
+ ['955128','Prep Lead'],['202394','Prep Team'],['208312','Prep Team'],
+ ['241377','Pastry Lead'],['261731','Pastry Team'],['202881','Pastry Team'],
+ ['218510','Beverage Station Lead'],
+ ['209038','Expo / Assembly'],['233978','Expo / Assembly'],['201862','Cashier'],['202474','Floater']
+];
+function assignBistroTeamPositions(){
+  if(db.settings?.bistroTeamAssigned)return false;
+  bistroTeamAssignments.forEach(([sid,pos])=>{
+    let u=db.users.find(x=>x.role==='student'&&(x.studentId===sid||x.pin===sid));
+    if(u)u.pos=pos;
+    if(!db.positions.includes(pos))db.positions.push(pos);
+  });
+  db.settings=db.settings||{}; db.settings.bistroTeamAssigned=true;
+  save();
+  return true;
+}
+window.assignBistroTeamPositions=assignBistroTeamPositions;
+assignBistroTeamPositions();
 let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();

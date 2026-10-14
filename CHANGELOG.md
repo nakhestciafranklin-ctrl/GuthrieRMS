@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Bistro Team Assignments
+- Set 22 C-Block Bistro Team students to their chart positions (matched by student ID), applied once so later changes in Settings stick. Jason is not on the roster yet and was skipped.
+
 ## Bistro Team Positions
 - Added the C-Block Bistro Team positions: Executive Chef, Sous Chef, Kitchen Shift Manager, Kitchen Department Lead, Hot Station Lead/Team, Fry Station Lead/Team, Cold/Garde Manger Lead/Team, Prep Lead/Team, Pastry Lead/Team, Beverage Station Lead, Expo / Assembly, Floater (Cashier already existed).
 - Added once to existing position lists, so removing one in Settings > Positions sticks.
