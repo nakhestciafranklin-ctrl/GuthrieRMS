@@ -787,6 +787,19 @@ function addCafeServicesOperation(){
 }
 window.addCafeServicesOperation=addCafeServicesOperation;
 addCafeServicesOperation();
+// Positions from the Guthrie Culinary C-Block Bistro Team chart. Added once (like Café Services),
+// so a position a manager removes in Settings > Positions stays removed.
+const bistroTeamPositions=['Executive Chef','Sous Chef','Kitchen Shift Manager','Kitchen Department Lead','Hot Station Lead','Hot Station Team','Fry Station Lead','Fry Station Team','Cold/Garde Manger Lead','Cold/Garde Manger Team','Prep Lead','Prep Team','Pastry Lead','Pastry Team','Beverage Station Lead','Expo / Assembly','Cashier','Floater'];
+function addBistroTeamPositions(){
+  if(db.settings?.bistroTeamPositionsAdded)return false;
+  if(!Array.isArray(db.positions))db.positions=[];
+  bistroTeamPositions.forEach(pos=>{if(!db.positions.includes(pos))db.positions.push(pos);});
+  db.settings=db.settings||{}; db.settings.bistroTeamPositionsAdded=true;
+  save();
+  return true;
+}
+window.addBistroTeamPositions=addBistroTeamPositions;
+addBistroTeamPositions();
 let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();

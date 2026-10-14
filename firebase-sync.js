@@ -106,6 +106,7 @@ if(!isConfigured(firebaseConfig)){
               if(typeof window.importCafeMenu==='function') window.importCafeMenu();
               if(typeof window.importBistroMenu==='function') window.importBistroMenu();
               if(typeof window.addCafeServicesOperation==='function') window.addCafeServicesOperation();
+              if(typeof window.addBistroTeamPositions==='function') window.addBistroTeamPositions();
               if(window.__guthrieRMSBooted){
                 if(typeof window.normalizeOrders==='function') window.normalizeOrders();
                 if(typeof window.render==='function') window.render();
