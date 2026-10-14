@@ -113,6 +113,10 @@ if(!isConfigured(firebaseConfig)){
             }
           }
           cloudReady=true;
+          // If this device's migrations changed the cloud copy (new menu items, modifiers,
+          // prices), send the result back up so every device gets it -- including devices
+          // still running an older cached version of the app.
+          pushToCloud();
           clearTimeout(fallbackTimer);
           window.__guthrieRMSBooted=true;
           setCloudStatus(true,'Connected — shared with all devices');
