@@ -1,5 +1,9 @@
 # Guthrie RMS Changelog
 
+## Italian Cream Soda Flavors
+- Added flavor choices to Italian Cream Soda: Blue Raspberry, Peach, Mango, Strawberry, Raspberry, Vanilla, Blueberry.
+- Devices that already have the Bistro menu pick up new menu modifiers automatically.
+
 ## Golden Melt Grilled Cheese
 - Added Golden Melt Grilled Cheese ($3) to the Bistro menu under Handhelds (Grill station).
 
