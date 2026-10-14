@@ -1,5 +1,9 @@
 # Guthrie RMS Changelog
 
+## Bistro Team Positions
+- Added the C-Block Bistro Team positions: Executive Chef, Sous Chef, Kitchen Shift Manager, Kitchen Department Lead, Hot Station Lead/Team, Fry Station Lead/Team, Cold/Garde Manger Lead/Team, Prep Lead/Team, Pastry Lead/Team, Beverage Station Lead, Expo / Assembly, Floater (Cashier already existed).
+- Added once to existing position lists, so removing one in Settings > Positions sticks.
+
 ## Menu Update Sync Fix
 - After connecting, a device now sends its menu updates (new items, modifiers, prices) back to the shared cloud data, so every device gets them — including ones still running an older cached copy of the app.
 - index.html loads app.js, firebase-sync.js and styles.css with a version tag so browsers fetch the new files after an update instead of a cached copy. Bump the `?v=` value in index.html with each release.
