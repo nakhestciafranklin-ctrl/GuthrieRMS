@@ -729,7 +729,7 @@ const bistroMenuData=[
  {id:211,name:'Oven-Baked Pommes Frites',price:2,category:'Sides',station:'grill',mods:['No Aioli','Aioli on Side']},
  {id:212,name:'Signature Peach Tea',price:3,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice','Extra Peach']},
  {id:213,name:'House-Brewed Sweet Tea',price:2,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice']},
- {id:214,name:'Italian Cream Soda',price:2,category:'Beverages',station:'beverage',mods:['No Cream','Light Ice','No Ice']},
+ {id:214,name:'Italian Cream Soda',price:2,category:'Beverages',station:'beverage',mods:['Blue Raspberry','Peach','Mango','Strawberry','Raspberry','Vanilla','Blueberry','No Cream','Light Ice','No Ice']},
  {id:215,name:'Strawberry Mint Lemonade',price:2,category:'Beverages',station:'beverage',mods:['No Mint','Light Ice','No Ice']},
  {id:216,name:'Chocolate Chunk Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
  {id:217,name:'Snickerdoodle Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
@@ -745,7 +745,14 @@ function importBistroMenu(){
   if(!Array.isArray(db.menu))db.menu=[];
   bistroMenuData.forEach(item=>{
     let existing=db.menu.find(m=>m.id===item.id);
-    if(existing){if(item.modPrices&&!existing.modPrices){existing.modPrices={...item.modPrices};changed=true;}return;}
+    if(existing){
+      if(item.modPrices&&!existing.modPrices){existing.modPrices={...item.modPrices};changed=true;}
+      // Pick up modifiers added to the menu since this device imported it (e.g. cream soda flavors),
+      // listed in menu order, keeping any extra modifiers already on the device.
+      let cur=Array.isArray(existing.mods)?existing.mods:[];
+      if(item.mods.some(md=>!cur.includes(md))){existing.mods=[...item.mods,...cur.filter(md=>!item.mods.includes(md))];changed=true;}
+      return;
+    }
     db.menu.push({...item,mods:[...item.mods],...(item.modPrices?{modPrices:{...item.modPrices}}:{}),inv:'bistro',menu:'bistro',active:true,dailyPar:0});
     changed=true;
   });
