@@ -1,5 +1,9 @@
 # Guthrie RMS Changelog
 
+## Menu Update Sync Fix
+- After connecting, a device now sends its menu updates (new items, modifiers, prices) back to the shared cloud data, so every device gets them — including ones still running an older cached copy of the app.
+- index.html loads app.js, firebase-sync.js and styles.css with a version tag so browsers fetch the new files after an update instead of a cached copy. Bump the `?v=` value in index.html with each release.
+
 ## Italian Cream Soda Flavors
 - Added flavor choices to Italian Cream Soda: Blue Raspberry, Peach, Mango, Strawberry, Raspberry, Vanilla, Blueberry.
 - Devices that already have the Bistro menu pick up new menu modifiers automatically.
