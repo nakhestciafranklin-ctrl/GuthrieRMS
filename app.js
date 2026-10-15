@@ -715,7 +715,7 @@ importCafeMenu();
 // Swapping the included pommes frites for another side is $1 extra.
 const sideSwapPrices={'Sub Charred Broccolini':1,'Sub Gruyère Mac & Cheese':1};
 const bistroMenuData=[
- {id:201,name:'Guthrie Bistro Burger',price:12,category:'Handhelds',station:'grill',mods:['No Cheese','No Pickles','No Sauce','Sauce on Side','Medium','Medium Well','Well Done','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices},
+ {id:201,name:'Guthrie Bistro Burger',price:12,category:'Handhelds',station:'grill',mods:['No Cheese','No Pickles','No Sauce','Sauce on Side','Medium','Medium Well','Well Done','Ketchup on Side','Mustard on Side','Mayo on Side','Pickles on Side','Ranch on Side','Aioli on Side','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices},
  {id:202,name:'Smoked Turkey Club',price:10,category:'Handhelds',station:'grill',mods:['No Ham','No Gruyère','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices},
  {id:203,name:'Buttermilk-Brined Chicken',price:11,category:'Handhelds',station:'grill',mods:['No Aioli','Aioli on Side','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices},
  {id:222,name:'Golden Melt Grilled Cheese',price:3,category:'Handhelds',station:'grill',mods:['Cut in Half','Allergy Alert']},
@@ -726,7 +726,7 @@ const bistroMenuData=[
  {id:208,name:"Chef's Weekly Feature",price:12,category:'Weekly Chef Special',station:'grill',mods:['Allergy Alert']},
  {id:209,name:'Charred Broccolini',price:2,category:'Sides',station:'grill',mods:['No Parmesan','No Lemon']},
  {id:210,name:'Gruyère Mac & Cheese',price:2,category:'Sides',station:'grill',mods:['Allergy Alert']},
- {id:211,name:'Oven-Baked Pommes Frites',price:2,category:'Sides',station:'grill',mods:['No Aioli','Aioli on Side']},
+ {id:211,name:'Oven-Baked Pommes Frites',price:2,category:'Sides',station:'grill',mods:['No Aioli','Aioli on Side','Ketchup on Side','Ranch on Side','Mustard on Side','Mayo on Side']},
  {id:212,name:'Signature Peach Tea',price:3,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice','Extra Peach']},
  {id:213,name:'House-Brewed Sweet Tea',price:2,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice']},
  {id:214,name:'Italian Cream Soda',price:2,category:'Beverages',station:'beverage',mods:['Blue Raspberry','Peach','Mango','Strawberry','Raspberry','Vanilla','Blueberry','No Cream','Light Ice','No Ice']},

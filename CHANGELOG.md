@@ -1,5 +1,9 @@
 # Guthrie RMS Changelog
 
+## Condiments on the Side
+- Guthrie Bistro Burger: Ketchup, Mustard, Mayo, Pickles, Ranch and Aioli on the side (for the burger or its frites), alongside the existing Sauce on Side.
+- Oven-Baked Pommes Frites: Ketchup, Ranch, Mustard and Mayo on the side, alongside Aioli on Side.
+
 ## Bistro Team Assignments
 - Set 22 C-Block Bistro Team students to their chart positions (matched by student ID), applied once so later changes in Settings stick. Jason is not on the roster yet and was skipped.
 
