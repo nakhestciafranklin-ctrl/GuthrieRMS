@@ -1,5 +1,9 @@
 # Guthrie RMS Changelog
 
+## Condiment Wording
+- Condiment options now read "Add Side of Ketchup / Mustard / Mayo / Pickles / Aioli" instead of "… on Side". Saved menus on existing devices are renamed in place.
+- "Aioli on Side" stays on the Buttermilk-Brined Chicken and Pommes Frites, where it means moving the aioli the dish comes with to the side.
+
 ## Condiments on the Side
 - All sandwiches (Guthrie Bistro Burger, Smoked Turkey Club, Buttermilk-Brined Chicken, Golden Melt Grilled Cheese): Ketchup, Mustard, Mayo, Pickles and Aioli on Side.
 - Oven-Baked Pommes Frites: Ketchup, Mustard and Mayo on Side, alongside Aioli on Side.
