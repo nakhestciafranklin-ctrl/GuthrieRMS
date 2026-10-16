@@ -21,6 +21,10 @@ const firebaseConfig={
 };
 
 const SHARED_DOC_PATH=['guthrieRMS','sharedState'];
+// App version from app.js. Every push stamps it on the shared doc; a device that sees a
+// newer version in the cloud is running stale cached code and reloads itself.
+const APP_VERSION=Number(window.GUTHRIE_RMS_VERSION)||0;
+const RELOAD_GUARD_MS=5*60*1000;
 const FALLBACK_TIMEOUT_MS=6000;
 const PUSH_DEBOUNCE_MS=500;
 
@@ -70,9 +74,11 @@ if(!isConfigured(firebaseConfig)){
 
       function pushToCloud(){
         if(!cloudReady||unsubscribed)return;
+        if(window.__guthrieRMSApplyingCloud)return;
         clearTimeout(pushTimer);
         pushTimer=setTimeout(()=>{
           try{
+            if(APP_VERSION&&!(Number(window.db.appVersion)>=APP_VERSION))window.db.appVersion=APP_VERSION;
             const clean=cleanForFirestore(window.db);
             const json=JSON.stringify(clean);
             if(json===lastSyncedJSON)return;
@@ -83,6 +89,20 @@ if(!isConfigured(firebaseConfig)){
           }
         },PUSH_DEBOUNCE_MS);
       }
+
+      // Reload once (at most every few minutes) when the shared data was written by a newer app version.
+      function newerVersionInCloud(cloudData){
+        if(!APP_VERSION||!(Number(cloudData?.appVersion)>APP_VERSION))return false;
+        try{
+          const last=Number(sessionStorage.getItem('guthrieRMSReloadAt'))||0;
+          if(Date.now()-last<RELOAD_GUARD_MS)return false;
+          sessionStorage.setItem('guthrieRMSReloadAt',String(Date.now()));
+        }catch(e){return false;}
+        setCloudStatus(false,'Updating to the newest version…');
+        location.reload();
+        return true;
+      }
+      let firstSnapshot=true;
 
       await signInAnonymously(auth);
 
@@ -95,30 +115,33 @@ if(!isConfigured(firebaseConfig)){
             await setDoc(sharedDocRef,clean);
           }else{
             const cloudData=snap.data();
+            if(newerVersionInCloud(cloudData))return;
             const cloudJSON=JSON.stringify(cloudData);
             if(cloudJSON!==lastSyncedJSON){
               lastSyncedJSON=cloudJSON;
               window.db=cloudData;
-              // The cloud snapshot fully replaces window.db, so any local-only
-              // migration (e.g. roster imports) has to be re-applied here or it
-              // gets silently discarded the moment cloud data arrives.
-              if(typeof window.importRosterStudents==='function') window.importRosterStudents();
-              if(typeof window.importCafeMenu==='function') window.importCafeMenu();
-              if(typeof window.importBistroMenu==='function') window.importBistroMenu();
-              if(typeof window.addCafeServicesOperation==='function') window.addCafeServicesOperation();
-              if(typeof window.addBistroTeamPositions==='function') window.addBistroTeamPositions();
-              if(typeof window.assignBistroTeamPositions==='function') window.assignBistroTeamPositions();
-              if(window.__guthrieRMSBooted){
-                if(typeof window.normalizeOrders==='function') window.normalizeOrders();
-                if(typeof window.render==='function') window.render();
+              // Re-applying migrations must not push on its own: a device running different
+              // code would undo it and push back, and the two would overwrite each other's
+              // orders in an endless loop. The migrated result is pushed once, on connect.
+              window.__guthrieRMSApplyingCloud=true;
+              try{
+                if(typeof window.importRosterStudents==='function') window.importRosterStudents();
+                if(typeof window.importCafeMenu==='function') window.importCafeMenu();
+                if(typeof window.importBistroMenu==='function') window.importBistroMenu();
+                if(typeof window.addCafeServicesOperation==='function') window.addCafeServicesOperation();
+                if(typeof window.addBistroTeamPositions==='function') window.addBistroTeamPositions();
+                if(typeof window.assignBistroTeamPositions==='function') window.assignBistroTeamPositions();
+                if(window.__guthrieRMSBooted&&typeof window.normalizeOrders==='function') window.normalizeOrders();
+              }finally{
+                window.__guthrieRMSApplyingCloud=false;
               }
+              if(window.__guthrieRMSBooted&&typeof window.render==='function') window.render();
             }
           }
           cloudReady=true;
-          // If this device's migrations changed the cloud copy (new menu items, modifiers,
-          // prices), send the result back up so every device gets it -- including devices
-          // still running an older cached version of the app.
-          pushToCloud();
+          // On connect only: if this device's migrations changed the cloud copy (new menu
+          // items, modifiers, prices), send the result up once so every device gets it.
+          if(firstSnapshot){firstSnapshot=false;pushToCloud();}
           clearTimeout(fallbackTimer);
           window.__guthrieRMSBooted=true;
           setCloudStatus(true,'Connected — shared with all devices');
