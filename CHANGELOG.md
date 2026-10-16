@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Sync Loop Fix (orders flickering at checkout)
+- Fixed a loop where a device running an older cached copy of the app and an updated device kept undoing each other's menu changes and re-sending the whole shared data, which made open orders (e.g. a grilled cheese at checkout) appear and disappear.
+- Menu fixes applied to incoming cloud data no longer trigger a push on their own; the migrated result is sent once, when the device connects.
+- The app now stamps its version on the shared data; a device that sees a newer version reloads itself (at most once every 5 minutes). Bump `GUTHRIE_RMS_VERSION` in app.js and the `?v=` tag in index.html with each release.
+
 ## Fry Station and Item Components on the KMS
 - Added a Fry station to the KMS. Oven-Baked Pommes Frites now route to Fry.
 - Items with parts made at another station show that part on that station's screen. The burger, turkey club and buttermilk chicken send their pommes frites to Fry; a side swap sends the broccolini or mac & cheese to the Grill instead.
