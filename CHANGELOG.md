@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Coffees on the Bistro Menu
+- Added Iced Latte and Hot Coffee with Syrup ($3 each, Vanilla / Mocha / Caramel / Pumpkin) to the Bistro menu under Beverages, matching the Café versions. Both route to the Beverage station.
+
 ## Condiment Wording
 - Condiment options now read "Add Side of Ketchup / Mustard / Mayo / Pickles / Aioli" instead of "… on Side". Saved menus on existing devices are renamed in place.
 - "Aioli on Side" stays on the Buttermilk-Brined Chicken and Pommes Frites, where it means moving the aioli the dish comes with to the side.

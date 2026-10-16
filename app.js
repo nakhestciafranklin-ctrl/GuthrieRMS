@@ -731,6 +731,8 @@ const bistroMenuData=[
  {id:213,name:'House-Brewed Sweet Tea',price:2,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice']},
  {id:214,name:'Italian Cream Soda',price:2,category:'Beverages',station:'beverage',mods:['Blue Raspberry','Peach','Mango','Strawberry','Raspberry','Vanilla','Blueberry','No Cream','Light Ice','No Ice']},
  {id:215,name:'Strawberry Mint Lemonade',price:2,category:'Beverages',station:'beverage',mods:['No Mint','Light Ice','No Ice']},
+ {id:223,name:'Iced Latte',price:3,category:'Beverages',station:'beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice']},
+ {id:224,name:'Hot Coffee with Syrup',price:3,category:'Beverages',station:'beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream']},
  {id:216,name:'Chocolate Chunk Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
  {id:217,name:'Snickerdoodle Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
  {id:218,name:'Sprinkle Sugar Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
