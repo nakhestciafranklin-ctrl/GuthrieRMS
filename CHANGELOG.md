@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Fry Station and Item Components on the KMS
+- Added a Fry station to the KMS. Oven-Baked Pommes Frites now route to Fry.
+- Items with parts made at another station show that part on that station's screen. The burger, turkey club and buttermilk chicken send their pommes frites to Fry; a side swap sends the broccolini or mac & cheese to the Grill instead.
+- Each part has its own Start / Complete. Expo shows each item with its parts underneath, an item counts as done only when all its parts are done, and the station Done counts and Complete All buttons cover parts too.
+
 ## Coffees on the Bistro Menu
 - Added Iced Latte and Hot Coffee with Syrup ($3 each, Vanilla / Mocha / Caramel / Pumpkin) to the Bistro menu under Beverages, matching the Café versions. Both route to the Beverage station.
 

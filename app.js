@@ -714,10 +714,13 @@ importCafeMenu();
 // tables and on the Bistro tab of Counter + To-Go orders; café items only on Counter + To-Go.
 // Swapping the included pommes frites for another side is $1 extra.
 const sideSwapPrices={'Sub Charred Broccolini':1,'Sub Gruyère Mac & Cheese':1};
+// Sandwiches come with pommes frites made at the Fry station; a side swap sends the
+// replacement side to the Grill instead. Each component gets its own KMS line.
+const friesComponent={key:'side',name:'Pommes Frites',station:'fry',swaps:{'Sub Charred Broccolini':{name:'Charred Broccolini',station:'grill'},'Sub Gruyère Mac & Cheese':{name:'Gruyère Mac & Cheese',station:'grill'}}};
 const bistroMenuData=[
- {id:201,name:'Guthrie Bistro Burger',price:12,category:'Handhelds',station:'grill',mods:['No Cheese','No Pickles','No Sauce','Sauce on Side','Medium','Medium Well','Well Done','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices},
- {id:202,name:'Smoked Turkey Club',price:10,category:'Handhelds',station:'grill',mods:['No Ham','No Gruyère','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices},
- {id:203,name:'Buttermilk-Brined Chicken',price:11,category:'Handhelds',station:'grill',mods:['No Aioli','Aioli on Side','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices},
+ {id:201,name:'Guthrie Bistro Burger',price:12,category:'Handhelds',station:'grill',mods:['No Cheese','No Pickles','No Sauce','Sauce on Side','Medium','Medium Well','Well Done','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[friesComponent]},
+ {id:202,name:'Smoked Turkey Club',price:10,category:'Handhelds',station:'grill',mods:['No Ham','No Gruyère','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[friesComponent]},
+ {id:203,name:'Buttermilk-Brined Chicken',price:11,category:'Handhelds',station:'grill',mods:['No Aioli','Aioli on Side','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[friesComponent]},
  {id:222,name:'Golden Melt Grilled Cheese',price:3,category:'Handhelds',station:'grill',mods:['Cut in Half','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Allergy Alert']},
  {id:204,name:'Southern Cobb Salad',price:12,category:'Greens & Bowls',station:'salad',mods:['No Chicken','No Bacon','No Egg','No Avocado','No Feta','No Corn','Dressing on Side','Allergy Alert']},
  {id:205,name:'Baby Spinach Salad',price:8,category:'Greens & Bowls',station:'salad',mods:['No Goat Cheese','No Pecans','Dressing on Side','Allergy Alert']},
@@ -726,7 +729,7 @@ const bistroMenuData=[
  {id:208,name:"Chef's Weekly Feature",price:12,category:'Weekly Chef Special',station:'grill',mods:['Allergy Alert']},
  {id:209,name:'Charred Broccolini',price:2,category:'Sides',station:'grill',mods:['No Parmesan','No Lemon']},
  {id:210,name:'Gruyère Mac & Cheese',price:2,category:'Sides',station:'grill',mods:['Allergy Alert']},
- {id:211,name:'Oven-Baked Pommes Frites',price:2,category:'Sides',station:'grill',mods:['No Aioli','Aioli on Side','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo']},
+ {id:211,name:'Oven-Baked Pommes Frites',price:2,category:'Sides',station:'fry',mods:['No Aioli','Aioli on Side','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo']},
  {id:212,name:'Signature Peach Tea',price:3,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice','Extra Peach']},
  {id:213,name:'House-Brewed Sweet Tea',price:2,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice']},
  {id:214,name:'Italian Cream Soda',price:2,category:'Beverages',station:'beverage',mods:['Blue Raspberry','Peach','Mango','Strawberry','Raspberry','Vanilla','Blueberry','No Cream','Light Ice','No Ice']},
@@ -751,6 +754,10 @@ function importBistroMenu(){
     let existing=db.menu.find(m=>m.id===item.id);
     if(existing){
       if(item.modPrices&&!existing.modPrices){existing.modPrices={...item.modPrices};changed=true;}
+      // Station and components follow the menu (e.g. fries moved to the Fry station).
+      if(item.station&&existing.station!==item.station){existing.station=item.station;changed=true;}
+      let comps=item.components?JSON.parse(JSON.stringify(item.components)):null;
+      if(JSON.stringify(existing.components||null)!==JSON.stringify(comps)){if(comps)existing.components=comps;else delete existing.components;changed=true;}
       // Pick up modifiers added to the menu since this device imported it (e.g. cream soda flavors),
       // listed in menu order, keeping any extra modifiers already on the device.
       let cur=Array.isArray(existing.mods)?existing.mods:[];
@@ -760,7 +767,7 @@ function importBistroMenu(){
       if(next.join('|')!==(existing.mods||[]).join('|')){existing.mods=next;changed=true;}
       return;
     }
-    db.menu.push({...item,mods:[...item.mods],...(item.modPrices?{modPrices:{...item.modPrices}}:{}),inv:'bistro',menu:'bistro',active:true,dailyPar:0});
+    db.menu.push({...JSON.parse(JSON.stringify(item)),inv:'bistro',menu:'bistro',active:true,dailyPar:0});
     changed=true;
   });
   if(!db.bistroMenuImported){
@@ -1078,7 +1085,8 @@ window.submitRefund=(orderId)=>{
  state.refundOrder=null; save(); render(); toast('Refund recorded.');
 };
 
-const kmsStationList=[['all','All Tickets'],['expo','Expo'],['grill','Grill'],['salad','Salad'],['beverage','Beverage'],['dessert','Dessert'],['catering','Catering']];
+const kmsStationList=[['all','All Tickets'],['expo','Expo'],['grill','Grill'],['fry','Fry'],['salad','Salad'],['beverage','Beverage'],['dessert','Dessert'],['catering','Catering']];
+const kmsStationLabels=Object.fromEntries(kmsStationList);
 // A ticket stays on the KMS until Expo completes it — paying the check does not clear it.
 // Paid tickets only carry over for the day they were sent, so old paid orders don't reappear.
 function kmsActive(o){
@@ -1086,18 +1094,38 @@ function kmsActive(o){
  if(!o.paid) return true;
  return new Date(o.sent).toLocaleDateString('en-CA')===productionToday();
 }
-// Expo and All Tickets see every line on the ticket; other stations see only their own lines.
-function kmsVisibleItems(o,station){return (station==='all'||station==='expo')?validItems(o):stationItems(o,station);}
-function kmsStationDone(o,station){let items=kmsVisibleItems(o,station);return items.length>0&&items.every(i=>i.kmsDone);}
+// Components of an item made at another station (e.g. a sandwich's fries). A side-swap
+// modifier replaces the component (fries → broccolini at the Grill).
+function itemComponents(i,o){
+ if(o?.type==='catering') return [];
+ let m=i?.menuId!=null?db.menu.find(x=>x.id===i.menuId):null;
+ return (m?.components||[]).map(c=>{let sw=Object.keys(c.swaps||{}).find(md=>(i.mods||[]).includes(md));let r=sw?c.swaps[sw]:c;return {key:c.key,name:r.name,station:r.station};});
+}
+// Every piece of work on a ticket: each item's main task at its station, plus one task per
+// component. The main task's state lives on the item (kmsStarted/kmsDone); components in kmsParts.
+function kmsTaskState(i,key){return key==='main'?i:(i.kmsParts&&i.kmsParts[key])||{};}
+function kmsTasks(o){
+ let out=[];
+ validItems(o).forEach(i=>{
+  out.push({i,key:'main',station:itemStation(i,o),name:i.name,component:false});
+  itemComponents(i,o).forEach(c=>out.push({i,key:c.key,station:c.station,name:c.name,component:true}));
+ });
+ return out.map(t=>({...t,started:!!kmsTaskState(t.i,t.key).kmsStarted,done:!!kmsTaskState(t.i,t.key).kmsDone}));
+}
+function kmsStationTasks(o,station){return kmsTasks(o).filter(t=>t.station===station);}
+function kmsItemDone(o,i){return kmsTasks(o).filter(t=>t.i===i).every(t=>t.done);}
+// Expo and All Tickets see every line on the ticket; other stations see only their own tasks.
+function kmsVisibleItems(o,station){return (station==='all'||station==='expo')?validItems(o):[...new Set(kmsStationTasks(o,station).map(t=>t.i))];}
+function kmsStationDone(o,station){let ts=kmsStationTasks(o,station);return ts.length>0&&ts.every(t=>t.done);}
 function kms(){
- let station=state.kmsStation||'all', label=kmsStationList.find(x=>x[0]===station)?.[1]||'All Tickets';
+ let station=state.kmsStation||'all', label=kmsStationLabels[station]||'All Tickets';
  let active=db.orders.filter(kmsActive).sort((a,b)=>new Date(a.sent)-new Date(b.sent));
  let list=active.filter(o=>kmsVisibleItems(o,station).length);
  let perStation=!['all','expo'].includes(station);
  let open=perStation?list.filter(o=>!kmsStationDone(o,station)):list, done=perStation?list.filter(o=>kmsStationDone(o,station)):[];
  let counts=Object.fromEntries(kmsStationList.map(([key])=>[key,active.filter(o=>kmsVisibleItems(o,key).length&&(['all','expo'].includes(key)||!kmsStationDone(o,key))).length]));
  let recent=db.orders.filter(o=>o.kmsStage==='completed'&&o.sent).sort((a,b)=>kmsLastTime(b)-kmsLastTime(a)).slice(0,5);
- return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). This only marks your station's items; the ticket stays up for the other stations. Expo sees every item, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${recent.length?`<details class="section"><summary><b>Recently Completed</b> (${recent.length})</summary>${recent.map(o=>`<div class="row kms-recent"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • completed ${new Date(kmsLastTime(o)).toLocaleTimeString()}</span><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}</details>`:''}</section>`;
+ return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). Items with parts from another station (like a sandwich's fries) show that part on that station's screen too. This only marks your station's work; the ticket stays up for the other stations. Expo sees every item, part, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${recent.length?`<details class="section"><summary><b>Recently Completed</b> (${recent.length})</summary>${recent.map(o=>`<div class="row kms-recent"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • completed ${new Date(kmsLastTime(o)).toLocaleTimeString()}</span><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}</details>`:''}</section>`;
 }
 function kmsLastTime(o){let l=(o.kmsLog||[]).slice(-1)[0];return new Date(l?.time||o.sent||0).getTime();}
 function itemStation(item,order){
@@ -1107,6 +1135,7 @@ function itemStation(item,order){
  if(order?.type==='catering'||name.includes('catering')||name.includes('box lunch')) return 'catering';
  if(name.includes('tea')||name.includes('drink')||name.includes('beverage')||name.includes('lemonade')||name.includes('coffee')||name.includes('latte')||name.includes('refresher')) return 'beverage';
  if(name.includes('cookie')||name.includes('dessert')||name.includes('tray')||name.includes('cake')||name.includes('muffin')) return 'dessert';
+ if(name.includes('frites')||name.includes('fries')) return 'fry';
  if(name.includes('salad')||name.includes('cobb')) return 'salad';
  if(name.includes('burger')||name.includes('sandwich')||name.includes('grill')||name.includes('wrap')||name.includes('quesadilla')||name.includes('bowl')) return 'grill';
  return 'expo';
@@ -1117,9 +1146,8 @@ function stationItems(order,station){
  return items.filter(i=>itemStation(i,order)===station);
 }
 function stationSummary(order){
- let labels={expo:'Expo',grill:'Grill',salad:'Salad',beverage:'Beverage',dessert:'Dessert',catering:'Catering'};
- let stations=[...new Set(validItems(order).map(i=>itemStation(i,order)))];
- return stations.map(s=>labels[s]||s).join(' • ');
+ let stations=[...new Set(kmsTasks(order).map(t=>t.station))];
+ return stations.map(s=>kmsStationLabels[s]||s).join(' • ');
 }
 function kmsElapsed(sent){
  let elapsed=Math.max(0,Date.now()-new Date(sent).getTime()), mins=Math.floor(elapsed/60000), secs=String(Math.floor(elapsed/1000)%60).padStart(2,'0');
@@ -1127,11 +1155,11 @@ function kmsElapsed(sent){
 }
 function kmsTicket(o,station){
  o.kmsStage=kmsStageOf(o);
- let t=kmsElapsed(o.sent), items=kmsVisibleItems(o,station), all=validItems(o), doneCount=all.filter(i=>i.kmsDone).length;
- let perStation=!['all','expo'].includes(station), stationLabel=kmsStationList.find(x=>x[0]===station)?.[1]||station;
+ let t=kmsElapsed(o.sent), all=validItems(o), doneCount=all.filter(i=>kmsItemDone(o,i)).length;
+ let perStation=!['all','expo'].includes(station), stationLabel=kmsStationLabels[station]||station, mine=perStation?kmsStationTasks(o,station):[];
  let where=o.type==='table'&&o.tableId?`TABLE ${o.tableId}`:o.type==='togo'?'TO-GO':o.type.toUpperCase();
- let bump=!perStation?'':items.some(i=>!i.kmsStarted&&!i.kmsDone)?`<button class="primary" onclick="markStationStarted(${o.id},'${station}')">Start All ${stationLabel}</button>`:items.some(i=>!i.kmsDone)?`<button class="primary success" onclick="markStationDone(${o.id},'${station}')">Complete All ${stationLabel}</button>`:'';
- return `<div class="ticket ${t.cls} ${perStation&&kmsStationDone(o,station)?'station-done':''}"><div class="row"><div><h2>${o.customer}${o.paid?' <span class="kms-paid">PAID</span>':''}</h2><p class="small">${where} • ${stationSummary(o)} • ${doneCount}/${all.length} items done</p></div><span class="spacer"></span><div class="timer" data-kms-sent="${o.sent}">${t.text}</div></div>${kmsProgress(o)}${kmsItemsList(o,items,station)}<div class="row section">${bump}${perStation?'':kmsButtons(o)}</div>${kmsLog(o)}</div>`;
+ let bump=!perStation?'':mine.some(x=>!x.started&&!x.done)?`<button class="primary" onclick="markStationStarted(${o.id},'${station}')">Start All ${stationLabel}</button>`:mine.some(x=>!x.done)?`<button class="primary success" onclick="markStationDone(${o.id},'${station}')">Complete All ${stationLabel}</button>`:'';
+ return `<div class="ticket ${t.cls} ${perStation&&kmsStationDone(o,station)?'station-done':''}"><div class="row"><div><h2>${o.customer}${o.paid?' <span class="kms-paid">PAID</span>':''}</h2><p class="small">${where} • ${stationSummary(o)} • ${doneCount}/${all.length} items done</p></div><span class="spacer"></span><div class="timer" data-kms-sent="${o.sent}">${t.text}</div></div>${kmsProgress(o)}${kmsItemsList(o,null,station)}<div class="row section">${bump}${perStation?'':kmsButtons(o)}</div>${kmsLog(o)}</div>`;
 }
 // Two-step flow: sent → started → completed. Tickets saved under the old
 // Prep / Plating / Ready stages count as started.
@@ -1140,19 +1168,25 @@ function kmsProgress(o){
  let stages=['sent','started','completed'], labels={sent:'Sent',started:'Started',completed:'Complete'}, at=stages.indexOf(kmsStageOf(o));
  return `<div class="progress kms-progress-2">${stages.map((st,ix)=>`<div class="step ${ix<=at?'done':''}">${labels[st]}</div>`).join('')}</div>`;
 }
-// One row per line: done box, item, station, seat, NEW badge for items added after the first send,
-// and every modifier as its own chip (allergy alerts in red) plus the custom note.
-function kmsItemsList(o,items,station){
- items=items||validItems(o);
- if(!items.length) return '<p>No station items.</p>';
- let showStation=['all','expo'].includes(station);
- return `<div class="kms-lines">${items.map(i=>{
-  let isNew=(Number(i.sendRound)||1)>1&&i.sendRound===o.sendCount;
+function kmsStepButton(o,t){
+ let args=`${o.id},'${t.i.lineId}','${t.key}'`;
+ return t.done?`<button class="kms-step done" title="Tap to undo" onclick="undoKmsTask(${args})">✓ Done</button>`:t.started?`<button class="kms-step complete" onclick="completeKmsTask(${args})">Complete</button>`:`<button class="kms-step start" onclick="startKmsTask(${args})">Start</button>`;
+}
+// One row per task. Station screens list their own tasks (a component shows which item it
+// belongs to); Expo / All list each item with its component rows underneath. Every row shows
+// the NEW badge, seat, each modifier as a chip (allergy alerts in red) and the custom note.
+function kmsItemsList(o,_items,station){
+ let showAll=['all','expo'].includes(station);
+ let tasks=kmsTasks(o).filter(t=>showAll||t.station===station);
+ if(!tasks.length) return '<p>No station items.</p>';
+ let row=t=>{
+  let i=t.i, isNew=(Number(i.sendRound)||1)>1&&i.sendRound===o.sendCount;
   let mods=(i.mods||[]).map(md=>`<span class="kms-mod ${/allerg/i.test(md)?'alert':''}">${md}</span>`).join('');
   let note=i.note?`<span class="kms-note">Note: ${i.note}</span>`:'';
-  let step=i.kmsDone?`<button class="kms-step done" title="Tap to undo" onclick="undoKmsItem(${o.id},'${i.lineId}')">✓ Done</button>`:i.kmsStarted?`<button class="kms-step complete" onclick="completeKmsItem(${o.id},'${i.lineId}')">Complete</button>`:`<button class="kms-step start" onclick="startKmsItem(${o.id},'${i.lineId}')">Start</button>`;
-  return `<div class="kms-line ${i.kmsDone?'done':i.kmsStarted?'started':''}">${step}<div class="kms-line-body"><div class="kms-line-head"><b>${i.name}</b>${isNew?'<span class="kms-new">NEW</span>':''}${showStation?`<span class="kms-station">${itemStation(i,o).toUpperCase()}</span>`:''}${o.type==='table'?`<span class="small">Seat ${i.seat||'-'}</span>`:''}</div>${mods||note?`<div class="kms-mods">${mods}${note}</div>`:''}</div></div>`;
- }).join('')}</div>`;
+  let title=t.component?`<b>${t.name}</b><span class="small">for ${i.name}</span>`:`<b>${i.name}</b>`;
+  return `<div class="kms-line ${t.component&&showAll?'kms-part':''} ${t.done?'done':t.started?'started':''}">${kmsStepButton(o,t)}<div class="kms-line-body"><div class="kms-line-head">${title}${isNew?'<span class="kms-new">NEW</span>':''}${showAll?`<span class="kms-station">${(kmsStationLabels[t.station]||t.station).toUpperCase()}</span>`:''}${o.type==='table'?`<span class="small">Seat ${i.seat||'-'}</span>`:''}</div>${(mods||note)&&!(t.component&&showAll)?`<div class="kms-mods">${mods}${note}</div>`:''}</div></div>`;
+ };
+ return `<div class="kms-lines">${tasks.map(row).join('')}</div>`;
 }
 function kmsLog(o){
  let logs=(o.kmsLog||[]).slice(-4).reverse();
@@ -1165,17 +1199,21 @@ setInterval(()=>{
  document.querySelectorAll('[data-kms-sent]').forEach(el=>{let t=kmsElapsed(el.dataset.kmsSent), tk=el.closest('.ticket'); el.textContent=t.text; if(tk){tk.classList.toggle('warn',t.cls==='warn');tk.classList.toggle('late',t.cls==='late');}});
 },1000);
 function kmsLine(orderId,lineId){let o=db.orders.find(x=>x.id===orderId);return {o,i:o&&validItems(o).find(x=>x.lineId===lineId)};}
-// Starting any item starts the ticket, so Expo doesn't need a separate tap.
+function kmsStateFor(i,key){if(key==='main')return i;i.kmsParts=i.kmsParts||{};return i.kmsParts[key]=i.kmsParts[key]||{};}
+// Starting any task starts the ticket, so Expo doesn't need a separate tap.
 function kmsAutoStart(o){if(kmsStageOf(o)==='sent'){o.kmsStage='started';o.kmsLog=o.kmsLog||[];o.kmsLog.push({stage:'Started',time:now(),by:state.user.name});}}
-function kmsStartItem(o,i){if(i.kmsStarted||i.kmsDone)return;i.kmsStarted=true;i.kmsStartedBy=state.user.name;i.kmsStartedAt=now();kmsAutoStart(o);}
-function kmsDoneItem(o,i){if(i.kmsDone)return;if(!i.kmsStarted){i.kmsStarted=true;i.kmsStartedAt=now();i.kmsStartedBy=state.user.name;}i.kmsDone=true;i.kmsDoneBy=state.user.name;i.kmsDoneAt=now();kmsAutoStart(o);}
-window.startKmsItem=(orderId,lineId)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; kmsStartItem(o,i); save(); render();};
-window.completeKmsItem=(orderId,lineId)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; kmsDoneItem(o,i); save(); render();};
-window.undoKmsItem=(orderId,lineId)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; i.kmsDone=false; i.kmsDoneBy=''; i.kmsDoneAt=''; save(); render();};
-window.markStationStarted=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationList.find(x=>x[0]===station)?.[1]||station; stationItems(o,station).forEach(i=>kmsStartItem(o,i)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Started`,time:now(),by:state.user.name}); save(); render(); toast(`${label} started`);};
-window.markStationDone=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationList.find(x=>x[0]===station)?.[1]||station; stationItems(o,station).forEach(i=>kmsDoneItem(o,i)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Complete`,time:now(),by:state.user.name}); save(); render(); toast(`${label} complete`);};
+function kmsStartTask(o,i,key){let st=kmsStateFor(i,key);if(st.kmsStarted||st.kmsDone)return;st.kmsStarted=true;st.kmsStartedBy=state.user.name;st.kmsStartedAt=now();kmsAutoStart(o);}
+function kmsDoneTask(o,i,key){let st=kmsStateFor(i,key);if(st.kmsDone)return;if(!st.kmsStarted){st.kmsStarted=true;st.kmsStartedAt=now();st.kmsStartedBy=state.user.name;}st.kmsDone=true;st.kmsDoneBy=state.user.name;st.kmsDoneAt=now();kmsAutoStart(o);}
+window.startKmsTask=(orderId,lineId,key)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; kmsStartTask(o,i,key||'main'); save(); render();};
+window.completeKmsTask=(orderId,lineId,key)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; kmsDoneTask(o,i,key||'main'); save(); render();};
+window.undoKmsTask=(orderId,lineId,key)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; let st=kmsStateFor(i,key||'main'); st.kmsDone=false; st.kmsDoneBy=''; st.kmsDoneAt=''; save(); render();};
+window.startKmsItem=(orderId,lineId)=>startKmsTask(orderId,lineId,'main');
+window.completeKmsItem=(orderId,lineId)=>completeKmsTask(orderId,lineId,'main');
+window.undoKmsItem=(orderId,lineId)=>undoKmsTask(orderId,lineId,'main');
+window.markStationStarted=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationLabels[station]||station; kmsStationTasks(o,station).forEach(t=>kmsStartTask(o,t.i,t.key)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Started`,time:now(),by:state.user.name}); save(); render(); toast(`${label} started`);};
+window.markStationDone=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationLabels[station]||station; kmsStationTasks(o,station).forEach(t=>kmsDoneTask(o,t.i,t.key)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Complete`,time:now(),by:state.user.name}); save(); render(); toast(`${label} complete`);};
 window.recallKmsTicket=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage='started'; if(!o.paid)o.status='sent'; o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:'Recalled',time:now(),by:state.user.name}); save(); render(); toast('Ticket recalled');};
-window.ready=id=>kmsStage(id,'completed'); window.kmsStage=(id,stage)=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let open=validItems(o).filter(i=>!i.kmsDone).length; if(stage==='completed'&&open&&!confirm(`${open} item(s) on this ticket are not marked complete by their station yet. Complete the ticket anyway?`))return; o.kmsStage=stage; o.kmsLog=o.kmsLog||[]; let label={started:'Started',completed:'Completed'}[stage]||stage; o.kmsLog.push({stage:label,time:now(),by:state.user.name}); if(!o.paid&&stage==='completed')o.status='completed'; let t=db.tables.find(x=>x.orderId===id); if(t&&stage==='completed')t.status='ready'; save(); render(); toast(label);};
+window.ready=id=>kmsStage(id,'completed'); window.kmsStage=(id,stage)=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let open=kmsTasks(o).filter(t=>!t.done).length; if(stage==='completed'&&open&&!confirm(`${open} item(s) or part(s) on this ticket are not marked complete by their station yet. Complete the ticket anyway?`))return; o.kmsStage=stage; o.kmsLog=o.kmsLog||[]; let label={started:'Started',completed:'Completed'}[stage]||stage; o.kmsLog.push({stage:label,time:now(),by:state.user.name}); if(!o.paid&&stage==='completed')o.status='completed'; let t=db.tables.find(x=>x.orderId===id); if(t&&stage==='completed')t.status='ready'; save(); render(); toast(label);};
 function inventory(){
  if(state.user.inventoryScope==='culinary') state.invDivision='culinary';
  const allItems=db.inventory.filter(i=>i.division===state.invDivision);
