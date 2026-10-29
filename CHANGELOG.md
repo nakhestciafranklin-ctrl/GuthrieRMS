@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Cinnamon Rolls to Fry
+- Exemption Day Cinnamon Rolls now route to the Fry station on the KMS for prep (were Dessert). Devices that already loaded the menu are updated.
+
 ## Quantity and Remove While Ringing Up
 - The add-item pop-up has a Quantity picker (− / + or type a number). Adding 3 puts 3 lines on the ticket with the same options, so the KMS, Daily Pars and reports count each one. If a par doesn't have enough left, it says how many remain.
 - The ticket on the order screen (Counter + To-Go, Dining Room and Catering) now has a Remove button on each line, so mistakes can be fixed before checkout. Removed items go back to the daily par; removing an item already sent to the KMS warns first and takes it off the kitchen screens. An order emptied this way stays open for more items.
