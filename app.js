@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026102906;
+window.GUTHRIE_RMS_VERSION=2026102907;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -887,7 +887,7 @@ assignBistroTeamPositions();
 let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();
-function save(){localStorage.setItem('guthrieRMS7A',JSON.stringify(db));}
+function save(){soldCache=null;localStorage.setItem('guthrieRMS7A',JSON.stringify(db));}
 function validItems(o){return Array.isArray(o?.items)?o.items.filter(i=>i&&i.name&&Number(i.price)>=0):[];}
 function normalizeOrders(){
   let changed=false;
@@ -1001,7 +1001,7 @@ function quick(){let list=db.orders.filter(o=>!o.paid&&(o.type==='counter'||o.ty
 window.createQuickOrder=(type)=>{let label=type==='togo'?'To-Go':'Counter';let customer=prompt(`Enter customer/order name for ${label}:`, type==='togo'?'To-Go Customer':'Walk-In')||label+' Order';let o={id:Date.now(),type,customer,items:[],status:'open',created:now(),sent:null,paid:false};db.orders.push(o);state.activeOrder=o.id;state.seat=1;state.menuTab='cafe';state.view='order';save();render();};
 window.openQuickOrder=id=>{let o=db.orders.find(x=>x.id===id);if(!o)return;state.activeOrder=id;state.seat=1;state.view='order';render();};
 function modifierModal(menuId,seat){let m=db.menu.find(x=>x.id===menuId); if(!m||isMenu86(m)){alert('This item is currently 86\'d or unavailable.');return;} app.insertAdjacentHTML('beforeend',`<div class="modal" id="mod"><div class="card"><h2>${m.name} Modifiers</h2><p class="small">Remaining today: ${productionRemaining(m.id)}</p><div class="modifier-list">${(m.mods||[]).map(md=>{let up=Number(m.modPrices?.[md])||0;return `<button data-mod="${md}" onclick="this.classList.toggle('selected')">${md}${up?` <b>+${money(up)}</b>`:''}</button>`;}).join('')||'<p class="small">No modifiers set up yet.</p>'}</div><h3>Custom Note</h3><input class="input" id="note" placeholder="Optional"><h3>Quantity</h3><div class="row qty-picker"><button class="small-btn" onclick="stepQty(-1)">&minus;</button><input class="input" id="qty" type="number" min="1" step="1" inputmode="numeric" value="1"><button class="small-btn" onclick="stepQty(1)">+</button></div><div class="row section"><button class="primary" onclick="addItem(${menuId},${seat})">Add Item</button><button class="primary danger" onclick="document.getElementById('mod').remove()">Cancel</button></div></div></div>`)}
-window.modifierModal=modifierModal; window.addItem=(menuId,seat)=>{let o=db.orders.find(x=>x.id===state.activeOrder), m=db.menu.find(x=>x.id===menuId); if(!o||!m)return; let qty=Math.max(1,Math.floor(Number($('#qty')?.value)||1)); if(!deductProduction(menuId,qty)){let left=productionRemaining(menuId);alert(productionItem(menuId).manual86||left==='∞'||!left?'This item is 86\'d or no longer available.':`Only ${left} left today.`);return;} let mods=[...document.querySelectorAll('#mod .modifier-list .selected')].map(b=>b.dataset.mod||b.textContent);let note=$('#note').value; let upcharge=mods.reduce((a,md)=>a+(Number(m.modPrices?.[md])||0),0); /* One ticket line per item so KMS, pars and reports count each one. */ for(let n=0;n<qty;n++)o.items.push({id:Date.now()+n,lineId:String(Date.now())+'-'+n+'-'+Math.random().toString(36).slice(2,7),menuId,name:m.name,price:Math.round((Number(m.price)+upcharge)*100)/100,basePrice:m.price,modCharge:upcharge,seat,mods:[...mods],note}); document.getElementById('mod').remove(); save();render(); if(qty>1)toast(`Added ${qty} × ${m.name}.`);};
+window.modifierModal=modifierModal; window.addItem=(menuId,seat)=>{let o=db.orders.find(x=>x.id===state.activeOrder), m=db.menu.find(x=>x.id===menuId); if(!o||!m)return; let qty=Math.max(1,Math.floor(Number($('#qty')?.value)||1)); if(!deductProduction(menuId,qty)){let left=productionRemaining(menuId);alert(productionItem(menuId).manual86||left==='∞'||!left?'This item is 86\'d or no longer available.':`Only ${left} left today.`);return;} let mods=[...document.querySelectorAll('#mod .modifier-list .selected')].map(b=>b.dataset.mod||b.textContent);let note=$('#note').value; let upcharge=mods.reduce((a,md)=>a+(Number(m.modPrices?.[md])||0),0); /* One ticket line per item so KMS, pars and reports count each one. */ for(let n=0;n<qty;n++)o.items.push({id:Date.now()+n,addedAt:Date.now(),lineId:String(Date.now())+'-'+n+'-'+Math.random().toString(36).slice(2,7),menuId,name:m.name,price:Math.round((Number(m.price)+upcharge)*100)/100,basePrice:m.price,modCharge:upcharge,seat,mods:[...mods],note}); document.getElementById('mod').remove(); save();render(); if(qty>1)toast(`Added ${qty} × ${m.name}.`);};
 window.stepQty=(d)=>{let q=$('#qty'); if(q)q.value=Math.max(1,(Math.floor(Number(q.value))||1)+d);};
 function ticketItems(o){let items=validItems(o);return items.length?`<table class="report-table"><tr><th>Seat</th><th>Item</th><th>Mods</th><th>Price</th><th>Remove</th></tr>${items.map((i,idx)=>`<tr><td>${i.seat||'-'}</td><td>${i.name}</td><td>${[...(i.mods||[]),i.note].filter(Boolean).join(', ')}</td><td>${money(i.price)}</td><td><button class="small-btn danger" onclick="removeTicketLine(${o.id},'${i.lineId||''}',${idx})">Remove</button></td></tr>`).join('')}<tr><td colspan="3"><b>Total</b></td><td colspan="2"><b>${money(total(o))}</b></td></tr></table>`:'<p>No items yet.</p>'}
 // Remove a line while ringing up. Unlike checkout, an emptied order stays open so more items can be added.
@@ -1406,45 +1406,68 @@ function rollProductionDay(){
   if(db.production.date===today) return false;
   db.production.items=db.production.items||{};
   db.production.history=db.production.history||[];
-  if(db.production.date) db.production.history.push({date:db.production.date,items:JSON.parse(JSON.stringify(db.production.items))});
+  if(db.production.date){
+    let sold=soldCounts(db.production.date), items=JSON.parse(JSON.stringify(db.production.items));
+    Object.entries(items).forEach(([id,p])=>{p.sold=sold[id]||0;p.remaining=Math.max(0,(Number(p.startingPar)||0)-p.sold);delete p.countFrom;});
+    db.production.history.push({date:db.production.date,items});
+  }
   db.production.history=db.production.history.slice(-30);
-  Object.values(db.production.items).forEach(p=>{p.remaining=Number(p.startingPar)||0;p.manual86=false;p.reason='';});
+  Object.values(db.production.items).forEach(p=>{delete p.remaining;delete p.countFrom;p.manual86=false;p.reason='';});
   db.production.date=today;
   save();
   return true;
 }
+// Sold counts come from the order lines themselves (orders with items are never deleted), so
+// every register's sales count no matter which device syncs last. A stored "remaining" number
+// used to be overwritten when two devices saved around the same time. Removing a line puts it
+// back automatically. "Refill All to Par" sets countFrom so only sales after it count.
+var soldCache=null;
+function lineTime(i){return Number(i.addedAt)||Number(i.id)||0;}
+function soldCounts(date){
+  date=date||productionToday();
+  if(soldCache&&soldCache.date===date)return soldCache.counts;
+  let counts={}, from=db.production?.items||{};
+  (db.orders||[]).forEach(o=>(o.items||[]).forEach(i=>{
+    if(!i||i.menuId==null)return;
+    let t=lineTime(i); if(!t||new Date(t).toLocaleDateString('en-CA')!==date)return;
+    if(date===productionToday()&&t<(Number(from[i.menuId]?.countFrom)||0))return;
+    counts[i.menuId]=(counts[i.menuId]||0)+1;
+  }));
+  soldCache={date,counts};
+  setTimeout(()=>{soldCache=null;},0);
+  return counts;
+}
+function soldToday(menuId){return soldCounts()[menuId]||0;}
+function remainingToday(menuId){let p=productionItem(menuId);return Math.max(0,(Number(p.startingPar)||0)-soldToday(menuId));}
 function productionItem(menuId){
   rollProductionDay();
   db.production.items=db.production.items||{};
   if(!db.production.items[menuId]){
     let m=db.menu.find(x=>x.id===menuId);
-    db.production.items[menuId]={startingPar:Number(m&&m.dailyPar)||0,remaining:Number(m&&m.dailyPar)||0,manual86:false,reason:''};
+    db.production.items[menuId]={startingPar:Number(m&&m.dailyPar)||0,manual86:false,reason:''};
   }
   return db.production.items[menuId];
 }
 function isMenu86(m){
   let p=productionItem(m.id);
   if(p.manual86) return true;
-  if(p.startingPar>0 && p.remaining<=0) return true;
+  if(p.startingPar>0 && remainingToday(m.id)<=0) return true;
   return false;
 }
 function productionRemaining(menuId){
   let p=productionItem(menuId);
-  return p.startingPar>0 ? p.remaining : '∞';
+  return p.startingPar>0 ? remainingToday(menuId) : '∞';
 }
 function deductProduction(menuId,qty){
   let p=productionItem(menuId);
   if(p.manual86) return false;
   if(p.startingPar>0){
-    if(p.remaining<qty) return false;
-    p.remaining-=qty;
+    if(remainingToday(menuId)<qty) return false;
   }
   return true;
 }
-function restoreProduction(menuId,qty){
-  let p=productionItem(menuId);
-  if(p.startingPar>0) p.remaining=Math.min(p.startingPar,p.remaining+qty);
-}
+// Counts follow the order lines, so adding or removing the line is what changes them.
+function restoreProduction(menuId,qty){}
 // Dining Room tables always use the Bistro menu; Counter + To-Go defaults to the Café menu
 // with tabs to switch to Bistro or Exemption Day.
 function menuTabFor(o){return o.type==='table'?'bistro':(state.menuTab||'cafe');}
@@ -1472,8 +1495,8 @@ function parsScreen(){
   let soldOut=items.filter(m=>isMenu86(m));
   let row=m=>{
     let p=productionItem(m.id), par=Number(p.startingPar)||0, d86=isMenu86(m);
-    let sold=par>0?par-p.remaining:null;
-    return `<tr><td><b>${m.name}</b></td><td><input class="input par-input" type="number" min="0" step="1" inputmode="numeric" data-par-id="${m.id}" value="${par||''}" placeholder="No limit" style="max-width:120px"></td><td>${sold==null?'—':sold}</td><td>${par>0?p.remaining:'No limit'}</td><td>${d86?`<b style="color:var(--red)">${p.manual86?'86\'d':'Sold Out'}</b>`:'Available'}</td><td><button class="small-btn ${p.manual86?'':'danger'}" onclick="toggleManual86(${m.id})">${p.manual86?'Un-86':'86 Item'}</button></td></tr>`;
+    let sold=soldToday(m.id);
+    return `<tr><td><b>${m.name}</b></td><td><input class="input par-input" type="number" min="0" step="1" inputmode="numeric" data-par-id="${m.id}" value="${par||''}" placeholder="No limit" style="max-width:120px"></td><td>${sold}</td><td>${par>0?remainingToday(m.id):'No limit'}</td><td>${d86?`<b style="color:var(--red)">${p.manual86?'86\'d':'Sold Out'}</b>`:'Available'}</td><td><button class="small-btn ${p.manual86?'':'danger'}" onclick="toggleManual86(${m.id})">${p.manual86?'Un-86':'86 Item'}</button></td></tr>`;
   };
   return `<section class="card"><h1>Daily Pars</h1>
     <p class="notice">Set how many of each item are available today (${productionToday()}). Leave a par blank or 0 for no limit. When an item's count reaches 0 it shows as Sold Out on the order screens. Pars carry over to the next day and counts refill automatically each morning.</p>
@@ -1488,19 +1511,19 @@ window.saveDailyPars=()=>{
   document.querySelectorAll('[data-par-id]').forEach(inp=>{
     let id=Number(inp.dataset.parId), m=db.menu.find(x=>x.id===id); if(!m)return;
     let p=productionItem(id), par=Math.max(0,Math.floor(Number(inp.value)||0));
-    let sold=p.startingPar>0?p.startingPar-p.remaining:0;
-    p.startingPar=par; p.remaining=Math.max(0,par-sold); m.dailyPar=par;
+    if(p.startingPar!==par)p.startingPar=par;
+    if(m.dailyPar!==par)m.dailyPar=par;
   });
   save(); render(); alert('Daily pars saved.');
 };
 window.refillDailyPars=()=>{
   if(!confirm('Reset every item\'s remaining count back to its full par? Use this only at the start of service.'))return;
-  Object.values(db.production.items||{}).forEach(p=>{p.remaining=Number(p.startingPar)||0;});
+  let t=Date.now(); Object.values(db.production.items||{}).forEach(p=>{p.countFrom=t;});
   save(); render();
 };
 window.clearDailyPars=()=>{
   if(!confirm('Remove the par from every item so nothing has a limit today?'))return;
-  db.menu.forEach(m=>{let p=productionItem(m.id); p.startingPar=0; p.remaining=0; m.dailyPar=0;});
+  db.menu.forEach(m=>{let p=productionItem(m.id); p.startingPar=0; m.dailyPar=0;});
   save(); render();
 };
 window.toggleManual86=id=>{let p=productionItem(id); p.manual86=!p.manual86; p.reason=p.manual86?'Manual 86':''; save(); render();};

@@ -109,6 +109,52 @@ if(!isConfigured(firebaseConfig)){
         return localWins;
       }
 
+      // ---- Everything else (pars, menu, settings, inventory, ...) ----
+      // Same idea for the rest of the shared doc. Each top-level section, the production day
+      // (date/history), and each item's par/count is a "unit". When this device changes a unit,
+      // its time goes in db.syncStamps; on merge the newer stamp wins. Without this, an update
+      // from another device replaced the whole doc and wiped out pars saved here moments before.
+      // baseUnits is what this device last took from the cloud (after migrations), so a
+      // migration's own changes are not stamped and pushed (see the loop note further down).
+      const UNSTAMPED=['orders','production','syncStamps','appVersion'];
+      function units(data){
+        const out=new Map();
+        Object.keys(data||{}).forEach(k=>{if(!UNSTAMPED.includes(k))out.set(k,data[k]);});
+        const prod=data?.production;
+        if(prod){
+          out.set('production',{date:prod.date,history:prod.history});
+          Object.entries(prod.items||{}).forEach(([id,item])=>out.set('production.items.'+id,item));
+        }
+        return out;
+      }
+      let baseUnits=new Map();       // unit -> JSON as last taken from the cloud
+      const stampedUnits=new Map();  // unit -> JSON this device already stamped
+      function rememberUnits(data){baseUnits=new Map([...units(data)].map(([k,v])=>[k,JSON.stringify(v)]));}
+      function stampLocalUnits(){
+        const data=window.db; if(!data)return;
+        units(data).forEach((v,k)=>{
+          const j=JSON.stringify(v);
+          if(baseUnits.get(k)!==j&&stampedUnits.get(k)!==j){data.syncStamps=data.syncStamps||{};data.syncStamps[k]=Date.now();stampedUnits.set(k,j);}
+        });
+      }
+      // Keeps this device's units that are newer than the cloud's. Returns true if any were kept.
+      function mergeUnits(cloudData,local){
+        const cs=cloudData.syncStamps||{}, ls=local?.syncStamps||{};
+        const stamps={...cs}; let localWins=false;
+        const newer=k=>(Number(ls[k])||0)>(Number(cs[k])||0);
+        const keep=k=>{stamps[k]=ls[k];localWins=true;};
+        Object.keys(local||{}).forEach(k=>{if(!UNSTAMPED.includes(k)&&newer(k)){cloudData[k]=local[k];keep(k);}});
+        const lp=local?.production;
+        if(lp){
+          const cp=cloudData.production=cloudData.production||{};
+          cp.items=cp.items||{};
+          if(newer('production')){cp.date=lp.date;cp.history=lp.history;keep('production');}
+          Object.entries(lp.items||{}).forEach(([id,item])=>{const k='production.items.'+id;if(newer(k)){cp.items[id]=item;keep(k);}});
+        }
+        cloudData.syncStamps=stamps;
+        return localWins;
+      }
+
       function cleanForFirestore(data){
         // Strips undefined values and functions, which Firestore rejects.
         return JSON.parse(JSON.stringify(data));
@@ -122,6 +168,7 @@ if(!isConfigured(firebaseConfig)){
           try{
             if(APP_VERSION&&!(Number(window.db.appVersion)>=APP_VERSION))window.db.appVersion=APP_VERSION;
             stampLocalChanges();
+            stampLocalUnits();
             const clean=cleanForFirestore(window.db);
             const json=JSON.stringify(clean);
             if(json===lastSyncedJSON)return;
@@ -151,6 +198,8 @@ if(!isConfigured(firebaseConfig)){
       let renderWaiting=null;
       function screenBusy(){
         if(document.querySelector('.modal'))return true;
+        // Pars typed on Daily Pars but not saved yet: a redraw would put the old numbers back.
+        if([...document.querySelectorAll('[data-par-id]')].some(i=>i.value!==i.defaultValue))return true;
         const el=document.activeElement;
         return !!(el&&/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)&&document.getElementById('app')?.contains(el));
       }
@@ -181,7 +230,13 @@ if(!isConfigured(firebaseConfig)){
               // First load takes the cloud's orders as-is (this device's saved copy may be days old).
               // After that, merge so orders this device just entered or updated aren't lost.
               if(firstSnapshot){ rememberBase(cloudData.orders); }
-              else { stampLocalChanges(); const localOrders=window.db?.orders||[]; localWins=mergeOrders(cloudData,localOrders); rememberBase(JSON.parse(cloudJSON).orders); }
+              else {
+                stampLocalChanges(); stampLocalUnits();
+                const local=window.db, localOrders=local?.orders||[];
+                localWins=mergeOrders(cloudData,localOrders);
+                if(mergeUnits(cloudData,local))localWins=true;
+                rememberBase(JSON.parse(cloudJSON).orders);
+              }
               window.db=cloudData;
               // Re-applying migrations must not push on its own: a device running different
               // code would undo it and push back, and the two would overwrite each other's
@@ -199,6 +254,7 @@ if(!isConfigured(firebaseConfig)){
               }finally{
                 window.__guthrieRMSApplyingCloud=false;
               }
+              rememberUnits(window.db);
               if(window.__guthrieRMSBooted) renderWhenIdle();
             }
           }
