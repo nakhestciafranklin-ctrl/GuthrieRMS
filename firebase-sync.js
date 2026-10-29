@@ -67,6 +67,48 @@ if(!isConfigured(firebaseConfig)){
       let pushTimer=null;
       let unsubscribed=false;
 
+      // ---- Order merging ----
+      // The whole app shares one cloud document, so a device saving a slightly older copy used
+      // to wipe out other devices' new orders and KMS progress. Orders are now merged by id:
+      // each order carries updatedAt (stamped when this device changes it) and the newer copy wins.
+      // baseOrders only changes when a cloud snapshot arrives (never on push): an order this
+      // device pushed is not "in the cloud" until the cloud sends it back.
+      let baseOrders=new Map();      // id -> order JSON (without updatedAt) as last seen in the cloud
+      const stamped=new Map();       // id -> JSON this device already stamped, so it isn't re-stamped
+      const orderKey=o=>{const c={...o};delete c.updatedAt;return JSON.stringify(c);};
+      function rememberBase(orders){baseOrders=new Map((orders||[]).map(o=>[o.id,orderKey(o)]));}
+      function stampLocalChanges(){
+        (window.db?.orders||[]).forEach(o=>{
+          const k=orderKey(o);
+          if(baseOrders.get(o.id)!==k&&stamped.get(o.id)!==k){o.updatedAt=Date.now();stamped.set(o.id,orderKey(o));}
+        });
+      }
+      // Returns true when this device holds order changes the cloud doesn't have yet.
+      function mergeOrders(cloudData,localOrders){
+        const cloudOrders=cloudData.orders||[];
+        const local=new Map((localOrders||[]).map(o=>[o.id,o]));
+        const seen=new Set(); const out=[]; let localWins=false;
+        cloudOrders.forEach(c=>{
+          seen.add(c.id);
+          const l=local.get(c.id);
+          if(l){ if((Number(l.updatedAt)||0)>(Number(c.updatedAt)||0)){out.push(l);localWins=true;} else out.push(c); }
+          else if(baseOrders.has(c.id)&&baseOrders.get(c.id)===orderKey(c)){ localWins=true; } // removed on this device
+          else out.push(c);
+        });
+        (localOrders||[]).forEach(l=>{
+          if(seen.has(l.id))return;
+          if(!baseOrders.has(l.id)){out.push(l);localWins=true;} // new on this device, not pushed yet
+        });
+        cloudData.orders=out;
+        // Keep each open table pointed at its order.
+        (cloudData.tables||[]).forEach(t=>{
+          if(t.orderId)return;
+          const o=out.find(x=>x.type==='table'&&x.tableId===t.id&&!x.paid&&x.kmsStage!=='completed'&&x.status!=='completed');
+          if(o){t.orderId=o.id;if(t.status==='open')t.status=o.sent?'sent':'active';}
+        });
+        return localWins;
+      }
+
       function cleanForFirestore(data){
         // Strips undefined values and functions, which Firestore rejects.
         return JSON.parse(JSON.stringify(data));
@@ -79,6 +121,7 @@ if(!isConfigured(firebaseConfig)){
         pushTimer=setTimeout(()=>{
           try{
             if(APP_VERSION&&!(Number(window.db.appVersion)>=APP_VERSION))window.db.appVersion=APP_VERSION;
+            stampLocalChanges();
             const clean=cleanForFirestore(window.db);
             const json=JSON.stringify(clean);
             if(json===lastSyncedJSON)return;
@@ -107,6 +150,7 @@ if(!isConfigured(firebaseConfig)){
       await signInAnonymously(auth);
 
       onSnapshot(sharedDocRef,async(snap)=>{
+        let localWins=false;
         try{
           if(!snap.exists()){
             // First device to ever connect seeds the shared database with its current local data.
@@ -119,6 +163,10 @@ if(!isConfigured(firebaseConfig)){
             const cloudJSON=JSON.stringify(cloudData);
             if(cloudJSON!==lastSyncedJSON){
               lastSyncedJSON=cloudJSON;
+              // First load takes the cloud's orders as-is (this device's saved copy may be days old).
+              // After that, merge so orders this device just entered or updated aren't lost.
+              if(firstSnapshot){ rememberBase(cloudData.orders); }
+              else { stampLocalChanges(); const localOrders=window.db?.orders||[]; localWins=mergeOrders(cloudData,localOrders); rememberBase(JSON.parse(cloudJSON).orders); }
               window.db=cloudData;
               // Re-applying migrations must not push on its own: a device running different
               // code would undo it and push back, and the two would overwrite each other's
@@ -143,6 +191,8 @@ if(!isConfigured(firebaseConfig)){
           // On connect only: if this device's migrations changed the cloud copy (new menu
           // items, modifiers, prices), send the result up once so every device gets it.
           if(firstSnapshot){firstSnapshot=false;pushToCloud();}
+          // This device had newer order changes than the cloud copy it just received: send them back up.
+          else if(localWins){pushToCloud();}
           clearTimeout(fallbackTimer);
           window.__guthrieRMSBooted=true;
           setCloudStatus(true,'Connected — shared with all devices');
