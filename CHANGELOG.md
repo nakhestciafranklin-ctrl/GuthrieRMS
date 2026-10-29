@@ -1,5 +1,18 @@
 # Guthrie RMS Changelog
 
+## Quantity and Remove While Ringing Up
+- The add-item pop-up has a Quantity picker (− / + or type a number). Adding 3 puts 3 lines on the ticket with the same options, so the KMS, Daily Pars and reports count each one. If a par doesn't have enough left, it says how many remain.
+- The ticket on the order screen (Counter + To-Go, Dining Room and Catering) now has a Remove button on each line, so mistakes can be fixed before checkout. Removed items go back to the daily par; removing an item already sent to the KMS warns first and takes it off the kitchen screens. An order emptied this way stays open for more items.
+
+## Exemption Day Menu
+- Added an **Exemption Day** tab to Counter + To-Go order entry (next to Café Menu and Bistro Menu), and an Exemption Day filter on Daily Pars.
+- Breakfast Tacos ($2): Bacon, Sausage or Turkey Sausage, each with Red Salsa or Green Salsa.
+- Cinnamon Roll ($3).
+- Hot Coffee ($2): Vanilla / Mocha / Caramel / Pumpkin syrup is +$1.
+- Iced Latte ($3) with Vanilla / Mocha / Caramel / Pumpkin.
+- Peach Tea and Hibiscus Lime Agua Fresca ($3).
+- Entrée: Guthrie Bistro Burger at its Bistro price ($12), with the same options and pommes frites to the Fry station.
+
 ## Sync Loop Fix (orders flickering at checkout)
 - Fixed a loop where a device running an older cached copy of the app and an updated device kept undoing each other's menu changes and re-sending the whole shared data, which made open orders (e.g. a grilled cheese at checkout) appear and disappear.
 - Menu fixes applied to incoming cloud data no longer trigger a push on their own; the migrated result is sent once, when the device connects.

@@ -128,6 +128,7 @@ if(!isConfigured(firebaseConfig)){
                 if(typeof window.importRosterStudents==='function') window.importRosterStudents();
                 if(typeof window.importCafeMenu==='function') window.importCafeMenu();
                 if(typeof window.importBistroMenu==='function') window.importBistroMenu();
+                if(typeof window.importExemptionMenu==='function') window.importExemptionMenu();
                 if(typeof window.addCafeServicesOperation==='function') window.addCafeServicesOperation();
                 if(typeof window.addBistroTeamPositions==='function') window.addBistroTeamPositions();
                 if(typeof window.assignBistroTeamPositions==='function') window.assignBistroTeamPositions();
