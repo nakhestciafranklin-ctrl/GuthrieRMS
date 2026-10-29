@@ -1,5 +1,9 @@
 # Guthrie RMS Changelog
 
+## Orders No Longer Lost Between Devices
+- Fixed orders sent to the KMS disappearing and tickets Expo completed coming back. Devices used to overwrite the whole shared data with their own copy, so a device saving a slightly older copy wiped out other devices' new orders and KMS progress.
+- Orders are now merged by order: each order records when it was last changed and the newer copy wins; orders a device just entered are kept and re-sent.
+
 ## Cinnamon Rolls to Fry
 - Exemption Day Cinnamon Rolls now route to the Fry station on the KMS for prep (were Dessert). Devices that already loaded the menu are updated.
 
