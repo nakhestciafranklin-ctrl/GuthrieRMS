@@ -1,5 +1,13 @@
 # Guthrie RMS Changelog
 
+## Exemption Day Menu
+- Added an **Exemption Day** tab to Counter + To-Go order entry (next to Café Menu and Bistro Menu), and an Exemption Day filter on Daily Pars.
+- Breakfast Tacos ($2): Bacon, Sausage or Turkey Sausage, each with Red Salsa or Green Salsa.
+- Cinnamon Roll ($3).
+- Iced Latte and Hot Coffee ($2): Vanilla / Mocha / Caramel / Pumpkin syrup is +$1.
+- Peach Tea and Hibiscus Lime Agua Fresca ($2).
+- Entrée: Guthrie Bistro Burger at its Bistro price ($12), with the same options and pommes frites to the Fry station.
+
 ## Sync Loop Fix (orders flickering at checkout)
 - Fixed a loop where a device running an older cached copy of the app and an updated device kept undoing each other's menu changes and re-sending the whole shared data, which made open orders (e.g. a grilled cheese at checkout) appear and disappear.
 - Menu fixes applied to incoming cloud data no longer trigger a push on their own; the migrated result is sent once, when the device connects.
