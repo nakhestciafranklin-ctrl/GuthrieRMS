@@ -146,6 +146,21 @@ if(!isConfigured(firebaseConfig)){
         return true;
       }
       let firstSnapshot=true;
+      // Updates from other devices redraw the screen, which would close an open item popup or wipe
+      // what a student is typing. Wait until no popup is open and no box is being typed in.
+      let renderWaiting=null;
+      function screenBusy(){
+        if(document.querySelector('.modal'))return true;
+        const el=document.activeElement;
+        return !!(el&&/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)&&document.getElementById('app')?.contains(el));
+      }
+      function renderWhenIdle(){
+        if(typeof window.render!=='function')return;
+        if(!screenBusy()){clearTimeout(renderWaiting);renderWaiting=null;window.render();return;}
+        if(renderWaiting)return;
+        const check=()=>{if(screenBusy()){renderWaiting=setTimeout(check,400);return;}renderWaiting=null;window.render();};
+        renderWaiting=setTimeout(check,400);
+      }
 
       await signInAnonymously(auth);
 
@@ -184,7 +199,7 @@ if(!isConfigured(firebaseConfig)){
               }finally{
                 window.__guthrieRMSApplyingCloud=false;
               }
-              if(window.__guthrieRMSBooted&&typeof window.render==='function') window.render();
+              if(window.__guthrieRMSBooted) renderWhenIdle();
             }
           }
           cloudReady=true;

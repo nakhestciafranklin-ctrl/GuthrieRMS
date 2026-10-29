@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Item Popup No Longer Closes While Ordering
+- Updates arriving from other devices used to redraw the screen immediately, closing the item popup a student had open (and wiping anything being typed). The screen now waits to redraw until the popup is closed and no box is being typed in.
+
 ## Orders No Longer Lost Between Devices
 - Fixed orders sent to the KMS disappearing and tickets Expo completed coming back. Devices used to overwrite the whole shared data with their own copy, so a device saving a slightly older copy wiped out other devices' new orders and KMS progress.
 - Orders are now merged by order: each order records when it was last changed and the newer copy wins; orders a device just entered are kept and re-sent.
