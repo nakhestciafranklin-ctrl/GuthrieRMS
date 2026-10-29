@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Daily Pars Sync Fix
+- Pars saved on one device were being wiped out when another device (a register or KMS) saved at about the same time; the update from the other device replaced everything except orders. Settings, menu, inventory and pars now merge between devices like orders do: each change is time-stamped and the newer one wins.
+- Sold / Remaining counts are now worked out from the order lines rung up today instead of a stored number, so two registers selling the same item at once both count. Removing a line puts it back automatically. "Refill All to Par" starts the count over from that moment.
+- The Daily Pars screen no longer redraws (and loses typed numbers) while pars are typed but not yet saved.
+
 ## Item Popup No Longer Closes While Ordering
 - Updates arriving from other devices used to redraw the screen immediately, closing the item popup a student had open (and wiping anything being typed). The screen now waits to redraw until the popup is closed and no box is being typed in.
 
