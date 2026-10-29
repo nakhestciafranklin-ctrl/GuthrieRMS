@@ -4,8 +4,9 @@
 - Added an **Exemption Day** tab to Counter + To-Go order entry (next to Café Menu and Bistro Menu), and an Exemption Day filter on Daily Pars.
 - Breakfast Tacos ($2): Bacon, Sausage or Turkey Sausage, each with Red Salsa or Green Salsa.
 - Cinnamon Roll ($3).
-- Iced Latte and Hot Coffee ($2): Vanilla / Mocha / Caramel / Pumpkin syrup is +$1.
-- Peach Tea and Hibiscus Lime Agua Fresca ($2).
+- Hot Coffee ($2): Vanilla / Mocha / Caramel / Pumpkin syrup is +$1.
+- Iced Latte ($3) with Vanilla / Mocha / Caramel / Pumpkin.
+- Peach Tea and Hibiscus Lime Agua Fresca ($3).
 - Entrée: Guthrie Bistro Burger at its Bistro price ($12), with the same options and pommes frites to the Fry station.
 
 ## Sync Loop Fix (orders flickering at checkout)
