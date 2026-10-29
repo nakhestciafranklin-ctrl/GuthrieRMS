@@ -105,3 +105,7 @@ button,.primary,.secondary,.small-btn,.tile,.menu-item,.input,.tabs button,.seat
 .kms-line.kms-part.started{background:#fffaf0}
 .kms-line.kms-part.done{background:#eef7ef}
 .kms-line .small{color:#43556d}
+/* Quantity picker in the add-item pop-up */
+.qty-picker{align-items:center;flex-wrap:nowrap}
+.qty-picker .input{width:90px;max-width:90px;text-align:center;font-size:20px;font-weight:700}
+.qty-picker .small-btn{min-width:56px;font-size:24px;font-weight:700}
