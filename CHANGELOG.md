@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Find an Order
+- New "Find an Order" search on Checkout and Counter + To-Go. Searches customer/table name, order number, items, modifiers and notes, and payment type (e.g. "maria", "green salsa", "card", "table 4"). Several words narrow it down.
+- Filters: All / Open / Paid, and Today / All Dates. Shows the newest 50 matches.
+- Each result shows the order number, start time, type, name, items, total and status. Details shows every line with seat, options, payment and refunds. Open orders have Edit and Checkout; paid orders have Refund (managers and cashiers).
+
 ## "Order Not Found" While Taking an Order
 - Cause 1 (fixed in the many-devices sync fix): a device that hadn't received a new order yet could send a copy without it, and the other devices dropped it, including the register taking that order.
 - Cause 2: Checkout's "Clear Empty/Stuck Orders" deleted every order with no items yet, on every device, including one a register had just opened. It now only clears empty orders older than 15 minutes.
