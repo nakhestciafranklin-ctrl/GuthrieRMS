@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Sync Fix for Many Devices
+- Each device now saves with a transaction: it reads the latest shared copy, merges its changes in, and writes only if no other device wrote in between (otherwise it retries). Before, a device sent its whole copy, which could overwrite what other devices had just saved.
+- An order missing from another device's copy is no longer treated as deleted. Deleted orders are recorded (kept 7 days) so a deletion still reaches every device. With many devices this used to drop new orders (lost sales).
+- Tested with up to 10 simulated devices (manager, registers and KMS screens) saving at once: every order, sale count, par and setting matched on all devices.
+
 ## Daily Pars Sync Fix
 - Pars saved on one device were being wiped out when another device (a register or KMS) saved at about the same time; the update from the other device replaced everything except orders. Settings, menu, inventory and pars now merge between devices like orders do: each change is time-stamped and the newer one wins.
 - Sold / Remaining counts are now worked out from the order lines rung up today instead of a stored number, so two registers selling the same item at once both count. Removing a line puts it back automatically. "Refill All to Par" starts the count over from that moment.

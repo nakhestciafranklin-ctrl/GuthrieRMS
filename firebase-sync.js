@@ -51,7 +51,7 @@ if(!isConfigured(firebaseConfig)){
   (async()=>{
     const fallbackTimer=setTimeout(()=>bootApp('cloud connection timed out'),FALLBACK_TIMEOUT_MS);
     try{
-      const [{initializeApp},{getAuth,signInAnonymously},{getFirestore,doc,onSnapshot,setDoc}]=await Promise.all([
+      const [{initializeApp},{getAuth,signInAnonymously},{getFirestore,doc,onSnapshot,setDoc,runTransaction}]=await Promise.all([
         import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
         import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
         import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')
@@ -77,28 +77,42 @@ if(!isConfigured(firebaseConfig)){
       const stamped=new Map();       // id -> JSON this device already stamped, so it isn't re-stamped
       const orderKey=o=>{const c={...o};delete c.updatedAt;return JSON.stringify(c);};
       function rememberBase(orders){baseOrders=new Map((orders||[]).map(o=>[o.id,orderKey(o)]));}
+      // Deleted orders are recorded in db.deletedOrders (id -> time). An order missing from an
+      // incoming copy is NOT taken as deleted: with many devices, one that hadn't received a new
+      // order yet would send a copy without it, and the others used to drop it (a lost sale).
+      const TOMBSTONE_DAYS=7;
       function stampLocalChanges(){
+        const data=window.db;
+        if(data){
+          const ids=new Set((data.orders||[]).map(o=>o.id));
+          baseOrders.forEach((_,id)=>{if(!ids.has(id)){data.deletedOrders=data.deletedOrders||{};if(!data.deletedOrders[id])data.deletedOrders[id]=Date.now();}});
+        }
         (window.db?.orders||[]).forEach(o=>{
           const k=orderKey(o);
           if(baseOrders.get(o.id)!==k&&stamped.get(o.id)!==k){o.updatedAt=Date.now();stamped.set(o.id,orderKey(o));}
         });
       }
       // Returns true when this device holds order changes the cloud doesn't have yet.
-      function mergeOrders(cloudData,localOrders){
+      function mergeOrders(cloudData,localOrders,localDeleted){
         const cloudOrders=cloudData.orders||[];
         const local=new Map((localOrders||[]).map(o=>[o.id,o]));
         const seen=new Set(); const out=[]; let localWins=false;
+        const cutoff=Date.now()-TOMBSTONE_DAYS*864e5;
+        const deleted={};
+        [cloudData.deletedOrders||{},localDeleted||{}].forEach(t=>Object.entries(t).forEach(([id,at])=>{if(Number(at)>cutoff)deleted[id]=Math.max(Number(at),deleted[id]||0);}));
+        if(Object.keys(deleted).some(id=>!(cloudData.deletedOrders||{})[id]))localWins=true;
         cloudOrders.forEach(c=>{
           seen.add(c.id);
+          if(deleted[c.id]){localWins=true;return;}
           const l=local.get(c.id);
           if(l){ if((Number(l.updatedAt)||0)>(Number(c.updatedAt)||0)){out.push(l);localWins=true;} else out.push(c); }
-          else if(baseOrders.has(c.id)&&baseOrders.get(c.id)===orderKey(c)){ localWins=true; } // removed on this device
           else out.push(c);
         });
         (localOrders||[]).forEach(l=>{
-          if(seen.has(l.id))return;
-          if(!baseOrders.has(l.id)){out.push(l);localWins=true;} // new on this device, not pushed yet
+          if(seen.has(l.id)||deleted[l.id])return;
+          out.push(l);localWins=true; // the cloud copy is missing it (new here, or a device sent an older copy)
         });
+        cloudData.deletedOrders=deleted;
         cloudData.orders=out;
         // Keep each open table pointed at its order.
         (cloudData.tables||[]).forEach(t=>{
@@ -116,7 +130,7 @@ if(!isConfigured(firebaseConfig)){
       // from another device replaced the whole doc and wiped out pars saved here moments before.
       // baseUnits is what this device last took from the cloud (after migrations), so a
       // migration's own changes are not stamped and pushed (see the loop note further down).
-      const UNSTAMPED=['orders','production','syncStamps','appVersion'];
+      const UNSTAMPED=['orders','deletedOrders','production','syncStamps','appVersion'];
       function units(data){
         const out=new Map();
         Object.keys(data||{}).forEach(k=>{if(!UNSTAMPED.includes(k))out.set(k,data[k]);});
@@ -160,22 +174,50 @@ if(!isConfigured(firebaseConfig)){
         return JSON.parse(JSON.stringify(data));
       }
 
+      // Each push is a transaction: read the latest cloud copy, merge this device's changes into it,
+      // and write only if no other device wrote in between (Firestore retries if one did). A plain
+      // write of this device's whole copy used to overwrite orders and pars that other devices had
+      // just saved, and with many devices busy at once it could take a long time to sort itself out.
+      let pushing=false, pushAgain=false;
       function pushToCloud(){
         if(!cloudReady||unsubscribed)return;
         if(window.__guthrieRMSApplyingCloud)return;
         clearTimeout(pushTimer);
-        pushTimer=setTimeout(()=>{
+        pushTimer=setTimeout(async()=>{
+          if(pushing){pushAgain=true;return;}
+          let json;
           try{
             if(APP_VERSION&&!(Number(window.db.appVersion)>=APP_VERSION))window.db.appVersion=APP_VERSION;
             stampLocalChanges();
             stampLocalUnits();
-            const clean=cleanForFirestore(window.db);
-            const json=JSON.stringify(clean);
+            json=JSON.stringify(cleanForFirestore(window.db));
             if(json===lastSyncedJSON)return;
             lastSyncedJSON=json;
-            setDoc(sharedDocRef,clean).catch(err=>console.warn('Guthrie RMS cloud sync: push failed, will retry on next change.',err));
           }catch(err){
             console.warn('Guthrie RMS cloud sync: could not prepare data for cloud push.',err);
+            return;
+          }
+          pushing=true;
+          try{
+            await runTransaction(firestore,async tx=>{
+              const local=JSON.parse(json);
+              const snap=await tx.get(sharedDocRef);
+              let out=local;
+              if(snap.exists()){
+                out=snap.data();
+                mergeOrders(out,local.orders,local.deletedOrders);
+                mergeUnits(out,local);
+                out.appVersion=Math.max(Number(out.appVersion)||0,Number(local.appVersion)||0);
+              }
+              tx.set(sharedDocRef,cleanForFirestore(out));
+            });
+          }catch(err){
+            console.warn('Guthrie RMS cloud sync: push failed, retrying.',err);
+            lastSyncedJSON=null;
+            setTimeout(pushToCloud,2000);
+          }finally{
+            pushing=false;
+            if(pushAgain){pushAgain=false;pushToCloud();}
           }
         },PUSH_DEBOUNCE_MS);
       }
@@ -233,7 +275,7 @@ if(!isConfigured(firebaseConfig)){
               else {
                 stampLocalChanges(); stampLocalUnits();
                 const local=window.db, localOrders=local?.orders||[];
-                localWins=mergeOrders(cloudData,localOrders);
+                localWins=mergeOrders(cloudData,localOrders,local?.deletedOrders);
                 if(mergeUnits(cloudData,local))localWins=true;
                 rememberBase(JSON.parse(cloudJSON).orders);
               }
