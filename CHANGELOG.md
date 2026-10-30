@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## "Order Not Found" While Taking an Order
+- Cause 1 (fixed in the many-devices sync fix): a device that hadn't received a new order yet could send a copy without it, and the other devices dropped it, including the register taking that order.
+- Cause 2: Checkout's "Clear Empty/Stuck Orders" deleted every order with no items yet, on every device, including one a register had just opened. It now only clears empty orders older than 15 minutes.
+- If an order is closed on another device, the order screen says so and offers Counter + To-Go / Dining Room buttons.
+
 ## Sync Fix for Many Devices
 - Each device now saves with a transaction: it reads the latest shared copy, merges its changes in, and writes only if no other device wrote in between (otherwise it retries). Before, a device sent its whole copy, which could overwrite what other devices had just saved.
 - An order missing from another device's copy is no longer treated as deleted. Deleted orders are recorded (kept 7 days) so a deletion still reaches every device. With many devices this used to drop new orders (lost sales).
