@@ -2430,8 +2430,11 @@ window.btToggleEmbed=()=>{state.btEmbed=!state.btEmbed;render();};
 // to paste into the browser console on the signed-in BriskTable POS page. It uses the same calls as
 // BriskTable's own Add Category / Add Product forms, and skips anything already there (matched by
 // the RMS code, e.g. RMS-205, or by name for items added in BriskTable by hand) so it is safe to run again.
+// Section shown by the iPad POS add-on (stored as the BriskTable item Description).
+const BT_SECTIONS={'Breakfast Tacos (All Day)':'Breakfast','Handhelds':'Entrées','Greens & Bowls':'Entrées','Weekly Chef Special':'Entrées','Entree':'Entrées','Lunch Entrées (B, C & D Block)':'Entrées','Sides':'Sides','Bake Shop':'Bakery & Desserts','Dessert':'Bakery & Desserts','Fresh Baked Cinnamon Rolls':'Bakery & Desserts','Beverage':'Drinks','Beverages':'Drinks','Coffee & Espresso':'Drinks','Other Beverages':'Drinks','Holiday Latte Collection':'Drinks','Holiday Specials':'Drinks','Catering':'Catering'};
+function btSection(m){return BT_SECTIONS[m.category]||'';}
 function btLoaderData(){
-  let items=btMenuItems(false).map(m=>({code:'RMS-'+m.id,name:m.name,category:btMenuName(m.menu)||'Menu',price:Number(m.price)||0,description:''}));
+  let items=btMenuItems(false).map(m=>({code:'RMS-'+m.id,name:m.name,category:btMenuName(m.menu)||'Menu',price:Number(m.price)||0,description:btSection(m)}));
   let seen={}, mods=[];
   btMenuItems(false).forEach(m=>(m.mods||[]).forEach(md=>{let price=Number(m.modPrices?.[md])||0, k=md+'|'+price; if(seen[k])return; seen[k]=1; mods.push({code:'RMS-MOD-'+(mods.length+1),name:price?`${md} (+${money(price)})`:md,category:'RMS Modifiers',price,description:''});}));
   return {items,mods};
@@ -2503,6 +2506,9 @@ views.brisktable=()=>{
     </ol>
     <div class="row"><button class="primary" onclick="btCopyLoader()">Copy BriskTable Loader (${items.length} items)</button><button class="small-btn" onclick="btDownloadLoader()">Download Loader</button></div>
     <p class="small">Modifiers: the loader asks whether to add the RMS modifiers as BriskTable modifiers. Attaching them to specific items is done in BriskTable (edit item, Rules tab).</p>
+    <h3>iPad POS add-on</h3>
+    <p class="small">Adds a Guest name box and groups items into sections (Entrées, Drinks, Bakery &amp; Desserts…) on the BriskTable POS screen.</p>
+    <div class="row"><a class="primary" style="text-decoration:none;display:inline-block" href="brisktable/" target="_blank" rel="noopener">iPad setup steps ↗</a></div>
     <h3>Other downloads</h3>
     <p class="small">Download what BriskTable needs and use its import or menu setup screens. CSV files open in Excel or Google Sheets.</p>
     <div class="row">
