@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BriskTable iPad Setup</title>
+<style>
+:root{--blue:#003DA5;--text:#1b1f24;--muted:#5b6470;--bg:#f4f6fa;--card:#fff;--line:#d9dee7}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--blue:#7fb0ff;--text:#e8ebf0;--muted:#a7b0bd;--bg:#14171c;--card:#1e232b;--line:#333a45}}
+:root[data-theme="dark"]{--blue:#7fb0ff;--text:#e8ebf0;--muted:#a7b0bd;--bg:#14171c;--card:#1e232b;--line:#333a45}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+main{max-width:760px;margin:0 auto;padding:24px 16px 48px}
+h1{color:var(--blue);margin:0 0 4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0}
+h2{margin:0 0 8px;font-size:1.2em}
+ol{padding-left:1.3em;margin:8px 0}li{margin:6px 0}
+.muted{color:var(--muted)}
+.btn{display:inline-block;background:var(--blue);color:#fff;border:0;border-radius:10px;padding:12px 16px;font-weight:700;font-size:1em;text-decoration:none;cursor:pointer}
+textarea{width:100%;height:110px;font:12px/1.4 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);color:var(--text)}
+code{background:var(--bg);padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<main>
+<h1>BriskTable POS add-on for iPads</h1>
+<p class="muted">Adds a <b>Guest name</b> box under the Takeout/Table dropdown and groups items into sections (Breakfast, Entrées, Sides, Bakery &amp; Desserts, Drinks, Catering) on the BriskTable POS screen. It changes nothing in BriskTable's own settings.</p>
+
+<div class="card">
+<h2>Option 1 (recommended): Userscripts app — works automatically</h2>
+<p class="muted">One-time setup per iPad, about 3 minutes.</p>
+<ol>
+<li>Install the free <b>Userscripts</b> app from the App Store (by Justin Wasack), and open it once.</li>
+<li>Go to <b>Settings → Apps → Safari → Extensions → Userscripts</b>, turn it on, and set <b>All Websites</b> (or www.brisktable.com) to <b>Allow</b>.</li>
+<li>In Safari, open this page and tap <b>Install add-on</b> below. Tap the <b>puzzle-piece / AA</b> icon in the address bar, choose <b>Userscripts</b>, and tap <b>Install</b>.</li>
+<li>Open the BriskTable POS. The Guest name box and sections appear on their own every time.</li>
+</ol>
+<p><a class="btn" href="pos-addon.user.js">Install add-on</a></p>
+</div>
+
+<div class="card">
+<h2>Option 2: Bookmark — no app needed</h2>
+<p class="muted">Tap the bookmark each time the POS screen is opened or reloaded.</p>
+<ol>
+<li>Tap <b>Copy bookmark code</b>.</li>
+<li>In Safari, bookmark any page (Share → Add Bookmark), name it <b>RMS POS add-on</b>, and save.</li>
+<li>Open Bookmarks, tap <b>Edit</b>, tap the new bookmark, clear its address and paste the copied code. Tap Done.</li>
+<li>Open the BriskTable POS, sign in, then tap the <b>RMS POS add-on</b> bookmark.</li>
+</ol>
+<p><button class="btn" id="copy">Copy bookmark code</button> <span id="msg" class="muted"></span></p>
+<textarea id="code" readonly>Loading…</textarea>
+</div>
+
+<div class="card">
+<h2>Using it</h2>
+<ol>
+<li>Tap the items, type the guest's name in <b>Guest name</b>, pick Takeout / Counter / To-Go / a table.</li>
+<li>Tap <b>Submit order</b> or <b>Checkout</b>. The name shows as <b>Customer</b> on the order and receipt.</li>
+<li>To move an item to another section, edit its <b>Description</b> in BriskTable (Point of Sale → Products) to one of: <code>Breakfast</code>, <code>Entrées</code>, <code>Sides</code>, <code>Bakery &amp; Desserts</code>, <code>Drinks</code>, <code>Catering</code>.</li>
+</ol>
+</div>
+</main>
+<script>
+(function(){
+  var ta=document.getElementById('code'),msg=document.getElementById('msg');
+  fetch('bookmarklet.txt',{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){ta.value=t.trim();}).catch(function(){ta.value='Could not load the bookmark code. Reload this page.';});
+  document.getElementById('copy').onclick=function(){
+    var done=function(){msg.textContent='Copied.';};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(done,function(){ta.select();msg.textContent='Select all in the box and copy.';});}
+    else{ta.focus();ta.select();try{document.execCommand('copy');done();}catch(e){msg.textContent='Select all in the box and copy.';}}
+  };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2542 @@
+// Bump with every release (with the ?v= tag in index.html). Devices running an older
+// cached copy reload themselves when the shared cloud data carries a newer version.
+window.GUTHRIE_RMS_VERSION=2026110808;
+const $=s=>document.querySelector(s); const app=$('#app');
+const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
+const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
+const bekDryInvoiceImport=[
+{barcode:'105944',name:'Cup Plas 16oz Clear Pet',unit:'20 / 50 CT',onHand:1},
+{barcode:'111179',name:'Cleaner Oven & Grill Aerosol',unit:'6 / 17.5 OZ',onHand:1},
+{barcode:'112208',name:'Cup Plas Souffle 2 Oz Trans',unit:'10 / 250 CT',onHand:1},
+{barcode:'116532',name:'Pastry Bag 18in Clr Disposable',unit:'1 / 100 CT',onHand:6},
+{barcode:'116601',name:'Cont Foam Hngd 3-c Lg White',unit:'1 / 150 CT',onHand:1},
+{barcode:'129706',name:'Bag Reclosable Quart 7x8',unit:'1 / 500 CT',onHand:6},
+{barcode:'129707',name:'Bag Reclosable 1 Gal 10.5x10.5',unit:'1 / 250 CT',onHand:2},
+{barcode:'129708',name:'Bag Reclosable 2 Gal 13x15.5',unit:'1 / 100 CT',onHand:2},
+{barcode:'134727',name:'Fuel Butane Cartridge 8 Oz',unit:'1 / 12 CT',onHand:3},
+{barcode:'144183',name:'Bleach Keith Ultra',unit:'6 / 1 GAL',onHand:1},
+{barcode:'147169',name:'Cup Plas 16 Oz Clear Pet',unit:'12 / 70 CT',onHand:1},
+{barcode:'147183',name:'Lid Plas 16oz&24oz Clear Pet',unit:'12 / 85 CT',onHand:1},
+{barcode:'150063',name:'Cutlery Spork White Mw',unit:'1 / 1000 CT',onHand:8},
+{barcode:'154478',name:'Cup Plas 12 Oz Trans',unit:'15 / 57 CT',onHand:1},
+{barcode:'158208',name:'Glove Poly Blue  L/xl',unit:'10 / 200 CT',onHand:1},
+{barcode:'166295',name:'Bag Poly 6x3x12 Inch',unit:'1 / 1000 CT',onHand:4},
+{barcode:'169556',name:'Tray Food Kraft 1 Lb  100',unit:'1 / 1000 CT',onHand:6},
+{barcode:'177103',name:'Tray Food 8 Oz #40',unit:'1 / 1000 CT',onHand:5},
+{barcode:'182753',name:'Pan Alum Half Deep HD Steam Table',unit:'1 / 100 CT',onHand:2},
+{barcode:'182754',name:'Lid Half Pan IVC Alum Steam Table',unit:'1 / 100 CT',onHand:2},
+{barcode:'182756',name:'Lid Alum Full Pan IVC Steam Table',unit:'1 / 50 CT',onHand:2},
+{barcode:'191739',name:'Pan Alum Full Deep Std Duty Steam Table',unit:'1 / 50 CT',onHand:2},
+{barcode:'193593',name:'Cont Plas 8oz Deli W/ Lid',unit:'1 / 240 CT',onHand:3},
+{barcode:'193595',name:'Cont Plas 16oz Deli W/ Lid',unit:'1 / 240 CT',onHand:3},
+{barcode:'193597',name:'Cont Plas 32oz Deli W/ Lid',unit:'1 / 240 CT',onHand:3},
+{barcode:'196345',name:'Tray Food 4 Oz Red Check',unit:'1 / 1000 CT',onHand:1},
+{barcode:'197296',name:'Film 12x2000 Clear Wrap',unit:'1 / 1 ROLL',onHand:8},
+{barcode:'197297',name:'Film 18x2000 Clear Wrap',unit:'1 / 1 ROLL',onHand:8},
+{barcode:'197298',name:'Film 24x2000 Clear Wrap',unit:'1 / 1 ROLL',onHand:8},
+{barcode:'198208',name:'Tray Food 1/2 Lb  50 Red Plaid',unit:'4 / 250 CT',onHand:1},
+{barcode:'198211',name:'Tray Food 3 Lb  300 Red Plaid',unit:'2 / 250 CT',onHand:2},
+{barcode:'205026',name:'Tray Food 1 Lb Kraft Poly Coat',unit:'1 / 1000 CT',onHand:1},
+{barcode:'220741',name:'Cutlery Spoon 5.9 In White',unit:'1 / 1000 CT',onHand:8},
+{barcode:'640050',name:'Filter Coffee 3 Gal Urn',unit:'1 / 250 CT',onHand:1},
+{barcode:'813152',name:'Lid Plas 10-24 Oz Wht Traveler',unit:'10 / 100 CT',onHand:1},
+{barcode:'813154',name:'Sleeve Coffee Hot 12/16/20',unit:'1 / 1300 CT',onHand:1},
+{barcode:'813173',name:'Cup Paper Hot 12 Oz White',unit:'20 / 50 CT',onHand:1},
+{barcode:'860042',name:'Lid Plas 12jl White Vented',unit:'10 / 100 CT',onHand:1},
+{barcode:'870047',name:'Lid Foam 20rl White Vented',unit:'10 / 50 CT',onHand:1},
+{barcode:'871154',name:'Cutlery Fork Clear Hw',unit:'1 / 1000 CT',onHand:1},
+{barcode:'872052',name:'Tray Hot Dog 8in Red Plaid',unit:'1 / 1000 CT',onHand:1},
+{barcode:'872241',name:'Cont Foam Hngd 1-c Perf Lid',unit:'1 / 200 CT',onHand:1},
+{barcode:'872976',name:'Cont Foam Hngd 1-c Lg Rect Wht',unit:'1 / 150 CT',onHand:1},
+{barcode:'873053',name:'Straw 7.75in Clear Wrapped',unit:'24 / 400 CT',onHand:2},
+{barcode:'875035',name:'Bag Sandwich Foil Square',unit:'1 / 1000 CT',onHand:1},
+{barcode:'875403',name:'Bag Reclosable Sandwich 6x5',unit:'1 / 500 CT',onHand:1},
+{barcode:'875501',name:'Bag Poly Bun Pan Freezer 27x37',unit:'1 / 200 CT',onHand:2},
+{barcode:'875548',name:'Cover Bun Rack Clear',unit:'1 / 50 CT',onHand:1},
+{barcode:'876055',name:'Foil 18x500 Roll',unit:'1 / 1 ROLL',onHand:6},
+{barcode:'880125',name:'Napkin Bev Black 2 Ply',unit:'4 / 250 CT',onHand:1},
+{barcode:'883595',name:'Apron Plastic 24x42 Inch',unit:'10 / 100 CT',onHand:1},
+{barcode:'883708',name:'Hair Net Black Light Wgt',unit:'1 / 144 CT',onHand:10},
+{barcode:'883721',name:'Glove Vinyl Xl Pf Clear',unit:'10 / 100 CT',onHand:1},
+{barcode:'883834',name:'Glove Vinyl Smpf Clear',unit:'4 / 100 CT',onHand:2},
+{barcode:'883835',name:'Glove Vinyl Med Pf Clear',unit:'4 / 100 CT',onHand:2},
+{barcode:'883840',name:'Glove Vinyl Lg Pf Clear',unit:'4 / 100 CT',onHand:2},
+{barcode:'883917',name:'Glove Latex Large Yellow',unit:'1 / 1 PR',onHand:50},
+{barcode:'884100',name:'Chopstick Red Envelope',unit:'800 / 1 PR',onHand:1},
+{barcode:'885043',name:'Cleanser Ajax Scouring Powder',unit:'24 / 21 OZ',onHand:1},
+{barcode:'885915',name:'Sanitizer Redi-san Rtu',unit:'6 / 1 QT',onHand:2},
+{barcode:'887029',name:'Soap Dawn Liq Dishwashing',unit:'8 / 38 OZ',onHand:1},
+{barcode:'888020',name:'Pad Scrubbing General Purpose',unit:'2 / 40 CT',onHand:2},
+{barcode:'888077',name:'Scrubber Stainless Steel Lg',unit:'1 / 12 CT',onHand:1},
+{barcode:'918865',name:'Thermometer Probe Wipes',unit:'1 / 200 CT',onHand:1},
+{barcode:'980196',name:'Cleaner Stainless Steel Polish',unit:'4 / 32 OZ',onHand:1}
+];
+seed.inventory=seed.inventory.concat(bekDryInvoiceImport.map((it,i)=>({id:100+i,division:'culinary',vendor:'Ben E. Keith',location:'Dry Storage',par:0,...it})));
+const bekOrderGuideImport=[
+{barcode:'180164',name:'Pork Loin Bnls Strap Off',unit:'6 / 8 LB',location:'Walk-In Freezer'},
+{barcode:'209727',name:'Pork Belly Skinless',unit:'3 / 10.75 LB',location:'Walk-In Freezer'},
+{barcode:'008545',name:'Sauce Red Hot Louisiana',unit:'12 / 12 OZ',location:'Dry Storage'},
+{barcode:'039240',name:'Juniper Berry Dried',unit:'1 / 11 OZ',location:'Walk-In Fridge'},
+{barcode:'060305',name:'Raisin Dark',unit:'1 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'098016',name:'Carrot Jumbo',unit:'1 / 25 LB',location:'Walk-In Fridge'},
+{barcode:'100658',name:'Sweetener Splenda Packet',unit:'1 / 2000 CT',location:'Dry Storage'},
+{barcode:'101922',name:'Sesame Seed Hulled',unit:'1 / 16 OZ',location:'Dry Storage'},
+{barcode:'102188',name:'Corn Whole Kernel Fancy',unit:'24 / #300 CAN',location:'Dry Storage'},
+{barcode:'102389',name:'Potato Russet #2 6oz',unit:'1 / 50 LB',location:'Walk-In Fridge'},
+{barcode:'102583',name:'Seasoning Tajin Clasico',unit:'1 / 14 OZ',location:'Dry Storage'},
+{barcode:'104198',name:'Frank Beef Slider & Buns 3 In',unit:'1 / 10 LB',location:'Walk-In Freezer'},
+{barcode:'106480',name:'Pork Butt Boneless',unit:'10 / 6-9 LB',location:'Walk-In Freezer'},
+{barcode:'109712',name:'Sweetener Sugar Packet',unit:'1 / 2000 CT',location:'Dry Storage'},
+{barcode:'111986',name:'Chicken Whole Wog 3-3.25 Lb',unit:'1 / 16 CT',location:'Walk-In Fridge'},
+{barcode:'113688',name:'Beef Teres Major',unit:'8 / 10 LB',location:'Walk-In Fridge'},
+{barcode:'115123',name:'Shrimp Raw P&d 16-20 Ct',unit:'5 / 2 LB',location:'Walk-In Freezer'},
+{barcode:'115609',name:'Chili Powder Light',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'115610',name:'Seasoning Italian',unit:'1 / 6 OZ',location:'Dry Storage'},
+{barcode:'119165',name:'Corn Meal Yellow',unit:'1 / 25 LB',location:'Dry Storage'},
+{barcode:'119451',name:'Mayonnaise Extra Heavy Duty',unit:'4 / 1 GAL',location:'Walk-In Fridge'},
+{barcode:'121334',name:'Butter Solid Unsalted',unit:'36 / 1 LB',location:'Walk-In Fridge'},
+{barcode:'122580',name:'Almond Blanched Slivered',unit:'3 / 2 LB',location:'Dry Storage'},
+{barcode:'122588',name:'Pecan Pieces Medium Fancy',unit:'1 / 5 LB',location:'Dry Storage'},
+{barcode:'123669',name:'Syrup Corn Light',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'124168',name:'Vinegar White 50 Grain',unit:'6 / 1 GAL',location:'Dry Storage'},
+{barcode:'124170',name:'Extract Vanilla Imitation',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'124172',name:'Syrup Pancake & Waffle',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'124176',name:'Preserve Apricot',unit:'6 / #10 CAN',location:'Dry Storage'},
+{barcode:'124296',name:'Candy M&M\'s Milk Chocolate',unit:'12 / 3.1 OZ',location:'Walk-In Fridge'},
+{barcode:'125459',name:'Milk Condensed Sweetened',unit:'24 / 14 OZ',location:'Walk-In Fridge'},
+{barcode:'129188',name:'Pasta Fusilli',unit:'12 / 16 OZ',location:'Dry Storage'},
+{barcode:'131263',name:'Cheese American Shredded',unit:'4 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'132179',name:'Bun Hamburger Potato 3.5 In',unit:'9 / 8 CT',location:'Walk-In Freezer'},
+{barcode:'133466',name:'Margarine Solid Unsalted',unit:'30 / 1 LB',location:'Walk-In Fridge'},
+{barcode:'133787',name:'Topping Whip Real Cream',unit:'12 / 15 OZ',location:'Walk-In Fridge'},
+{barcode:'137488',name:'Ginger Ground',unit:'1 / 12.5 OZ',location:'Dry Storage'},
+{barcode:'137942',name:'Sauce Choc Dark Sugar Free',unit:'4 / 64 OZ',location:'Dry Storage'},
+{barcode:'137944',name:'Sauce Caramel Sugar Free',unit:'4 / 64 OZ',location:'Dry Storage'},
+{barcode:'138206',name:'Celery Stalk Medium 6 Ct',unit:'1 / 6 CT',location:'Walk-In Fridge'},
+{barcode:'139445',name:'Cheese Cheddar Shred Rf',unit:'4 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'142362',name:'Egg Fresh Shell Xl Usda Aa',unit:'1 / 15 DZN',location:'Walk-In Fridge'},
+{barcode:'145319',name:'Flower Edible Lavender',unit:'1 / 4 OZ',location:'Dry Storage'},
+{barcode:'145331',name:'Flour Almond Blanched',unit:'1 / 5 LB',location:'Dry Storage'},
+{barcode:'145885',name:'Flour Whole Wheat',unit:'1 / 50 LB',location:'Dry Storage'},
+{barcode:'146145',name:'Cont Plas Hngd 1-c 9x9 Black',unit:'1 / 120 CT',location:'Dry Storage'},
+{barcode:'147306',name:'Tortilla Flour 10in',unit:'12 / 12 CT',location:'Walk-In Freezer'},
+{barcode:'148125',name:'Beef Patty Brisket Blend Fsh',unit:'20 / 8 OZ',location:'Walk-In Fridge'},
+{barcode:'149147',name:'Flour All Purpose Gluten Free',unit:'4 / 44 OZ',location:'Dry Storage'},
+{barcode:'149677',name:'Chile Powder Guajillo',unit:'1 / 18 OZ',location:'Dry Storage'},
+{barcode:'151463',name:'Cheese Cotija Polvo Grated',unit:'4 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'151836',name:'Syrup French Vanilla Sf',unit:'4 / 1 LTR',location:'Dry Storage'},
+{barcode:'153233',name:'Chocolate Chip White',unit:'1 / 25 LB',location:'Walk-In Fridge'},
+{barcode:'154928',name:'Paste Vanilla Pure',unit:'1 / 32 OZ',location:'Dry Storage'},
+{barcode:'155062',name:'Onion Yellow Jumbo',unit:'1 / 25 LB',location:'Walk-In Fridge'},
+{barcode:'155104',name:'Sauce Bbq Sweet & Smoky',unit:'2 / 1 GAL',location:'Dry Storage'},
+{barcode:'157859',name:'Paste Almond Premium',unit:'2 / 9 LB',location:'Dry Storage'},
+{barcode:'158101',name:'Cheese Provolone Shredded',unit:'6 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'162165',name:'Salt Pc Packs',unit:'3 / 1000 CT',location:'Dry Storage'},
+{barcode:'164740',name:'Ketchup Fancy 33% Solids',unit:'6 / 114 OZ',location:'Dry Storage'},
+{barcode:'165099',name:'Peanut Butter Creamy',unit:'6 / 5 LB',location:'Dry Storage'},
+{barcode:'167672',name:'Seasoning Blackened Redfish',unit:'1 / 5 LB',location:'Dry Storage'},
+{barcode:'170213',name:'Cheese Provolone Slice',unit:'6 / 1.5 LB',location:'Walk-In Fridge'},
+{barcode:'170887',name:'Mustard Pc Pouch 200 Ct',unit:'200 / 5.5 GRM',location:'Dry Storage'},
+{barcode:'171003',name:'Mango Chunks Iqf',unit:'1 / 30 LB',location:'Walk-In Freezer'},
+{barcode:'171143',name:'Cheese Cheddar Shred Feather',unit:'2 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'172103',name:'Cheese Mozzarella Shredded',unit:'6 / 2.2 LB',location:'Walk-In Fridge'},
+{barcode:'181708',name:'Oil Canola Olive Blend 80/20',unit:'6 / 1 GAL',location:'Dry Storage'},
+{barcode:'183640',name:'Salt Sea Kosher Coarse',unit:'12 / 3 LB',location:'Dry Storage'},
+{barcode:'183842',name:'Beef Stew Meat',unit:'1 / 10 LB',location:'Walk-In Freezer'},
+{barcode:'184933',name:'Turmeric Ground',unit:'6 / 5 LB',location:'Dry Storage'},
+{barcode:'185373',name:'Rice White Long Grain',unit:'1 / 50 LB',location:'Dry Storage'},
+{barcode:'188117',name:'Chocolate Semi Sweet Block',unit:'1 / 11 LB',location:'Walk-In Fridge'},
+{barcode:'189266',name:'Oil Salad Canola Oil',unit:'1 / 35 LB',location:'Dry Storage'},
+{barcode:'189580',name:'Butter Blend Unsalted',unit:'36 / 1 LB',location:'Walk-In Fridge'},
+{barcode:'189664',name:'Bun Hot Dog 6 In',unit:'8 / 12 CT',location:'Walk-In Freezer'},
+{barcode:'191283',name:'Starch Corn',unit:'6 / 3 LB',location:'Dry Storage'},
+{barcode:'191843',name:'Cheese Feta Crumble',unit:'4 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'195328',name:'Seasoning Cajun Original Blend',unit:'6 / 8 OZ',location:'Dry Storage'},
+{barcode:'197997',name:'Coffee Colombian Gour Decaf',unit:'48 / 1.5 OZ',location:'Dry Storage'},
+{barcode:'204029',name:'Ham Sliced Black Forest FC',unit:'4 / 2.5 LB',location:'Walk-In Freezer'},
+{barcode:'204809',name:'Sugar Sanding Clear',unit:'1 / 8 LB',location:'Dry Storage'},
+{barcode:'204826',name:'Cracker Crumbs Graham',unit:'2 / 5 LB',location:'Dry Storage'},
+{barcode:'205584',name:'Beef Fajita Inside Skirt',unit:'2 / 5 LB',location:'Walk-In Freezer'},
+{barcode:'205805',name:'Oil Avocado',unit:'1 / 35 LB',location:'Dry Storage'},
+{barcode:'208365',name:'Tomato Crushed Unpeeled',unit:'6 / 105 OZ',location:'Dry Storage'},
+{barcode:'212559',name:'Syrup Berry Blue Energy Conc',unit:'4 / 64 OZ',location:'Dry Storage'},
+{barcode:'214902',name:'Pepper Pc Pouch',unit:'3 / 1000 CT',location:'Dry Storage'},
+{barcode:'221161',name:'Mayonnaise Pc Pack',unit:'1 / 200 CT',location:'Dry Storage'},
+{barcode:'222826',name:'Star Anise',unit:'1 / 6 OZ',location:'Dry Storage'},
+{barcode:'222845',name:'Cheese Parmesan Shredded',unit:'4 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'223860',name:'Pan Spray Coating GF',unit:'6 / 17 OZ',location:'Dry Storage'},
+{barcode:'224157',name:'Syrup Strawberry Sugar Free',unit:'6 / 1 LTR',location:'Dry Storage'},
+{barcode:'224177',name:'Syrup Blue Raspberry Sf',unit:'6 / 1 LTR',location:'Dry Storage'},
+{barcode:'224181',name:'Syrup Hazelnut Sf Classic',unit:'6 / 1 LTR',location:'Dry Storage'},
+{barcode:'224236',name:'Syrup Raspberry Sugar Free',unit:'6 / 1 LTR',location:'Dry Storage'},
+{barcode:'224484',name:'Syrup Vanilla Sugar Free',unit:'6 / 1 LTR',location:'Dry Storage'},
+{barcode:'227396',name:'Candy Rainbow Sprinkle',unit:'1 / 10 LB',location:'Dry Storage'},
+{barcode:'229075',name:'Sugar Brown Light',unit:'12 / 2 LB',location:'Dry Storage'},
+{barcode:'231800',name:'Bacon Ends & Pieces',unit:'1 / 10 LB',location:'Walk-In Freezer'},
+{barcode:'275050',name:'Pistachio Shelled',unit:'1 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'285133',name:'Cream Heavy Whipping 40%bf',unit:'12 / 1 QT',location:'Walk-In Fridge'},
+{barcode:'301173',name:'Apple Granny Smith Iqf Sliced',unit:'2 / 5 LB',location:'Walk-In Freezer'},
+{barcode:'303037',name:'Blueberry Wild Iqf',unit:'2 / 5 LB',location:'Walk-In Freezer'},
+{barcode:'307517',name:'Peach Sliced Iqf',unit:'2 / 5 LB',location:'Walk-In Freezer'},
+{barcode:'310173',name:'Strawberry Whole Iqf',unit:'2 / 5 LB',location:'Walk-In Freezer'},
+{barcode:'334302',name:'Bean Green Regular Cut',unit:'12 / 2 LB',location:'Walk-In Freezer'},
+{barcode:'335299',name:'Broccoli Floret Iqf',unit:'12 / 2 LB',location:'Walk-In Freezer'},
+{barcode:'336335',name:'Carrot Diced',unit:'12 / 2 LB',location:'Walk-In Freezer'},
+{barcode:'343502',name:'Pea Green',unit:'12 / 2.5 LB',location:'Walk-In Freezer'},
+{barcode:'348100',name:'Spinach Chopped',unit:'12 / 3 LB',location:'Walk-In Freezer'},
+{barcode:'391106',name:'Topping Dessert Whipped',unit:'12 / 16 OZ',location:'Walk-In Freezer'},
+{barcode:'391299',name:'Topping Whip Ready To Whip',unit:'12 / 32 OZ',location:'Walk-In Freezer'},
+{barcode:'394438',name:'Bread Wheat Hoagie Sl 8in',unit:'6 / 6 CT',location:'Walk-In Freezer'},
+{barcode:'394636',name:'Bun Slider Brioche Unsliced',unit:'160 / 1.4 OZ',location:'Walk-In Freezer'},
+{barcode:'408103',name:'Tortilla Corn Thin 4 Cut',unit:'1 / 1440 CT',location:'Walk-In Freezer'},
+{barcode:'408710',name:'Tortilla Flour Whl Wheat 6in',unit:'24 / 12 CT',location:'Dry Storage'},
+{barcode:'412049',name:'Dough Puff Pastry 10x 15 X 1/8',unit:'20 / 12 OZ',location:'Walk-In Freezer'},
+{barcode:'412062',name:'Dough Fillo Sheet 14x18',unit:'12 / 1 LB',location:'Walk-In Freezer'},
+{barcode:'451869',name:'Salmon Fillet 8oz Atlantic',unit:'1 / 10 LB',location:'Walk-In Freezer'},
+{barcode:'492340',name:'Turkey Sliced Smoked .70 Oz',unit:'6 / 2 LB',location:'Walk-In Fridge'},
+{barcode:'506511',name:'Beef Ground Fine 81/19',unit:'8 / 10 LB',location:'Walk-In Fridge'},
+{barcode:'530113',name:'Bacon Layout Reg 14/18 Sl/lb',unit:'1 / 15 LB',location:'Walk-In Freezer'},
+{barcode:'541080',name:'Sausage Link Breakfast 2 Oz',unit:'80 / 2 OZ',location:'Walk-In Freezer'},
+{barcode:'541107',name:'Sausage Andouille Cajun Rope',unit:'1 / 10 LB',location:'Walk-In Freezer'},
+{barcode:'547428',name:'Pepperoni Sliced',unit:'1 / 10 LB',location:'Walk-In Freezer'},
+{barcode:'620115',name:'Juice Lemon 100% Juice',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'620119',name:'Juice Key Lime 100% Juice',unit:'12 / 16 OZ',location:'Walk-In Fridge'},
+{barcode:'640243',name:'Tea Filter Pouch',unit:'32 / 4 OZ',location:'Dry Storage'},
+{barcode:'640376',name:'Tea Hot Asst Flavors Ind',unit:'6 / 28 CT',location:'Dry Storage'},
+{barcode:'640495',name:'Coffee Rainforest Select',unit:'42 / 2.5 OZ',location:'Dry Storage'},
+{barcode:'650059',name:'Bean Black Seasoned',unit:'12 / 15 OZ',location:'Dry Storage'},
+{barcode:'650079',name:'Bean Garbanzo Chick Pea',unit:'24 / 15.5 OZ',location:'Dry Storage'},
+{barcode:'650385',name:'Pumpkin Solid Pack Fancy',unit:'6 / #10 CAN',location:'Dry Storage'},
+{barcode:'650491',name:'Tomato Paste Fancy',unit:'24 / 12 OZ',location:'Dry Storage'},
+{barcode:'650589',name:'Tomato Whole Peeled In Puree',unit:'6 / 91 OZ',location:'Dry Storage'},
+{barcode:'654078',name:'Rice Arborio',unit:'20 / 16 OZ',location:'Dry Storage'},
+{barcode:'660095',name:'Liquid Smoke Mesquite',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'660405',name:'Sauce Buffalo Wing',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'661017',name:'Sauce Sriracha Chili',unit:'12 / 28 OZ',location:'Dry Storage'},
+{barcode:'664012',name:'Mustard Classic Yellow',unit:'4 / 105 OZ',location:'Dry Storage'},
+{barcode:'664021',name:'Mustard Dijon Imported',unit:'6 / 29.9 OZ',location:'Dry Storage'},
+{barcode:'674028',name:'Ketchup PC Foil Pouch',unit:'200 / 9 GRM',location:'Dry Storage'},
+{barcode:'675030',name:'Sweetener Equal Packet',unit:'1 / 2000 CT',location:'Dry Storage'},
+{barcode:'675044',name:'Sweetener Pink Packet',unit:'1 / 2000 CT',location:'Dry Storage'},
+{barcode:'686012',name:'Vinegar Red Wine',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'686030',name:'Vinegar Apple Cider',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'686223',name:'Vinegar Rice Wine',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'686235',name:'Vinegar Balsamic',unit:'2 / 5 LTR',location:'Dry Storage'},
+{barcode:'688001',name:'Flour Sir Galahad Enriched',unit:'1 / 50 LB',location:'Dry Storage'},
+{barcode:'688008',name:'Flour Hotel & Rest All Purpose',unit:'2 / 25 LB',location:'Dry Storage'},
+{barcode:'688043',name:'Flour Pizza 00 Neapolitan',unit:'1 / 50 LB',location:'Dry Storage'},
+{barcode:'688055',name:'Flour Cake Purasnow',unit:'1 / 50 LB',location:'Dry Storage'},
+{barcode:'688090',name:'Flour All Purpose Medallion',unit:'1 / 50 LB',location:'Dry Storage'},
+{barcode:'692020',name:'Coconut Snowflake',unit:'10 / 1 LB',location:'Dry Storage'},
+{barcode:'696005',name:'Baking Powder',unit:'6 / 5 LB',location:'Dry Storage'},
+{barcode:'696131',name:'Baking Soda',unit:'6 / 5 LB',location:'Dry Storage'},
+{barcode:'697003',name:'Yeast Instant Direct',unit:'20 / 1 LB',location:'Dry Storage'},
+{barcode:'697010',name:'Yeast Fresh Compressed Wet',unit:'20 / 1 LB',location:'Walk-In Fridge'},
+{barcode:'700004',name:'Pasta Elbow Macaroni',unit:'2 / 10 LB',location:'Dry Storage'},
+{barcode:'700260',name:'Pasta Orzo',unit:'20 / 1 LB',location:'Dry Storage'},
+{barcode:'740022',name:'Cheese Cheddar Slice Mild',unit:'8 / 1.5 LB',location:'Walk-In Fridge'},
+{barcode:'742002',name:'Cheese Cream Loaf Grade A',unit:'10 / 3 LB',location:'Walk-In Fridge'},
+{barcode:'760014',name:'Cheese Swiss Slice W/holes',unit:'8 / 1.5 LB',location:'Walk-In Fridge'},
+{barcode:'767080',name:'Gelatin Sheets Silver',unit:'1 / 2.2 LB',location:'Dry Storage'},
+{barcode:'771122',name:'Bread Crumbs Japanese Panko',unit:'1 / 25 LB',location:'Dry Storage'},
+{barcode:'774002',name:'Allspice Ground',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'774014',name:'Bay Leaf Laurel',unit:'1 / 2 OZ',location:'Dry Storage'},
+{barcode:'774018',name:'Caraway Seed Whole',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'774042',name:'Cinnamon Stick',unit:'1 / 8 OZ',location:'Dry Storage'},
+{barcode:'774043',name:'Seasoning Cajun No Msg',unit:'1 / 18 OZ',location:'Dry Storage'},
+{barcode:'774048',name:'Coriander Ground',unit:'1 / 14 OZ',location:'Dry Storage'},
+{barcode:'774049',name:'Coriander Seed',unit:'1 / 11 OZ',location:'Dry Storage'},
+{barcode:'774052',name:'Cream Of Tartar',unit:'1 / 25 OZ',location:'Dry Storage'},
+{barcode:'774053',name:'Cumin Seed',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'774060',name:'Cinnamon Ground',unit:'1 / 18 OZ',location:'Dry Storage'},
+{barcode:'774064',name:'Fennel Seed',unit:'1 / 14 OZ',location:'Dry Storage'},
+{barcode:'774071',name:'Cumin Ground',unit:'1 / 14 OZ',location:'Dry Storage'},
+{barcode:'774076',name:'Gumbo File',unit:'1 / 12 OZ',location:'Dry Storage'},
+{barcode:'774118',name:'Pumpkin Pie Spice No MSG',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'774120',name:'Mustard Ground',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'774125',name:'Nutmeg Ground Fancy',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'774129',name:'Chinese Five Spice',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'774131',name:'Onion Granulated',unit:'1 / 18 OZ',location:'Dry Storage'},
+{barcode:'774148',name:'Oregano Leaves',unit:'1 / 5 OZ',location:'Dry Storage'},
+{barcode:'774165',name:'Pepper Black Ground',unit:'1 / 18 OZ',location:'Dry Storage'},
+{barcode:'774167',name:'Pepper Red Crushed',unit:'1 / 13 OZ',location:'Dry Storage'},
+{barcode:'774168',name:'Pepper Black Whole Peppercorn',unit:'1 / 19.5 OZ',location:'Dry Storage'},
+{barcode:'774177',name:'Pepper White Whole Peppercorn',unit:'1 / 20 OZ',location:'Dry Storage'},
+{barcode:'774181',name:'Spice Pickling No MSG',unit:'1 / 12 OZ',location:'Dry Storage'},
+{barcode:'774186',name:'Rosemary Leaf',unit:'1 / 6 OZ',location:'Dry Storage'},
+{barcode:'774219',name:'Sesame Seed Black',unit:'1 / 18 OZ',location:'Dry Storage'},
+{barcode:'774220',name:'Thyme Ground',unit:'1 / 11 OZ',location:'Dry Storage'},
+{barcode:'774223',name:'Thyme Leaf Whole',unit:'1 / 27.5 OZ',location:'Dry Storage'},
+{barcode:'774231',name:'Onion Powder',unit:'1 / 20 OZ',location:'Dry Storage'},
+{barcode:'774323',name:'Curry Powder Ground',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'774324',name:'Cardamom Ground',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'774469',name:'Seasoning Jerk Caribbean',unit:'1 / 18 OZ',location:'Dry Storage'},
+{barcode:'774470',name:'Seasoning Herbes De Provence',unit:'1 / 6 OZ',location:'Dry Storage'},
+{barcode:'774512',name:'Paprika Smoked',unit:'1 / 17 OZ',location:'Dry Storage'},
+{barcode:'774590',name:'Oregano Leaves Mexican Style',unit:'1 / 5 OZ',location:'Dry Storage'},
+{barcode:'774704',name:'Paprika',unit:'1 / 16 OZ',location:'Dry Storage'},
+{barcode:'774715',name:'Garlic Granulated',unit:'1 / 25 OZ',location:'Dry Storage'},
+{barcode:'774830',name:'Mustard Seed',unit:'1 / 22 OZ',location:'Dry Storage'},
+{barcode:'774891',name:'Chili Pepper Ancho Ground',unit:'1 / 1 LB',location:'Dry Storage'},
+{barcode:'774898',name:'Pepper White Ground',unit:'1 / 18 OZ',location:'Dry Storage'},
+{barcode:'777028',name:'Extract Vanilla Imitation',unit:'1 / 32 OZ',location:'Dry Storage'},
+{barcode:'777034',name:'Extract Vanilla Pure',unit:'1 / 1 QT',location:'Dry Storage'},
+{barcode:'777144',name:'Food Color Red',unit:'1 / 1 PNT',location:'Dry Storage'},
+{barcode:'777146',name:'Food Color Red',unit:'1 / 1 QT',location:'Dry Storage'},
+{barcode:'777210',name:'Food Color Green',unit:'1 / 1 PNT',location:'Dry Storage'},
+{barcode:'779041',name:'Shortening Crisco',unit:'6 / 6 LB',location:'Dry Storage'},
+{barcode:'779178',name:'Oil Canola Clear Fry',unit:'1 / 35 LB',location:'Dry Storage'},
+{barcode:'779347',name:'Oil Olive Pomace',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'780007',name:'Sugar Granulated Fine 50 Lb',unit:'1 / 50 LB',location:'Dry Storage'},
+{barcode:'781006',name:'Sugar Powdered White 10x',unit:'12 / 2 LB',location:'Dry Storage'},
+{barcode:'787084',name:'Syrup Peach',unit:'4 / 1 LTR',location:'Dry Storage'},
+{barcode:'787152',name:'Syrup Mango',unit:'4 / 33.8 OZ',location:'Dry Storage'},
+{barcode:'787154',name:'Syrup Raspberry',unit:'4 / 33.8 OZ',location:'Dry Storage'},
+{barcode:'787155',name:'Syrup Strawberry',unit:'4 / 1 LTR',location:'Dry Storage'},
+{barcode:'787159',name:'Syrup Vanilla',unit:'4 / 1 LTR',location:'Dry Storage'},
+{barcode:'787160',name:'Syrup Hazelnut',unit:'4 / 1 LTR',location:'Dry Storage'},
+{barcode:'787287',name:'Syrup Caramel Flavor Sf',unit:'4 / 1 LTR',location:'Dry Storage'},
+{barcode:'787456',name:'Syrup Blueberry',unit:'4 / 1 LTR',location:'Dry Storage'},
+{barcode:'787556',name:'Syrup Caramel',unit:'4 / 1 LTR',location:'Dry Storage'},
+{barcode:'791008',name:'Syrup Chocolate Jug',unit:'6 / 7.5 LB',location:'Dry Storage'},
+{barcode:'791017',name:'Cocoa Baking',unit:'6 / 5 LB',location:'Dry Storage'},
+{barcode:'793012',name:'Syrup Corn Dark',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'793086',name:'Molasses Olde Farm',unit:'4 / 1 GAL',location:'Dry Storage'},
+{barcode:'795003',name:'Walnut Medium Pieces',unit:'1 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'795718',name:'Almond Natural Sliced',unit:'1 / 5 LB',location:'Dry Storage'},
+{barcode:'795795',name:'Pecan Pieces Small Fancy',unit:'1 / 5 LB',location:'Dry Storage'},
+{barcode:'795807',name:'Pecan Halves Jumbo Fancy',unit:'1 / 5 LB',location:'Walk-In Fridge'},
+{barcode:'798001',name:'Milk Evaporated',unit:'24 / 12 OZ',location:'Dry Storage'},
+{barcode:'798036',name:'Milk Coconut',unit:'6 / 98 OZ',location:'Dry Storage'},
+{barcode:'799199',name:'Cereal Oatmeal Old Fashioned',unit:'12 / 42 OZ',location:'Dry Storage'},
+{barcode:'799235',name:'Cereal Bulk Rice Crisp',unit:'4 / 35 OZ',location:'Dry Storage'},
+{barcode:'800324',name:'Chocolate Dark Couverture',unit:'2 / 10 KIL',location:'Walk-In Fridge'},
+{barcode:'800383',name:'Chocolate Callet White 28%',unit:'2 / 10 KIL',location:'Walk-In Fridge'},
+{barcode:'800403',name:'Chocolate Chip Mini Semi Sweet',unit:'1 / 25 LB',location:'Walk-In Fridge'},
+{barcode:'800464',name:'Topping Chocolate Dark Sauce',unit:'6 / 87.3 OZ',location:'Dry Storage'},
+{barcode:'800585',name:'Chocolate Abuelita Round Puck',unit:'12 / 19 OZ',location:'Walk-In Fridge'},
+{barcode:'814199',name:'Cup Plas 8 Oz Clear',unit:'20 / 25 CT',location:'Dry Storage'},
+{barcode:'817992',name:'Pan Alum Pie 9in Extra Deep',unit:'1 / 400 CT',location:'Dry Storage'},
+{barcode:'819204',name:'Cup Plas 1.75oz Clear Square',unit:'8 / 40 CT',location:'Dry Storage'},
+{barcode:'840573',name:'Plate Plas 7.5 In Clear',unit:'1 / 144 CT',location:'Dry Storage'},
+{barcode:'871231',name:'Cutlery Fork Silver Tasting',unit:'1 / 500 CT',location:'Dry Storage'},
+{barcode:'871570',name:'Cutlery Spoon Silver Tasting',unit:'1 / 500 CT',location:'Dry Storage'},
+{barcode:'875473',name:'Liner Pan Full Sheet Artisan',unit:'1 / 1000 CT',location:'Dry Storage'},
+{barcode:'875489',name:'Liner Pan 1/2 Sheet White',unit:'1 / 1000 CT',location:'Dry Storage'},
+{barcode:'880125',name:'Napkin Bev Black 2 Ply',unit:'4 / 250 CT',location:'Dry Storage'},
+{barcode:'888066',name:'Cleaner Quick Clean Griddle',unit:'40 / 1 EA',location:'Dry Storage'}
+];
+seed.inventory=seed.inventory.concat(bekOrderGuideImport.filter(it=>!seed.inventory.some(x=>x.barcode===it.barcode)).map((it,i)=>({id:1000+i,division:'culinary',vendor:'Ben E. Keith',par:0,onHand:0,...it})));
+// RMS 2.0 (BriskTable test copy) saves only to RMS2_KEY. On first open it starts from a copy of
+// the live RMS data saved in this browser; the live keys are read, never written or removed.
+const RMS2_KEY='guthrieRMS2';
+window.GUTHRIE_RMS2=true;
+function loadSavedRMS(){
+  const keys=[RMS2_KEY,'guthrieRMS7A','guthrieRMS5A','guthrieRMS4K','guthrieRMS4F'];
+  for(const key of keys){
+    const raw=localStorage.getItem(key);
+    if(!raw) continue;
+    try{
+      const parsed=JSON.parse(raw);
+      if(parsed && typeof parsed==='object') return parsed;
+    }catch(err){
+      try{localStorage.setItem('guthrieRMS2_recovery_'+Date.now(),raw);}catch(e){}
+      console.warn('Skipped unreadable Guthrie RMS saved data from',key,err);
+    }
+  }
+  return JSON.parse(JSON.stringify(seed));
+}
+var db=loadSavedRMS();
+if(!Array.isArray(db.users))db.users=JSON.parse(JSON.stringify(seed.users));
+if(!Array.isArray(db.positions))db.positions=[...seed.positions];
+if(!Array.isArray(db.tables))db.tables=JSON.parse(JSON.stringify(seed.tables));
+if(!Array.isArray(db.menu))db.menu=JSON.parse(JSON.stringify(seed.menu));
+if(!Array.isArray(db.inventory))db.inventory=JSON.parse(JSON.stringify(seed.inventory));
+if(!Array.isArray(db.orders))db.orders=[];
+if(!Array.isArray(db.shifts))db.shifts=[];
+if(!Array.isArray(db.cashbox))db.cashbox=[];
+if(!Array.isArray(db.deliveries))db.deliveries=[];
+if(!Array.isArray(db.cateringMenus))db.cateringMenus=JSON.parse(JSON.stringify(seed.cateringMenus));
+if(!db.settings||typeof db.settings!=='object')db.settings={};
+if(db.settings.demoMode===undefined)db.settings.demoMode=true;
+if(!db.settings.businessName)db.settings.businessName='Guthrie RMS';
+if(!db.settings.businessSubtitle)db.settings.businessSubtitle='Restaurant Management System';
+if(!db.settings.vendors)db.settings.vendors=['Armstrong Chemicals','HEB','Ben E. Keith','Amazon'];
+if(!db.settings.inventoryLocations)db.settings.inventoryLocations=['Bistro Dry Storage','Bistro Reach-In Cooler','Bistro Freezer','FOH Storage','Kitchen 1','Kitchen 2','Kitchen 3','Bakeshop','Catering Kitchen','Dry Storage','Fine Dining Storage'];
+['Walk-In Fridge','Walk-In Freezer'].forEach(loc=>{if(!db.settings.inventoryLocations.includes(loc))db.settings.inventoryLocations.push(loc)});
+if(!db.settings.kmsStations)db.settings.kmsStations=['Expo','Grill','Salad','Beverage','Dessert','Catering']; if(!db.settings.operations)db.settings.operations=['Bistro Service','Counter + To-Go','Café Services','Catering Event','Culinary Lab','Inventory / Receiving','Special Event','Training','Competition Prep'];
+(db.inventory||[]).forEach(i=>{if(i.barcode==null)i.barcode='';});
+{
+  let bekChanged=false;
+  const bekBarcodeRenumbers={'113601':'116601','872975':'872976'};
+  Object.entries(bekBarcodeRenumbers).forEach(([oldCode,newCode])=>{
+    let item=db.inventory.find(x=>normalizeBarcode(x.barcode)===oldCode);
+    if(item){item.barcode=newCode;bekChanged=true;}
+  });
+  if(!db.settings.bekDryInvoiceImported){
+    let added=0;
+    bekDryInvoiceImport.forEach((it,i)=>{
+      if(!db.inventory.some(x=>normalizeBarcode(x.barcode)===it.barcode)){
+        db.inventory.push({id:Date.now()+i,division:'culinary',vendor:'Ben E. Keith',location:'Dry Storage',par:0,...it});
+        added++;
+      }
+    });
+    if(added){
+      db.deliveries=db.deliveries||[];
+      db.deliveries.push({date:now(),by:'BEK Invoice Import',division:'culinary',vendor:'Ben E. Keith',invoice:'57832449 / PO 28012614-00',name:`${added} dry-goods item(s) imported from Ben E. Keith invoice`,qty:added,unit:'item(s)',location:'Dry Storage',quality:'Pass',notes:'Imported from Ben E. Keith order confirmation 0002828855 / PO 28012614-00, dated 08/11/2026. Barcode field holds Ben E. Keith\'s item number.'});
+    }
+    db.settings.bekDryInvoiceImported=true;
+    bekChanged=true;
+  }
+  bekDryInvoiceImport.forEach(it=>{
+    let existing=db.inventory.find(x=>normalizeBarcode(x.barcode)===it.barcode&&x.vendor==='Ben E. Keith');
+    if(existing&&(existing.name!==it.name||existing.unit!==it.unit)){
+      existing.name=it.name;existing.unit=it.unit;bekChanged=true;
+    }
+  });
+  if(!db.settings.bekOrderGuideImported){
+    bekOrderGuideImport.forEach((it,i)=>{
+      if(!db.inventory.some(x=>normalizeBarcode(x.barcode)===it.barcode)){
+        db.inventory.push({id:Date.now()+1000+i,division:'culinary',vendor:'Ben E. Keith',par:0,onHand:0,...it});
+        bekChanged=true;
+      }
+    });
+    db.settings.bekOrderGuideImported=true;
+    bekChanged=true;
+  }
+  bekOrderGuideImport.forEach(it=>{
+    let existing=db.inventory.find(x=>normalizeBarcode(x.barcode)===it.barcode&&x.vendor==='Ben E. Keith');
+    if(existing&&(existing.name!==it.name||existing.unit!==it.unit)){
+      existing.name=it.name;existing.unit=it.unit;bekChanged=true;
+    }
+  });
+  if(bekChanged)save();
+}
+if(db.settings.lowStockThreshold===undefined)db.settings.lowStockThreshold=10;
+if(!db.settings.theme)db.settings.theme={};
+const themeDefaults={primary:'#003DA5',accent:'#F9A825',success:'#2E7D32',danger:'#C62828',pageBackground:'#F3F6FB',surface:'#FFFFFF',text:'#102033',font:'Arial, Helvetica, sans-serif',cardRadius:18,buttonRadius:12,headerBackground:'#003DA5',backgroundStyle:'solid'};
+Object.entries(themeDefaults).forEach(([k,v])=>{if(db.settings.theme[k]===undefined)db.settings.theme[k]=v;}); if(!db.production)db.production={date:new Date().toISOString().slice(0,10),items:{},history:[]}; if(!db.cateringItems)db.cateringItems=[{id:1,name:'Box Lunch',price:12,unit:'per guest',inventorySource:'culinary'},{id:2,name:'Dessert Tray',price:35,unit:'per tray',inventorySource:'culinary'},{id:3,name:'Peach Tea Gallon',price:10,unit:'per gallon',inventorySource:'culinary'},{id:4,name:'Cookie Dozen',price:18,unit:'per dozen',inventorySource:'culinary'}]; if(!Array.isArray(db.dailyCloseouts))db.dailyCloseouts=[]; if(!Array.isArray(db.invoices))db.invoices=[]; if(!Array.isArray(db.evaluations))db.evaluations=[]; if(!Array.isArray(db.refunds))db.refunds=[]; if(!Array.isArray(db.recipes))db.recipes=[]; if(!Array.isArray(db.labUsage))db.labUsage=[]; if(!Array.isArray(db.scheduledShifts))db.scheduledShifts=[]; if(!db.positions)db.positions=seed.positions;
+const rosterImportData=[
+{teacherName:'Alexander Bove',teacherAliases:['Alexander Bove'],students:[
+{name:'Hojara Barrera',studentId:'210776',block:'A'},
+{name:'Sherry Cardona Garcia',studentId:'254339',block:'A'},
+{name:'Londyn Franks',studentId:'237389',block:'A'},
+{name:'Shaylin Hernandez',studentId:'215033',block:'A'},
+{name:'Mariah Jones',studentId:'221854',block:'A'},
+{name:'Jesus Melendez',studentId:'234841',block:'A'},
+{name:'Xavier Mendez',studentId:'203387',block:'A'},
+{name:'Andrian Najera Veliz',studentId:'225387',block:'A'},
+{name:'Mariah Portis',studentId:'279023',block:'A'},
+{name:'Eloise Posey',studentId:'228840',block:'A'},
+{name:'Leah Razo',studentId:'218646',block:'A'},
+{name:'Chiquinquira Salazar',studentId:'265101',block:'A'},
+{name:'Brooklyn Sykes',studentId:'229535',block:'A'},
+{name:'Jefferson Ventura De Leon',studentId:'266555',block:'A'},
+{name:'Fatima Banikhalid',studentId:'252697',block:'B'},
+{name:'Karson Jeffrey Case',studentId:'257132',block:'B'},
+{name:'Michelle Flores',studentId:'210937',block:'B'},
+{name:'Olmer Flores',studentId:'217455',block:'B'},
+{name:'Gabriel Hernandez',studentId:'256669',block:'B'},
+{name:'Kelin Hernandez Orellana',studentId:'236930',block:'B'},
+{name:'Noah Janssen',studentId:'222682',block:'B'},
+{name:'Ana Jimenez',studentId:'207444',block:'B'},
+{name:'Natalia Maldonado',studentId:'215972',block:'B'},
+{name:'Jazmin Mendoza Cortez',studentId:'203072',block:'B'},
+{name:'Oliver Pablo',studentId:'240261',block:'B'},
+{name:'Kaylee Ruiz',studentId:'215449',block:'B'},
+{name:'Luke White',studentId:'256186',block:'B'},
+{name:'Marvin Alexander',studentId:'214229',block:'D'},
+{name:'Andi Almarales Larrude',studentId:'259754',block:'D'},
+{name:'Julie Casares',studentId:'272098',block:'D'},
+{name:'Victoria Diaz',studentId:'238580',block:'D'},
+{name:'Isaiah Lee',studentId:'272190',block:'D'},
+{name:'Jacob Macias',studentId:'217115',block:'D'},
+{name:'Isabella Maldonado',studentId:'206475',block:'D'},
+{name:'Karen Mejia Valle',studentId:'263459',block:'D'},
+{name:'Rai Quiroa',studentId:'272175',block:'D'},
+{name:'Madelynn Razo',studentId:'208221',block:'D'},
+{name:'Ayden Reyna',studentId:'215926',block:'D'},
+{name:'Diamantina Saldana',studentId:'246367',block:'D'},
+{name:'Elara Senninger',studentId:'239340',block:'D'},
+{name:'Lucas Soriano',studentId:'201274',block:'D'},
+{name:'Josgar Vazquez',studentId:'202093',block:'D'},
+{name:'Gustavo Velasquez Gonzales',studentId:'264813',block:'D'},
+{name:'Samuel Viasus Perez',studentId:'274030',block:'D'}
+]},
+{teacherName:'Andi Pope',teacherAliases:['Andi Pope'],students:[
+{name:'Kevin Castillo',studentId:'250112',block:'A'},
+{name:'Jaslene Castro',studentId:'208848',block:'A'},
+{name:'Anabely Cordova Ramos',studentId:'223280',block:'A'},
+{name:'Beatriz Donson',studentId:'279071',block:'A'},
+{name:'Jalynn Guerra',studentId:'208996',block:'A'},
+{name:'Yoswel Macias Caraballo',studentId:'266847',block:'A'},
+{name:'Gabriela Martinez',studentId:'268714',block:'A'},
+{name:'Julio Mendoza',studentId:'263640',block:'A'},
+{name:'Katie Mendoza',studentId:'210842',block:'A'},
+{name:'Nasdely Munoz',studentId:'224763',block:'A'},
+{name:'Cristina-Ernesta Nze Nzang',studentId:'267824',block:'A'},
+{name:'Isabelle Patino',studentId:'214676',block:'A'},
+{name:'Khang Phan',studentId:'273928',block:'A'},
+{name:'Lupita Reyes',studentId:'215946',block:'A'},
+{name:'Jacob Anderson',studentId:'202394',block:'C'},
+{name:'Catcher Jankowski',studentId:'202474',block:'C'},
+{name:'Lydia Lane',studentId:'201862',block:'C'},
+{name:'Isabelle Malone',studentId:'233978',block:'C'},
+{name:'Natan Matteoni Marcos',studentId:'244767',block:'C'},
+{name:'Madison Stone',studentId:'209038',block:'C'},
+{name:'Morgan Stone',studentId:'209039',block:'C'},
+{name:'Francisco Amaro',studentId:'214142',block:'C'},
+{name:'Dulce Angeles',studentId:'210485',block:'C'},
+{name:'Stefany Castaneda Ayala',studentId:'235378',block:'C'},
+{name:'Ricardo Cortes Reyes',studentId:'236868',block:'C'},
+{name:'Kaylee Fraire Perales',studentId:'216052',block:'C'},
+{name:'Kayla Gonzalez',studentId:'275202',block:'C'},
+{name:'Carter Jennings',studentId:'224964',block:'C'},
+{name:'Sebastian Lopera Giraldo',studentId:'263271',block:'C'},
+{name:'Valerie Mata',studentId:'955447',block:'C'},
+{name:'Valerie Morales',studentId:'222556',block:'C'},
+{name:'Jasmine Nieto',studentId:'214704',block:'C'},
+{name:'Daniela Ochoa',studentId:'215702',block:'C'},
+{name:'Luis Reyes Ventura',studentId:'266580',block:'C'},
+{name:'Brooklyn Ruth',studentId:'260125',block:'C'},
+{name:'Jose Segura',studentId:'216797',block:'C'},
+{name:'Ashley Vasquez Bonilla',studentId:'214216',block:'C'},
+{name:'Rowel Almario Bien',studentId:'218177',block:'D'},
+{name:'Leonel Cartagena Ordonez',studentId:'237005',block:'D'},
+{name:'Destiny Davis',studentId:'203296',block:'D'},
+{name:'Leland Langlois',studentId:'208312',block:'D'},
+{name:'Francisco Olvera',studentId:'205436',block:'D'},
+{name:'Edgar Podzemny',studentId:'265893',block:'D'},
+{name:'Declan Reid',studentId:'262455',block:'D'},
+{name:'Dayana Briones Sustaita',studentId:'230318',block:'D'},
+{name:'Marshon Carpenter',studentId:'276321',block:'D'},
+{name:'Yahir Eulogio Romero',studentId:'215832',block:'D'},
+{name:'Landon Faber',studentId:'248717',block:'D'},
+{name:'Allana Gandhi',studentId:'249600',block:'D'},
+{name:'Walker Girkin',studentId:'243548',block:'D'},
+{name:'Jannelly Ibarra',studentId:'215162',block:'D'},
+{name:'Daniela Juarez',studentId:'210808',block:'D'},
+{name:'Jeira Martinez Ulloa',studentId:'259515',block:'D'},
+{name:'Jose Manuel Ramirez Vidal',studentId:'235580',block:'D'},
+{name:'Stella Ramos',studentId:'256847',block:'D'},
+{name:'Danny Rodriguez Cortes',studentId:'224863',block:'D'},
+{name:'Tyson Thompson',studentId:'208796',block:'D'},
+{name:'Justin Vega',studentId:'270837',block:'D'},
+{name:'Jeremiah Welford',studentId:'253523',block:'D'},
+{name:'Ariani Zambrano Rios',studentId:'273850',block:'D'}
+]},
+{teacherName:'Benjamin Baze',teacherAliases:['Benjamin Baze'],students:[
+{name:'Kenneth Basurto',studentId:'205032',block:'B'},
+{name:'Melissa Estrada',studentId:'210771',block:'B'},
+{name:'Jeremy Garcia-Cortez',studentId:'203028',block:'B'},
+{name:'Sebastian James',studentId:'258042',block:'B'},
+{name:'Ayden Liles',studentId:'271601',block:'B'},
+{name:'Johan Lopez Pagoaga',studentId:'253863',block:'B'},
+{name:'Lianna Marin',studentId:'258684',block:'B'},
+{name:'Cindy Martinez Lopez',studentId:'210702',block:'B'},
+{name:'Emily Martinez-Hernandez',studentId:'245414',block:'B'},
+{name:'Sierra Morales',studentId:'263495',block:'B'},
+{name:'Yvanna Rebollo Perales',studentId:'202316',block:'B'},
+{name:'Evoleth Rodriguez',studentId:'210968',block:'B'},
+{name:'Alejandro Rodriguez Valdes',studentId:'263199',block:'B'},
+{name:'Lucas Rubio',studentId:'263570',block:'B'},
+{name:'Elliott Torres',studentId:'230197',block:'B'},
+{name:'Abraham Urdaneta Parra',studentId:'267576',block:'B'},
+{name:'Jeniffer Vigil',studentId:'242390',block:'B'},
+{name:'Luis Zetino Salmeron',studentId:'244289',block:'B'},
+{name:'Michael Guevara',studentId:'209566',block:'B'},
+{name:'Osiel Gutierrez',studentId:'208547',block:'B'},
+{name:'Nia Barnett',studentId:'208483',block:'C'},
+{name:'Ederson Diaz Coreas',studentId:'250419',block:'C'},
+{name:'Austin Doyle',studentId:'248824',block:'C'},
+{name:'Dulce Duarte Medina',studentId:'275669',block:'C'},
+{name:'Ana Duron Cruz',studentId:'240184',block:'C'},
+{name:'Anderson Escobar Trigueros',studentId:'245989',block:'C'},
+{name:'Olivia Hernandez Aguilar',studentId:'259590',block:'C'},
+{name:'Josue Lopez',studentId:'204492',block:'C'},
+{name:'Jonathan Medina-Lopez',studentId:'202290',block:'C'},
+{name:'Pablo Mendez',studentId:'218804',block:'C'},
+{name:'Logan Morales',studentId:'253006',block:'C'},
+{name:'Alonzo Palmeros',studentId:'203586',block:'C'},
+{name:'Azula Ramirez',studentId:'225024',block:'C'},
+{name:'Jared Rasgado',studentId:'203407',block:'C'},
+{name:'Perla Rivas-Antunez',studentId:'203804',block:'C'},
+{name:'Yasmin Ruiz',studentId:'209473',block:'C'},
+{name:'Franklin Ruiz Arita',studentId:'252537',block:'C'},
+{name:'Nashaly Salas Sanchez',studentId:'202420',block:'C'},
+{name:'Johana Zapeta',studentId:'251310',block:'C'},
+{name:'Kimberly Carranza Bejarano',studentId:'225414',block:'D'},
+{name:'Vincent Detamore',studentId:'267027',block:'D'},
+{name:'Michael Figueroa Serrano',studentId:'208351',block:'D'},
+{name:'Arwen Hassan',studentId:'267930',block:'D'},
+{name:'Logan Krajnovich',studentId:'262823',block:'D'},
+{name:'Edder Lagunas',studentId:'203821',block:'D'},
+{name:'Filipp Lapotko',studentId:'249614',block:'D'},
+{name:'Hazel Marquez-Carrillo',studentId:'218084',block:'D'},
+{name:'Brenden Moore',studentId:'205958',block:'D'},
+{name:'Leo Nava',studentId:'225753',block:'D'},
+{name:'Sofia Palmer',studentId:'214397',block:'D'},
+{name:'Elvin Ponce Orellana',studentId:'258821',block:'D'},
+{name:'Alex Ramirez',studentId:'204036',block:'D'},
+{name:'Alize Rodriguez',studentId:'202824',block:'D'},
+{name:'Joshua Romero',studentId:'228258',block:'D'},
+{name:'Angie Zaldivar Galdamez',studentId:'211692',block:'D'}
+]},
+{teacherName:'Chef Mikhail',teacherAliases:['Chef Mikhail','Sarah Johnson'],students:[
+{name:'Juanita Aguilar',studentId:'229949',block:'A'},
+{name:'Evelin Alonso Sanchez',studentId:'258562',block:'A'},
+{name:'Diego Amaro',studentId:'210896',block:'A'},
+{name:'Abraham Bermudez Arias',studentId:'252523',block:'A'},
+{name:'Cristopher Carmona-Lucio',studentId:'208216',block:'A'},
+{name:'Yisel Castrejon',studentId:'201713',block:'A'},
+{name:'Odaly Castro',studentId:'205103',block:'A'},
+{name:'Kathy Council-Barahona',studentId:'213443',block:'A'},
+{name:'Leiana Dixon',studentId:'229108',block:'A'},
+{name:'Alessandra Garcia',studentId:'204222',block:'A'},
+{name:'Favian Godinez',studentId:'201650',block:'A'},
+{name:'Landen Jenkins',studentId:'239519',block:'A'},
+{name:'Alyssa Marroquin',studentId:'204299',block:'A'},
+{name:'Carmen Nze Nzang',studentId:'267901',block:'A'},
+{name:'Jissel Ochoa',studentId:'203127',block:'A'},
+{name:'Justyce Patterson',studentId:'256300',block:'A'},
+{name:'Grant Smith',studentId:'207816',block:'A'},
+{name:'Adehan Stubblefield',studentId:'234070',block:'A'},
+{name:'Aiden Acevedo',studentId:'279231',block:'B'},
+{name:'Maribel Aguilar',studentId:'214377',block:'B'},
+{name:'Alexandra Bravo',studentId:'215046',block:'B'},
+{name:'Estefany Diaz Reyes',studentId:'230419',block:'B'},
+{name:'Gustavo Garcia',studentId:'220568',block:'B'},
+{name:'Giovanni Hinojosa',studentId:'210423',block:'B'},
+{name:'Phuc Ho',studentId:'275325',block:'B'},
+{name:'Victor Jimenez',studentId:'242923',block:'B'},
+{name:'Omielle Keyes',studentId:'260379',block:'B'},
+{name:'Grace Lee',studentId:'271505',block:'B'},
+{name:'Cesar Quinones Espinoza',studentId:'258453',block:'B'},
+{name:'Jace Rodriguez',studentId:'216354',block:'B'},
+{name:'Anthony Rodriguez-Acosta',studentId:'214328',block:'B'},
+{name:'Fiona So',studentId:'278541',block:'B'},
+{name:'Darwin Sylvester',studentId:'211033',block:'B'},
+{name:'Daniel Taylor',studentId:'275193',block:'B'},
+{name:'Ryan Young',studentId:'213714',block:'B'},
+{name:'Chris Aranda',studentId:'201912',block:'C'},
+{name:'Omar Clemente',studentId:'218510',block:'C'},
+{name:'Jose De La Cruz',studentId:'001879',block:'C'},
+{name:'Leila Foley',studentId:'261731',block:'C'},
+{name:'Avery Graham',studentId:'205031',block:'C'},
+{name:'Carmen Guerra',studentId:'241377',block:'C'},
+{name:'Alyssa Lopez',studentId:'205589',block:'C'},
+{name:'David Mata',studentId:'204594',block:'C'},
+{name:'Kerlyn Meza Lainez',studentId:'204140',block:'C'},
+{name:'McKenzie Nava-Alexander',studentId:'955128',block:'C'},
+{name:'Charles Podzemny',studentId:'265851',block:'C'},
+{name:'Estefania Prado',studentId:'253847',block:'C'},
+{name:'Ivan Ruiz Torres',studentId:'229998',block:'C'},
+{name:'Anthony Saravia',studentId:'205056',block:'C'},
+{name:'Jayson Trevino',studentId:'201987',block:'C'},
+{name:'Rodney Vidal',studentId:'202881',block:'C'}
+]},
+];
+const enterpriseStudentPositions=['Team Member','Station Lead','Shift Manager','Department Lead','General Manager (Student)','Grill / Hot-Line Lead','Prep Lead','Pastry / Bakery Lead','Host','Server','Cashier','Catering Crew Lead','Marketing Lead','Inventory Lead','Chef Tables Lead'];
+enterpriseStudentPositions.forEach(pos=>{if(!db.positions.includes(pos))db.positions.push(pos)}); if(!db.users.some(u=>u.role==='teacher'))db.users.push({id:Date.now(),name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}); db.users.forEach(u=>{ if(!u.access){u.access=u.role==='manager'?['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup']:(u.role==='teacher'?['clock','inventory','catering','recipes','reports','invoices','development','schedule']:['clock','dining','quick','checkout','kms','inventory','development']);} if(!u.inventoryScope) u.inventoryScope=u.role==='teacher'?'culinary':(u.role==='manager'?'all':'assigned'); if(u.role==='student'){ if(!('studentId' in u)) u.studentId=''; if(!('teacherId' in u)) u.teacherId=''; } });
+// Menu and daily production migration
+(db.menu||[]).forEach(m=>{ if(!m.category) m.category=(m.name||'').toLowerCase().includes('tea')|| (m.name||'').toLowerCase().includes('beverage')?'Beverage':((m.name||'').toLowerCase().includes('cookie')||(m.name||'').toLowerCase().includes('dessert')?'Dessert':'Entree'); if(m.active===undefined)m.active=true; if(m.dailyPar===undefined)m.dailyPar=0; if(!Array.isArray(m.mods))m.mods=[]; if(!db.production.items[m.id]) db.production.items[m.id]={startingPar:Number(m.dailyPar)||0,remaining:Number(m.dailyPar)||0,manual86:false,reason:''}; });
+// Repair older browser-saved users so Counter + To-Go remains available after upgrades.
+db.users.forEach(u=>{
+  if(u.role==='manager') u.access=[...new Set([...(u.access||[]),'clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','closeout','setup'])];
+  if(u.role==='student') u.access=[...new Set([...(u.access||[]),'clock','dining','quick','checkout','kms','inventory','development'])];
+});
+// Import 2026-2027 sign-in sheet rosters as Team Member students, matching each
+// roster's teacher against an existing teacher account by name (never inventing
+// a PIN for a teacher) and skipping any student whose PIN is already on file.
+// Exposed on window so firebase-sync.js can re-run it against the shared cloud
+// data after a sync overwrites window.db, since otherwise a cloud snapshot
+// taken before this import ran would wipe the newly added roster users back out.
+function importRosterStudents(){
+  let changed=false;
+  let nextId=(db.users.reduce((max,u)=>Math.max(max,Number(u.id)||0),0))+1;
+  rosterImportData.forEach(group=>{
+    let teacher=db.users.find(u=>u.role==='teacher'&&group.teacherAliases.some(a=>a.toLowerCase()===String(u.name||'').trim().toLowerCase()));
+    if(!teacher){
+      teacher={id:nextId++,name:group.teacherName,pin:'',role:'teacher',pos:'Instructor',active:false,access:['clock','inventory','catering','recipes','reports','invoices','development','schedule'],inventoryScope:'culinary'};
+      db.users.push(teacher);changed=true;
+    }
+    group.students.forEach(s=>{
+      let existing=db.users.find(u=>u.pin===s.studentId||u.studentId===s.studentId);
+      if(existing){
+        if(!existing.teacherId)existing.teacherId=teacher.id;
+        if(!existing.block)existing.block=s.block;
+      }else{
+        db.users.push({id:nextId++,name:s.name,studentId:s.studentId,pin:s.studentId,role:'student',pos:'Team Member',block:s.block,teacherId:teacher.id,active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'});
+        changed=true;
+      }
+    });
+  });
+  if(changed)save();
+  return changed;
+}
+window.importRosterStudents=importRosterStudents;
+importRosterStudents();
+// Common Grounds café items from the Common Grounds Version 2.0 recipe workbook.
+// Prices are the Common Grounds café menu prices (cookies $1, muffins $2,
+// refreshers/lattes/coffee $3, entrées $4). Bump cafeMenuVersion when prices change.
+// They belong to the café menu (Counter + To-Go only). station routes them on the KMS.
+// Fixed ids let the import skip items already on file.
+const cafeMenuData=[
+ {id:101,name:'Chocolate Chip Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert'],station:'dessert'},
+ {id:102,name:'Snickerdoodle Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert'],station:'dessert'},
+ {id:103,name:'Red Velvet Cookie',price:1,category:'Dessert',mods:['Warm Cookie','Allergy Alert'],station:'dessert'},
+ {id:104,name:'Protein Banana Oat Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert'],station:'dessert'},
+ {id:105,name:'Protein Pumpkin Muffin',price:2,category:'Dessert',mods:['Warm Muffin','Allergy Alert'],station:'dessert'},
+ {id:106,name:'Hot Honey Chicken Wrap',price:4,category:'Entree',mods:['No Cheese','No Tomato','No Cabbage','No Lettuce','No Sauce','Sauce on Side','Not Toasted (Cold)','Allergy Alert'],station:'grill'},
+ {id:107,name:'Chicken Quesadilla',price:4,category:'Entree',mods:['No Cheese','No Beans','No Corn','No Pico','Pico on Side','No Cilantro','Allergy Alert'],station:'grill'},
+ {id:108,name:'Street Corn Chicken Bowl',price:4,category:'Entree',mods:['No Beans','No Corn','No Pico','No Lettuce','No Crema','Crema on Side','No Cilantro','No Feta','Allergy Alert'],station:'grill'},
+ {id:109,name:'Strawberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:110,name:'Peach Berry Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:111,name:'Mango Citrus Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:112,name:'Blue Raspberry Lemon Refresher',price:3,category:'Beverage',mods:['Light Ice','No Ice','No Added Sweetener'],station:'beverage'},
+ {id:113,name:'Iced Latte',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice'],station:'beverage'},
+ {id:114,name:'Hot Coffee with Syrup',price:3,category:'Beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream'],station:'beverage'}
+];
+const cafeMenuVersion=2;
+function importCafeMenu(){
+  let changed=false;
+  if(!Array.isArray(db.menu))db.menu=[];
+  let repriceExisting=(Number(db.cafeMenuVersion)||0)<cafeMenuVersion;
+  cafeMenuData.forEach(item=>{
+    let existing=db.menu.find(m=>m.id===item.id);
+    if(existing){
+      if(repriceExisting&&existing.price!==item.price){existing.price=item.price;changed=true;}
+      return;
+    }
+    db.menu.push({...item,mods:[...item.mods],inv:'bistro',menu:'cafe',services:['counter','togo'],active:true,dailyPar:0});
+    changed=true;
+  });
+  if(repriceExisting){db.cafeMenuVersion=cafeMenuVersion;changed=true;}
+  if(changed)save();
+  return changed;
+}
+window.importCafeMenu=importCafeMenu;
+importCafeMenu();
+// The Bistro dining menu from the Guthrie Bistro Menu insert. Bistro items show on Dining Room
+// tables and on the Bistro tab of Counter + To-Go orders; café items only on Counter + To-Go.
+// Swapping the included pommes frites for another side is $1 extra.
+const sideSwapPrices={'Sub Charred Broccolini':1,'Sub Gruyère Mac & Cheese':1};
+// Sandwiches come with pommes frites made at the Fry station; a side swap sends the
+// replacement side to the Grill instead. Each component gets its own KMS line.
+const friesComponent={key:'side',name:'Pommes Frites',station:'fry',swaps:{'Sub Charred Broccolini':{name:'Charred Broccolini',station:'grill'},'Sub Gruyère Mac & Cheese':{name:'Gruyère Mac & Cheese',station:'grill'}}};
+const bistroMenuData=[
+ {id:201,name:'Guthrie Bistro Burger',price:12,category:'Handhelds',station:'grill',mods:['No Cheese','No Pickles','No Sauce','Sauce on Side','Medium','Medium Well','Well Done','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[friesComponent]},
+ {id:202,name:'Smoked Turkey Club',price:10,category:'Handhelds',station:'grill',mods:['No Ham','No Gruyère','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[friesComponent]},
+ {id:203,name:'Buttermilk-Brined Chicken',price:11,category:'Handhelds',station:'grill',mods:['No Aioli','Aioli on Side','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[friesComponent]},
+ {id:222,name:'Golden Melt Grilled Cheese',price:3,category:'Handhelds',station:'grill',mods:['Cut in Half','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Allergy Alert']},
+ {id:204,name:'Southern Cobb Salad',price:12,category:'Greens & Bowls',station:'salad',mods:['No Chicken','No Bacon','No Egg','No Avocado','No Feta','No Corn','Dressing on Side','Allergy Alert']},
+ {id:205,name:'Baby Spinach Salad',price:8,category:'Greens & Bowls',station:'salad',mods:['No Goat Cheese','No Pecans','Dressing on Side','Allergy Alert']},
+ {id:206,name:'Tomato Basil Soup',price:3,category:'Greens & Bowls',station:'grill',mods:['Allergy Alert']},
+ {id:207,name:'Chicken & Sausage Gumbo',price:6,category:'Greens & Bowls',station:'grill',mods:['No Rice','Allergy Alert']},
+ {id:208,name:"Chef's Weekly Feature",price:12,category:'Weekly Chef Special',station:'grill',mods:['Allergy Alert']},
+ {id:209,name:'Charred Broccolini',price:2,category:'Sides',station:'grill',mods:['No Parmesan','No Lemon']},
+ {id:210,name:'Gruyère Mac & Cheese',price:2,category:'Sides',station:'grill',mods:['Allergy Alert']},
+ {id:211,name:'Oven-Baked Pommes Frites',price:2,category:'Sides',station:'fry',mods:['No Aioli','Aioli on Side','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo']},
+ {id:212,name:'Signature Peach Tea',price:3,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice','Extra Peach']},
+ {id:213,name:'House-Brewed Sweet Tea',price:2,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice']},
+ {id:214,name:'Italian Cream Soda',price:2,category:'Beverages',station:'beverage',mods:['Blue Raspberry','Peach','Mango','Strawberry','Raspberry','Vanilla','Blueberry','No Cream','Light Ice','No Ice']},
+ {id:215,name:'Strawberry Mint Lemonade',price:2,category:'Beverages',station:'beverage',mods:['No Mint','Light Ice','No Ice']},
+ {id:223,name:'Iced Latte',price:3,category:'Beverages',station:'beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice']},
+ {id:224,name:'Hot Coffee with Syrup',price:3,category:'Beverages',station:'beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream']},
+ {id:216,name:'Chocolate Chunk Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:217,name:'Snickerdoodle Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:218,name:'Sprinkle Sugar Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
+ {id:219,name:'Salted Caramel Brownie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm','Allergy Alert']},
+ {id:220,name:'Brown Butter Pecan Blondie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm','Allergy Alert']},
+ {id:221,name:'Warm Peach Cobbler',price:3,category:'Bake Shop',station:'dessert',mods:['No Ice Cream','Ice Cream on Side','Allergy Alert']}
+];
+// Condiment options renamed from "X on Side" to "Add Side of X".
+const renamedBistroMods={'Ketchup on Side':'Add Side of Ketchup','Mustard on Side':'Add Side of Mustard','Mayo on Side':'Add Side of Mayo','Pickles on Side':'Add Side of Pickles','Aioli on Side':'Add Side of Aioli'};
+// Starter demo items replaced by the real Bistro menu (kept, inactive, so old orders still read right).
+const retiredBistroSeedIds=[1,2,3,4];
+function importBistroMenu(){
+  let changed=false;
+  if(!Array.isArray(db.menu))db.menu=[];
+  bistroMenuData.forEach(item=>{
+    let existing=db.menu.find(m=>m.id===item.id);
+    if(existing){
+      if(item.modPrices&&!existing.modPrices){existing.modPrices={...item.modPrices};changed=true;}
+      // Station and components follow the menu (e.g. fries moved to the Fry station).
+      if(item.station&&existing.station!==item.station){existing.station=item.station;changed=true;}
+      let comps=item.components?JSON.parse(JSON.stringify(item.components)):null;
+      if(JSON.stringify(existing.components||null)!==JSON.stringify(comps)){if(comps)existing.components=comps;else delete existing.components;changed=true;}
+      // Pick up modifiers added to the menu since this device imported it (e.g. cream soda flavors),
+      // listed in menu order, keeping any extra modifiers already on the device.
+      let cur=Array.isArray(existing.mods)?existing.mods:[];
+      // Renamed options: swap the old saved name for the new one so both don't show.
+      cur=cur.map(md=>!item.mods.includes(md)&&renamedBistroMods[md]&&item.mods.includes(renamedBistroMods[md])?renamedBistroMods[md]:md).filter((md,i,a)=>a.indexOf(md)===i);
+      let next=[...item.mods,...cur.filter(md=>!item.mods.includes(md))];
+      if(next.join('|')!==(existing.mods||[]).join('|')){existing.mods=next;changed=true;}
+      return;
+    }
+    db.menu.push({...JSON.parse(JSON.stringify(item)),inv:'bistro',menu:'bistro',active:true,dailyPar:0});
+    changed=true;
+  });
+  if(!db.bistroMenuImported){
+    db.menu.forEach(m=>{if(retiredBistroSeedIds.includes(m.id)&&m.active!==false){m.active=false;changed=true;}});
+    // Box Lunch / Catering Dessert Tray aren't on the Bistro insert; list them under Catering.
+    db.menu.forEach(m=>{if([5,6].includes(m.id)&&m.inv==='culinary'){m.category='Catering';changed=true;}});
+    db.bistroMenuImported=true; changed=true;
+  }
+  // Label every item with its menu: café items (and anything limited to counter/to-go) vs. Bistro.
+  db.menu.forEach(m=>{
+    if(m.menu)return;
+    m.menu=(m.id>=101&&m.id<=199)||(Array.isArray(m.services)&&!m.services.includes('table'))?'cafe':'bistro';
+    let c=cafeMenuData.find(x=>x.id===m.id); if(c&&!m.station)m.station=c.station;
+    changed=true;
+  });
+  if(changed)save();
+  return changed;
+}
+window.importBistroMenu=importBistroMenu;
+importBistroMenu();
+// Exemption Day menu (Wednesday, November 11, 2026): its own tab on Counter + To-Go orders.
+// Items use modifier groups (modGroups): a group can be required (e.g. tortilla, protein,
+// hot or iced) and pick-one or pick-many. Every option is also listed in mods, and the
+// chosen options are saved on the order line as plain text, so the KMS, reports and search
+// read them like any other modifier. Bump exemptionMenuVersion when this menu changes:
+// existing devices then take the new names, prices, stations and options, and items no
+// longer on the menu (retired) are hidden but kept so old orders still read right.
+const exHolidayFlavors=['Peppermint Mocha','Winter Wonderland','Pumpkin Spice','Chocolate Hazelnut Truffle','Caramel Pumpkin Cheesecake','Gingerbread Cookie','S\'mores Mocha','Brown Sugar Cinnamon'];
+const exBaseFlavors=['Vanilla','Caramel','Mocha','Hazelnut'];
+const exTortilla={name:'Tortilla',options:['Flour Tortilla','Corn Tortilla'],pick:'one',required:true};
+// Black beans can be the protein on their own or paired with beef or chicken (one tap each).
+const exProtein={name:'Protein',options:['Seasoned Shredded Beef','Shredded Chicken','Black Beans Only','Beef + Black Beans','Chicken + Black Beans'],pick:'one',required:true};
+// Rice bowls already include black beans, so the protein is beef, chicken or beans only.
+const exBowlProtein={name:'Protein',options:['Seasoned Shredded Beef','Shredded Chicken','Black Beans Only'],pick:'one',required:true};
+const exHotIced={name:'Hot or Iced',options:['Hot','Iced'],pick:'one',required:true};
+const exIce={name:'Ice (Iced Drinks)',options:['Light Ice','Extra Ice','No Ice'],pick:'one'};
+// Kept short for students: one "Leave Off" group for what comes on the entrée (pico de gallo,
+// lettuce and cheese on all; queso on nachos; rice, beans and corn on bowls), then one group of
+// add-on toppings. Light / extra / on the side go in the custom note.
+const exLeaveOff=(extra=[])=>({name:'Leave Off',options:[...extra,'Pico de Gallo','Lettuce','Cheese'].map(t=>'No '+t),pick:'many'});
+const exToppingNames=['Corn Salsa','Diced Tomatoes','Diced Onions','Lime Wedges','Jalapeño Lime Crema','Chile con Queso','Red Salsa','Green Salsa'];
+const exToppings=(skip=[])=>({name:'Add Toppings',options:[...exToppingNames.filter(t=>!skip.includes(t)).map(t=>'Add '+t),'Add Guacamole'],pick:'many'});
+const exAllergy={name:'Allergy',options:['Allergy Alert'],pick:'many'};
+// Veteran discount and allergy alert share one group on the entrées to keep the screen short.
+const exEntreeOther={name:'Other',options:['Veteran Free Entrée','Allergy Alert'],pick:'many'};
+const exEntreePrices={'Add Guacamole':1,'Veteran Free Entrée':-8};
+// Breakfast tacos are made on flour tortillas only (no tortilla choice).
+// Holiday lattes: one item per flavor, $3, hot or iced. Used on the Exemption Day tab and in
+// Holiday Specials on the Café menu (separate items so each menu keeps its own pars).
+const exHolidayLattes=(list,category)=>list.map(([id,name])=>({id,name,price:3,category,station:'beverage',modGroups:[
+  exHotIced,
+  {name:'Whipped Cream',options:['No Whipped Cream','Extra Whipped Cream'],pick:'one'},
+  {name:'Drizzle / Topping',options:['No Drizzle','Extra Drizzle'],pick:'one'},exIce,exAllergy]}));
+const exBreakfastTaco=(id,name)=>({id,name,price:2,category:'Breakfast Tacos (All Day)',station:'grill',modGroups:[
+ {name:'Salsa',options:['Red Salsa','Green Salsa','Red Salsa on Side','Green Salsa on Side','No Salsa'],pick:'one'},
+ {name:'Hold / Extra',options:['No Eggs','No Potatoes','No Cheese','Extra Cheese'],pick:'many'},
+ exAllergy]});
+const exCinnamonRoll=(id,name)=>({id,name,price:3,category:'Fresh Baked Cinnamon Rolls',station:'fry',modGroups:[
+ {name:'Icing',options:['No Icing','Extra Icing','Icing on Side'],pick:'one'},
+ {name:'Warm',options:['Warm'],pick:'many'},
+ exAllergy]});
+const exemptionMenuData=[
+ exBreakfastTaco(301,'Bacon Breakfast Taco'),
+ exBreakfastTaco(302,'Pork Sausage Breakfast Taco'),
+ exBreakfastTaco(303,'Turkey Sausage Breakfast Taco'),
+ exCinnamonRoll(304,'Classic Cinnamon Roll'),
+ exCinnamonRoll(310,'Pumpkin Cinnamon Roll'),
+ {id:311,name:'Tacos',price:8,category:'Lunch Entrées (B, C & D Block)',station:'grill',modPrices:exEntreePrices,modGroups:[
+  exProtein,exTortilla,exLeaveOff(),exToppings(),exEntreeOther]},
+ {id:312,name:'Nachos',price:8,category:'Lunch Entrées (B, C & D Block)',station:'grill',modPrices:exEntreePrices,modGroups:[
+  exProtein,exLeaveOff(['Chile con Queso']),exToppings(['Chile con Queso']),exEntreeOther]},
+ {id:313,name:'Rice Bowl',price:8,category:'Lunch Entrées (B, C & D Block)',station:'grill',modPrices:exEntreePrices,modGroups:[
+  exBowlProtein,exLeaveOff(['Rice','Black Beans','Roasted Corn']),exToppings(),exEntreeOther]},
+ // Each holiday latte has its own button; the pop-up then asks hot or iced and garnish.
+ ...exHolidayLattes([[321,'Peppermint Mocha'],[322,'Winter Wonderland'],[323,'Pumpkin Spice Latte'],[324,'Chocolate Hazelnut Truffle'],[325,'Caramel Pumpkin Cheesecake'],[326,'Gingerbread Cookie Latte'],[327,'S\'mores Mocha'],[328,'Brown Sugar Cinnamon Latte']],'Holiday Latte Collection'),
+ {id:305,name:'Latte',price:3,category:'Coffee & Espresso',station:'beverage',modGroups:[
+  {name:'Flavor',options:exBaseFlavors,pick:'one',required:true},exHotIced,
+  {name:'Garnish',options:['Add Whipped Cream','Add Drizzle'],pick:'many'},exIce,exAllergy]},
+ {id:319,name:'Cappuccino',price:3,category:'Coffee & Espresso',station:'beverage',modGroups:[
+  {name:'Flavor',options:[...exHolidayFlavors,...exBaseFlavors,'No Flavor'],pick:'one',required:true},exHotIced,
+  {name:'Foam / Garnish',options:['Extra Foam','Light Foam','No Cinnamon Dusting'],pick:'many'},exIce,exAllergy]},
+ {id:306,name:'Americano',price:2,category:'Coffee & Espresso',station:'beverage',modPrices:Object.fromEntries([...exBaseFlavors,...exHolidayFlavors].map(f=>[f+' Syrup',1])),modGroups:[
+  {name:'Syrup (+$1)',options:[...exBaseFlavors,...exHolidayFlavors].map(f=>f+' Syrup'),pick:'one'},
+  {name:'Extras',options:['Add Milk','Room for Cream'],pick:'many'},exAllergy]},
+ {id:320,name:'Horchata',price:3,category:'Other Beverages',station:'beverage',modGroups:[
+  {name:'Ice',options:['Light Ice','Extra Ice','No Ice'],pick:'one'},{name:'Garnish',options:['No Cinnamon','Extra Cinnamon'],pick:'one'},exAllergy]},
+ {id:308,name:'Hibiscus Lime Agua Fresca',price:3,category:'Other Beverages',station:'beverage',modGroups:[
+  {name:'Ice',options:['Light Ice','Extra Ice','No Ice'],pick:'one'},{name:'Garnish',options:['No Lime Garnish','Extra Lime'],pick:'one'},exAllergy]},
+ {id:307,name:'Peach Tea',price:3,category:'Other Beverages',station:'beverage',modGroups:[
+  {name:'Ice',options:['Light Ice','Extra Ice','No Ice'],pick:'one'},{name:'Garnish',options:['No Peach Garnish','Extra Peach'],pick:'one'},exAllergy]}
+].map((item,i)=>({...item,mods:item.modGroups.flatMap(g=>g.options),sortOrder:i}));
+// Items from earlier Exemption Day drafts that are not on the final menu (desserts aren't being run).
+const retiredExemptionIds=[309,314,315,316,317,318];
+const exemptionMenuVersion=10;
+function importExemptionMenu(){
+  let changed=false;
+  if(!Array.isArray(db.menu))db.menu=[];
+  let updateExisting=(Number(db.exemptionMenuVersion)||0)<exemptionMenuVersion;
+  exemptionMenuData.forEach(item=>{
+    let existing=db.menu.find(m=>m.id===item.id);
+    if(existing){
+      if(updateExisting){
+        let fresh=JSON.parse(JSON.stringify(item));
+        ['name','price','category','station','mods','modGroups','sortOrder'].forEach(k=>{if(JSON.stringify(existing[k])!==JSON.stringify(fresh[k])){existing[k]=fresh[k];changed=true;}});
+        if(JSON.stringify(existing.modPrices||null)!==JSON.stringify(fresh.modPrices||null)){if(fresh.modPrices)existing.modPrices=fresh.modPrices;else delete existing.modPrices;changed=true;}
+        if(existing.components){delete existing.components;changed=true;}
+        if(existing.menu!=='exemption'){existing.menu='exemption';changed=true;}
+        if(existing.active===false){existing.active=true;changed=true;}
+      }
+      return;
+    }
+    db.menu.push({...JSON.parse(JSON.stringify(item)),inv:'bistro',menu:'exemption',services:['counter','togo'],active:true,dailyPar:0});
+    changed=true;
+  });
+  if(updateExisting){
+    db.menu.forEach(m=>{if(retiredExemptionIds.includes(m.id)&&m.active!==false){m.active=false;changed=true;}});
+    db.exemptionMenuVersion=exemptionMenuVersion;changed=true;
+  }
+  if(importCafeHolidaySpecials())changed=true;
+  if(changed)save();
+  return changed;
+}
+// Holiday Specials section on the Café menu (Counter + To-Go). Imported with the Exemption Day
+// menu (so it also runs on data arriving from other devices). Bump cafeHolidayVersion to update.
+const cafeHolidayData=exHolidayLattes([[115,'Peppermint Mocha'],[116,'Winter Wonderland'],[117,'Pumpkin Spice Latte'],[118,'Chocolate Hazelnut Truffle'],[119,'Caramel Pumpkin Cheesecake'],[120,'Gingerbread Cookie Latte'],[121,'S\'mores Mocha'],[122,'Brown Sugar Cinnamon Latte']],'Holiday Specials').map((item,i)=>({...item,mods:item.modGroups.flatMap(g=>g.options),sortOrder:i}));
+const cafeHolidayVersion=1;
+function importCafeHolidaySpecials(){
+  let changed=false, update=(Number(db.cafeHolidayVersion)||0)<cafeHolidayVersion;
+  cafeHolidayData.forEach(item=>{
+    let fresh=JSON.parse(JSON.stringify(item)), existing=db.menu.find(m=>m.id===item.id);
+    if(!existing){db.menu.push({...fresh,inv:'bistro',menu:'cafe',services:['counter','togo'],active:true,dailyPar:0});changed=true;return;}
+    if(update)['name','price','category','station','mods','modGroups','sortOrder'].forEach(k=>{if(JSON.stringify(existing[k])!==JSON.stringify(fresh[k])){existing[k]=fresh[k];changed=true;}});
+  });
+  if(update){db.cafeHolidayVersion=cafeHolidayVersion;changed=true;}
+  return changed;
+}
+window.importExemptionMenu=importExemptionMenu;
+importExemptionMenu();
+// Add Café Services to the scheduling Operation list once (right after Counter + To-Go),
+// so a manager who later removes it in Settings doesn't see it come back.
+function addCafeServicesOperation(){
+  db.settings=db.settings||{};
+  if(db.settings.cafeServicesOperationAdded)return false;
+  let ops=Array.isArray(db.settings.operations)?db.settings.operations:(db.settings.operations=[]);
+  if(!ops.includes('Café Services')){let at=ops.indexOf('Counter + To-Go');ops.splice(at>=0?at+1:ops.length,0,'Café Services');}
+  db.settings.cafeServicesOperationAdded=true;
+  save();
+  return true;
+}
+window.addCafeServicesOperation=addCafeServicesOperation;
+addCafeServicesOperation();
+// Positions from the Guthrie Culinary C-Block Bistro Team chart. Added once (like Café Services),
+// so a position a manager removes in Settings > Positions stays removed.
+const bistroTeamPositions=['Executive Chef','Sous Chef','Kitchen Shift Manager','Kitchen Department Lead','Hot Station Lead','Hot Station Team','Fry Station Lead','Fry Station Team','Cold/Garde Manger Lead','Cold/Garde Manger Team','Prep Lead','Prep Team','Pastry Lead','Pastry Team','Beverage Station Lead','Expo / Assembly','Cashier','Floater'];
+function addBistroTeamPositions(){
+  if(db.settings?.bistroTeamPositionsAdded)return false;
+  if(!Array.isArray(db.positions))db.positions=[];
+  bistroTeamPositions.forEach(pos=>{if(!db.positions.includes(pos))db.positions.push(pos);});
+  db.settings=db.settings||{}; db.settings.bistroTeamPositionsAdded=true;
+  save();
+  return true;
+}
+window.addBistroTeamPositions=addBistroTeamPositions;
+addBistroTeamPositions();
+// C-Block Bistro Team chart assignments, matched by student ID. Applied once, so position
+// changes made later in Settings are kept. (Jason isn't on the roster yet.)
+const bistroTeamAssignments=[
+ ['205031','Executive Chef'],['001879','Sous Chef'],['229998','Kitchen Shift Manager'],
+ ['205589','Kitchen Department Lead'],
+ ['204140','Hot Station Lead'],['204594','Hot Station Team'],['209039','Hot Station Team'],
+ ['205056','Fry Station Lead'],['244767','Fry Station Team'],
+ ['265851','Cold/Garde Manger Lead'],['201912','Cold/Garde Manger Team'],
+ ['955128','Prep Lead'],['202394','Prep Team'],['208312','Prep Team'],
+ ['241377','Pastry Lead'],['261731','Pastry Team'],['202881','Pastry Team'],
+ ['218510','Beverage Station Lead'],
+ ['209038','Expo / Assembly'],['233978','Expo / Assembly'],['201862','Cashier'],['202474','Floater']
+];
+function assignBistroTeamPositions(){
+  if(db.settings?.bistroTeamAssigned)return false;
+  bistroTeamAssignments.forEach(([sid,pos])=>{
+    let u=db.users.find(x=>x.role==='student'&&(x.studentId===sid||x.pin===sid));
+    if(u)u.pos=pos;
+    if(!db.positions.includes(pos))db.positions.push(pos);
+  });
+  db.settings=db.settings||{}; db.settings.bistroTeamAssigned=true;
+  save();
+  return true;
+}
+window.assignBistroTeamPositions=assignBistroTeamPositions;
+assignBistroTeamPositions();
+let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
+// Repair older saved tickets so every checkout item has a unique removable line id.
+let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();
+function save(){soldCache=null;localStorage.setItem(RMS2_KEY,JSON.stringify(db));}
+function validItems(o){return Array.isArray(o?.items)?o.items.filter(i=>i&&i.name&&Number(i.price)>=0):[];}
+function normalizeOrders(){
+  let changed=false;
+  db.orders=(db.orders||[]).map(o=>{
+    o.items=validItems(o);
+    o.items.forEach((it,idx)=>{
+      if(!it.lineId){it.lineId=String(it.id||Date.now())+'-'+idx+'-'+Math.random().toString(36).slice(2,7); changed=true;}
+      if(!Array.isArray(it.mods)) it.mods=[];
+      if(it.note==null) it.note='';
+      it.price=Number(it.price)||0;
+    });
+    return o;
+  });
+  db.tables.forEach(t=>{
+    if(t.orderId){
+      let linked=db.orders.find(o=>o.id===t.orderId);
+      if(!linked || linked.paid || !validItems(linked).length){t.orderId=null;t.status='open';changed=true;}
+    }
+  });
+  if(state.selectedOrder){
+    let selected=db.orders.find(o=>o.id===state.selectedOrder);
+    if(!selected || selected.paid || !validItems(selected).length){state.selectedOrder=null;changed=true;}
+  }
+  if(changed) save();
+}
+function toast(msg){let old=document.querySelector('.toast'); if(old)old.remove(); document.body.insertAdjacentHTML('beforeend',`<div class="toast">${msg}</div>`); setTimeout(()=>{let t=document.querySelector('.toast'); if(t)t.remove()},2200);}
+function normalizeAccessForUser(u){
+  const roleDefaults={
+    manager:['clock','dining','quick','pars','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],
+    teacher:['clock','pars','inventory','catering','recipes','reports','invoices','development','schedule'],
+    student:['clock','dining','quick','checkout','kms','inventory','development']
+  };
+  const defaults=roleDefaults[u.role]||roleDefaults.student;
+  u.access=[...new Set([...(u.access||[]), ...defaults.filter(v=>u.role==='manager'||u.role==='student'||u.role==='teacher' ? true : false)])];
+  if(u.role==='teacher' && !u.access.length) u.access=defaults;
+  return u;
+}
+function applyTheme(){
+ const t=db.settings?.theme||{};
+ const root=document.documentElement;
+ root.style.setProperty('--blue',t.primary||'#003DA5');
+ root.style.setProperty('--gold',t.accent||'#F9A825');
+ root.style.setProperty('--green',t.success||'#2E7D32');
+ root.style.setProperty('--red',t.danger||'#C62828');
+ root.style.setProperty('--gray',t.pageBackground||'#F3F6FB');
+ root.style.setProperty('--white',t.surface||'#FFFFFF');
+ root.style.setProperty('--ink',t.text||'#102033');
+ root.style.setProperty('--font-family',t.font||'Arial, Helvetica, sans-serif');
+ root.style.setProperty('--card-radius',(Number(t.cardRadius)||18)+'px');
+ root.style.setProperty('--button-radius',(Number(t.buttonRadius)||12)+'px');
+ root.style.setProperty('--header-bg',t.headerBackground||t.primary||'#003DA5');
+ document.body.dataset.backgroundStyle=t.backgroundStyle||'solid';
+}
+function render(){
+  applyTheme();
+  if(!state.user) return login();
+  normalizeAccessForUser(state.user);
+  const allowed=allowedViews();
+  if(!views[state.view] || (!canView(state.view) && !['dashboard','order'].includes(state.view))) state.view='dashboard';
+  const dashboardShortcut = state.view==='dashboard' ? '' : `<div class="dashboard-shortcut"><button class="primary" data-view="dashboard">🏠 Dashboard</button><span>Dashboard &gt; ${state.viewLabel||state.view}</span></div>`;
+  app.innerHTML=topbar()+`<div class="rms2-banner">RMS 2.0 test copy &bull; changes here do not affect the live Guthrie RMS</div><main class="wrap">${dashboardShortcut}${views[state.view]()}</main>`;
+  bindCommon();
+  // Opening a different screen (or a different order at checkout) starts at the top, so the
+  // payment panel isn't left below the old scroll position.
+  let place=state.view+'|'+(state.view==='checkout'?state.selectedOrder||'':'');
+  if(state.lastPlace!==undefined&&state.lastPlace!==place)window.scrollTo(0,0);
+  state.lastPlace=place;
+}
+function cloudStatusLine(){
+  const s=window.__guthrieRMSCloudStatus;
+  if(!s) return '';
+  const color=s.ok?'#2E7D32':'#C62828';
+  const icon=s.ok?'☁':'⚠';
+  return `<p class="small" style="color:${color};margin-top:8px">${icon} ${s.message}</p>`;
+}
+function login(){applyTheme();app.innerHTML=`<div class="login"><div class="card login-card"><img class="logo" src="../assets/guthrie-center-logo.jpg"><h1 class="title">${db.settings?.businessName||'Guthrie RMS'}</h1><p>${db.settings?.businessSubtitle||'Restaurant Management System'}</p><p class="rms2-tag">RMS 2.0 &bull; BriskTable test copy</p><p>Enter Student or Manager PIN</p><div class="pin-display">${'*'.repeat(state.pin.length)}</div><div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-key="${n}">${n}</button>`).join('')}<button class="clear" data-clear>Clear</button><button data-key="0">0</button><button class="login-btn" data-login>Login</button></div><p class="error" id="err"></p>${db.settings?.demoMode?'<p class="small">Demo: Manager 9999 | Teacher 8888 | Student IDs/PINs: FOH 1001 | BOH 1002 | Cashier 1003 | Inventory 1004</p>':''}${cloudStatusLine()}</div></div>`; document.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>{state.pin+=b.dataset.key;login()}); $('[data-clear]').onclick=()=>{state.pin='';login()}; $('[data-login]').onclick=()=>{let u=db.users.find(x=>x.pin===state.pin&&x.active); if(u){state.user=u;state.pin='';state.view='dashboard';render()} else $('#err').textContent='PIN not found or inactive.'};}
+function allowedViews(){
+  if(!state.user) return [];
+  normalizeAccessForUser(state.user);
+  const order=['clock','dining','quick','pars','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','brisktable','setup'];
+  return order.filter(v=>(state.user.access||[]).includes(v) || state.user.role==='manager');
+}
+function canView(v){return allowedViews().includes(v)||state.user.role==='manager';}
+function topbar(){let labels={clock:'Clock In/Out',dining:'Dining Room',quick:'Counter + To-Go',pars:'Daily Pars',checkout:'Checkout',kms:'KMS',inventory:'Inventory',catering:'Catering',recipes:'Recipes/Labs',recipes:'Recipes/Labs',reports:'Reports',invoices:'Invoices',development:'Student Development',schedule:'Scheduling',brisktable:'BriskTable',setup:'Settings',closeout:'End of Day'}; let nav=allowedViews().filter(v=>labels[v]).map(v=>v+':'+labels[v]); return `<header class="topbar"><img src="../assets/guthrie-center-logo.jpg"><b>${db.settings?.businessName||'Guthrie RMS'}</b><span>${state.user.name} • ${state.user.pos}</span><span class="spacer"></span><nav class="nav"><button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">🏠 Dashboard</button>${nav.map(x=>{let [v,l]=x.split(':');return `<button data-view="${v}" class="${state.view===v?'active':''}">${l}</button>`}).join('')}<button data-logout>Log Out</button></nav></header>`}
+function bindCommon(){
+  document.querySelectorAll('[data-view]').forEach(b=>{
+    b.onclick=(e)=>{e.preventDefault();let v=b.dataset.view;if(v==='dashboard'||canView(v)){state.view=v;render()}else alert('Access not assigned for this area.')}
+  });
+  const lo=$('[data-logout]'); if(lo) lo.onclick=()=>{state.user=null;render()}
+}
+
+function dashboardScheduleWidget(){
+ if(!state.user)return '';
+ if(state.user.role==='student'){
+  let sh=scheduledForStudent(state.user.id).filter(s=>shiftDateTime(s)>=new Date()&&s.status==='Published').slice(0,3);
+  return `<div class="section panel"><div class="row"><h3>Upcoming Shifts</h3><span class="spacer"></span><button class="small-btn" onclick="state.view='schedule';render()">View Schedule</button></div>${sh.map(x=>`<p><b>${x.date}</b> • ${x.operation} • ${x.startTime}–${x.endTime}</p>`).join('')||'<p class="small">No upcoming shifts.</p>'}</div>`;
+ }
+ if(state.user.role==='teacher'){
+  let sh=scheduledForTeacher(state.user.id).filter(s=>shiftDateTime(s)>=new Date()&&s.status==='Published').slice(0,3);
+  return `<div class="section panel"><div class="row"><h3>Upcoming Student Shifts</h3><span class="spacer"></span><button class="small-btn" onclick="state.view='schedule';render()">View Schedule</button></div><p>${sh.length} upcoming scheduled operation(s)</p></div>`;
+ }
+ let sh=(db.scheduledShifts||[]).filter(s=>shiftDateTime(s)>=new Date()&&s.status==='Published').slice(0,3);
+ return `<div class="section panel"><div class="row"><h3>Upcoming Shifts</h3><span class="spacer"></span><button class="small-btn" onclick="state.view='schedule';render()">Open Scheduler</button></div>${sh.map(x=>`<p><b>${x.date}</b> • ${x.operation} • ${(x.assignments||[]).length} student(s)</p>`).join('')||'<p class="small">No upcoming shifts.</p>'}</div>`;
+}
+
+const activeShift=()=>db.shifts.find(s=>s.userId===state.user.id&&!s.out);
+function roleTiles(){let tiles=allowedViews(); return tiles.map(v=>`<button class="tile" data-view="${v}">${({clock:'Clock In / Out',dining:'Dining Room',quick:'Counter + To-Go',pars:'Daily Pars',checkout:'Checkout',kms:'KMS',inventory:'Inventory',catering:'Catering',recipes:'Recipes/Labs',recipes:'Recipes/Labs',reports:'Reports',invoices:'Invoices',development:'Student Development',schedule:'Scheduling',brisktable:'BriskTable POS',setup:'Settings',closeout:'End of Day Closeout'})[v]}</button>`).join('')}
+const views={dashboard:()=>`<section class="card"><h1>Welcome, ${state.user.name}</h1><p>${activeShift()?'Clocked in: '+new Date(activeShift().in).toLocaleTimeString():'Not clocked in'}</p>${dashboardScheduleWidget()}<div class="grid">${roleTiles()}</div></section>`,
+clock:()=>`<section class="card"><h1>Clock In / Clock Out</h1><p>${activeShift()?`You clocked in at ${new Date(activeShift().in).toLocaleString()}`:'You are not clocked in.'}</p><button class="primary ${activeShift()?'danger':'success'}" onclick="toggleClock()">${activeShift()?'Clock Out':'Clock In'}</button></section>`,
+dining:()=>dining(), quick:()=>quick(), pars:()=>parsScreen(), order:()=>orderScreen(), checkout:()=>checkout(), kms:()=>kms(), inventory:()=>inventory(), catering:()=>catering(), recipes:()=>recipesLab(), reports:()=>reports(), invoices:()=>invoiceCenter(), development:()=>development(), schedule:()=>scheduleCenter(), closeout:()=>closeout(), setup:()=>setup()};
+window.toggleClock=()=>{let s=activeShift(); if(s){s.out=now(); s.hours=shiftHours(s);}else db.shifts.push({id:Date.now(),userId:state.user.id,name:state.user.name,pos:state.user.pos,teacherId:state.user.teacherId||'',serviceType:'Shift',in:now(),out:null}); save();render()};
+function dining(){return `<section class="card"><h1>Dining Room</h1><div class="table-grid">${db.tables.map(t=>`<div class="table-card status-${t.status==='open'?'open':t.status==='ready'?'ready':'active'}" onclick="openTable(${t.id})"><h3>Table ${t.id}</h3><p>${t.seats} seats</p><p>${t.status}</p></div>`).join('')}</div></section>`}
+window.openTable=id=>{let t=db.tables.find(x=>x.id===id); if(!t.orderId){let o={id:Date.now(),type:'table',tableId:id,customer:'Table '+id,items:[],status:'open',created:now(),sent:null,paid:false}; db.orders.push(o); t.orderId=o.id;t.status='active';save()} state.activeOrder=t.orderId; state.seat=1; state.view='order'; render()};
+function orderScreen(){let o=db.orders.find(x=>x.id===state.activeOrder); if(!o)return `<section class="card"><h1>Order Not Found</h1><p class="notice">This order was closed or cleared on another device.</p><div class="row"><button class="primary" onclick="state.view='quick';render()">Counter + To-Go</button><button class="primary" onclick="state.view='dining';render()">Dining Room</button><button class="small-btn" onclick="state.view='dashboard';render()">Dashboard</button></div></section>`; let t=o.type==='table'?db.tables.find(x=>x.id===o.tableId):null; let seats=t?Number(t.seats)||1:1; let checkoutType=o.type==='table'?'table':o.type; return `<section class="card"><h1>${o.customer}</h1>${t?`<div class="seat-tabs">${Array.from({length:seats},(_,i)=>`<button class="${state.seat===i+1?'active':''}" onclick="state.seat=${i+1};render()">Seat ${i+1}</button>`).join('')}</div>`:`<p class="notice">${o.type==='togo'?'To-Go':'Counter'} order entry</p>`}<h3>Add Item ${t?`to Seat ${state.seat}`:''}</h3>${o.type==='table'?'':`<div class="row menu-tabs"><button class="${menuTabFor(o)==='cafe'?'primary':'small-btn'}" onclick="state.menuTab='cafe';render()">Café Menu</button><button class="${menuTabFor(o)==='bistro'?'primary':'small-btn'}" onclick="state.menuTab='bistro';render()">Bistro Menu</button><button class="${menuTabFor(o)==='exemption'?'primary':'small-btn'}" onclick="state.menuTab='exemption';render()">Exemption Day</button></div>`}${renderBistroMenuButtons(o.type,menuTabFor(o))}<h3>Ticket</h3>${ticketItems(o)}<div class="row"><button class="primary" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="primary" onclick="state.view='checkout';state.checkoutType='${checkoutType}';state.selectedOrder=${o.id};render()">Checkout</button><button class="primary" onclick="state.view='${t?'dining':'quick'}';render()">Back</button></div></section>`}
+function quick(){let list=db.orders.filter(o=>!o.paid&&(o.type==='counter'||o.type==='togo'));return `<section class="card"><h1>Counter + To-Go Order Entry</h1><p class="notice">Create, edit, send, and checkout counter or to-go orders from this page.</p><div class="row"><button class="primary success" onclick="createQuickOrder('counter')">New Counter Order</button><button class="primary success" onclick="createQuickOrder('togo')">New To-Go Order</button></div>${orderSearchPanel()}<h2>Open Counter + To-Go Orders</h2><div class="grid">${list.map(o=>`<div class="order-card"><h3>${o.type==='togo'?'To-Go':'Counter'}: ${o.customer}</h3><p>${validItems(o).length} item(s) • ${money(total(o))} • ${o.status}</p><div class="row"><button class="small-btn" onclick="openQuickOrder(${o.id})">Edit Order</button><button class="small-btn" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="small-btn" onclick="state.checkoutType='${o.type}';state.selectedOrder=${o.id};state.view='checkout';render()">Checkout</button></div></div>`).join('')||'<p>No open counter or to-go orders.</p>'}</div></section>`}
+window.createQuickOrder=(type)=>{let label=type==='togo'?'To-Go':'Counter';let customer=prompt(`Enter customer/order name for ${label}:`, type==='togo'?'To-Go Customer':'Walk-In')||label+' Order';let o={id:Date.now(),type,customer,items:[],status:'open',created:now(),sent:null,paid:false};db.orders.push(o);state.activeOrder=o.id;state.seat=1;state.menuTab='cafe';state.view='order';save();render();};
+window.openQuickOrder=id=>{let o=db.orders.find(x=>x.id===id);if(!o)return;state.activeOrder=id;state.seat=1;state.view='order';render();};
+// Add-item pop-up. Items with modGroups show each group under its own heading: a pick-one
+// group acts like a radio (tapping the chosen option again clears it) and a required group
+// must have a choice before the item can be added. Options not in any group, and items
+// without groups, show as one list of toggles as before.
+const attr=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+function modButton(m,md){let up=Number(m.modPrices?.[md])||0;return `<button data-mod="${attr(md)}" onclick="toggleModOption(this)">${attr(md)}${up?` <b>${up>0?'+':'&minus;'}${money(Math.abs(up))}</b>`:''}</button>`;}
+function modGroupsHtml(m){
+  let groups=Array.isArray(m.modGroups)?m.modGroups:[];
+  let grouped=new Set(groups.flatMap(g=>g.options||[]));
+  let other=(m.mods||[]).filter(md=>!grouped.has(md));
+  if(!groups.length) return `<div class="modifier-list">${other.map(md=>modButton(m,md)).join('')||'<p class="small">No modifiers set up yet.</p>'}</div>`;
+  return groups.map((g,gi)=>`<div class="mod-group" data-group="${gi}" data-pick="${g.pick==='one'?'one':'many'}" data-required="${g.required?1:''}" data-name="${attr(g.name)}"><h3>${attr(g.name)} <span class="small">${g.required?'Required &bull; choose 1':g.pick==='one'?'Optional &bull; choose 1':'Optional &bull; choose any'}</span></h3><div class="modifier-list">${(g.options||[]).map(md=>modButton(m,md)).join('')}</div></div>`).join('')
+    +(other.length?`<div class="mod-group" data-pick="many"><h3>Other Options</h3><div class="modifier-list">${other.map(md=>modButton(m,md)).join('')}</div></div>`:'');
+}
+window.toggleModOption=btn=>{
+  let g=btn.closest('.mod-group');
+  if(g&&g.dataset.pick==='one'&&!btn.classList.contains('selected'))g.querySelectorAll('.modifier-list .selected').forEach(b=>b.classList.remove('selected'));
+  btn.classList.toggle('selected');
+  if(g)g.classList.remove('missing');
+};
+function modifierModal(menuId,seat){let m=db.menu.find(x=>x.id===menuId); if(!m||isMenu86(m)){alert('This item is currently 86\'d or unavailable.');return;} app.insertAdjacentHTML('beforeend',`<div class="modal" id="mod"><div class="card"><h2>${m.name} &bull; ${money(m.price)}</h2><p class="small">Remaining today: ${productionRemaining(m.id)}</p>${modGroupsHtml(m)}<h3>Custom Note</h3><input class="input" id="note" placeholder="Optional"><h3>Quantity</h3><div class="row qty-picker"><button class="small-btn" onclick="stepQty(-1)">&minus;</button><input class="input" id="qty" type="number" min="1" step="1" inputmode="numeric" value="1"><button class="small-btn" onclick="stepQty(1)">+</button></div><div class="row section"><button class="primary" onclick="addItem(${menuId},${seat})">Add Item</button><button class="primary danger" onclick="document.getElementById('mod').remove()">Cancel</button></div></div></div>`)}
+window.modifierModal=modifierModal; window.addItem=(menuId,seat)=>{let o=db.orders.find(x=>x.id===state.activeOrder), m=db.menu.find(x=>x.id===menuId); if(!o||!m)return;
+  let missing=[...document.querySelectorAll('#mod .mod-group[data-required="1"]')].filter(g=>!g.querySelector('.modifier-list .selected'));
+  if(missing.length){missing.forEach(g=>g.classList.add('missing'));missing[0].scrollIntoView({block:'center'});alert('Please choose: '+missing.map(g=>g.dataset.name).join(', '));return;}
+  let qty=Math.max(1,Math.floor(Number($('#qty')?.value)||1)); if(!deductProduction(menuId,qty)){let left=productionRemaining(menuId);alert(productionItem(menuId).manual86||left==='∞'||!left?'This item is 86\'d or no longer available.':`Only ${left} left today.`);return;} let mods=[...document.querySelectorAll('#mod .modifier-list .selected')].map(b=>b.dataset.mod||b.textContent);let note=$('#note').value; let upcharge=mods.reduce((a,md)=>a+(Number(m.modPrices?.[md])||0),0);
+  /* A discount option (e.g. Veteran Free Entrée, -$8) never takes a line below $0. */
+  let price=Math.max(0,Math.round((Number(m.price)+upcharge)*100)/100); upcharge=Math.round((price-Number(m.price))*100)/100;
+  /* One ticket line per item so KMS, pars and reports count each one. */ for(let n=0;n<qty;n++)o.items.push({id:Date.now()+n,addedAt:Date.now(),lineId:String(Date.now())+'-'+n+'-'+Math.random().toString(36).slice(2,7),menuId,name:m.name,price,basePrice:m.price,modCharge:upcharge,seat,mods:[...mods],note}); document.getElementById('mod').remove(); save();render(); if(qty>1)toast(`Added ${qty} × ${m.name}.`);};
+window.stepQty=(d)=>{let q=$('#qty'); if(q)q.value=Math.max(1,(Math.floor(Number(q.value))||1)+d);};
+function ticketItems(o){let items=validItems(o);return items.length?`<table class="report-table"><tr><th>Seat</th><th>Item</th><th>Mods</th><th>Price</th><th>Remove</th></tr>${items.map((i,idx)=>`<tr><td>${i.seat||'-'}</td><td>${i.name}</td><td>${[...(i.mods||[]),i.note].filter(Boolean).join(', ')}</td><td>${money(i.price)}</td><td><button class="small-btn danger" onclick="removeTicketLine(${o.id},'${i.lineId||''}',${idx})">Remove</button></td></tr>`).join('')}<tr><td colspan="3"><b>Total</b></td><td colspan="2"><b>${money(total(o))}</b></td></tr></table>`:'<p>No items yet.</p>'}
+// Remove a line while ringing up. Unlike checkout, an emptied order stays open so more items can be added.
+window.removeTicketLine=(orderId,lineId,idx)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; o.items=validItems(o); let itemIndex=o.items.findIndex(i=>String(i.lineId)===String(lineId)); if(itemIndex<0&&Number.isInteger(idx))itemIndex=idx; let item=o.items[itemIndex]; if(!item){render();return;} if(!confirm(`Remove ${item.name} from this order?${o.sent?' It was already sent to the KMS and will come off the kitchen screens.':''}`))return; if(item.menuId!=null)restoreProduction(item.menuId,1); o.items.splice(itemIndex,1); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`Item removed: ${item.name}`,time:now(),by:state.user.name}); save(); render(); toast('Item removed.');};
+function total(o){return validItems(o).reduce((a,i)=>a+(Number(i.price)||0),0)}
+
+window.sendKitchen=(orderId)=>{
+  const o=db.orders.find(x=>x.id===orderId);
+  if(!o){ alert('Order not found.'); return; }
+  const items=validItems(o);
+  if(!items.length){ alert('Add at least one item before sending to KMS.'); return; }
+  // Preserve the full ticket and send directly to BOH station screens.
+  o.items=items;
+  o.sent=now();
+  o.status='sent';
+  o.kmsStage='sent';
+  // Number each send so lines added after the first send show as NEW on the KMS.
+  o.sendCount=(Number(o.sendCount)||0)+1;
+  items.forEach(i=>{if(!i.sendRound)i.sendRound=o.sendCount;});
+  o.kmsLog=o.kmsLog||[];
+  o.kmsLog.push({stage:o.sendCount>1?'Added Items Sent':'Sent to Kitchen',time:o.sent,by:state.user?.name||'System'});
+  if(o.type==='table'&&o.tableId){
+    const t=db.tables.find(t=>t.id===o.tableId);
+    if(t){t.status='sent';t.orderId=o.id;}
+  }
+  save();
+  toast('Item has been sent to kitchen');
+  render();
+};
+
+// Checkout has two views. Order list: a tab per order type (with counts) and compact order
+// tiles. Picking an order (or tapping Checkout on an order screen) opens the payment view at
+// the top of the page: the ticket on the left, payment on the right (stacked on small screens),
+// with All Orders and Back to Order buttons.
+function checkoutOpenOrders(type){return (db.orders||[]).filter(o=>!o.paid&&o.type===type&&validItems(o).length>0);}
+function checkout(){
+  normalizeOrders();
+  let types=[['table','Tables'],['counter','Counter'],['togo','To-Go'],['catering','Catering']];
+  let type=state.checkoutType||'table';
+  let list=checkoutOpenOrders(type).sort((x,y)=>x.id-y.id);
+  let selected=state.selectedOrder?(db.orders||[]).find(o=>o.id===state.selectedOrder&&!o.paid&&validItems(o).length):null;
+  if(!selected) state.selectedOrder=null;
+  if(selected) return `<section class="card checkout-pay"><div class="row checkout-nav"><button class="small-btn" onclick="state.selectedOrder=null;render()">&larr; All Orders</button><button class="primary" onclick="checkoutBackToOrder(${selected.id})">&larr; Back to Order (Edit Items)</button></div>
+    <h1>Checkout: ${selected.customer}</h1><p class="small">${orderTypeLabel(selected)} &bull; Order #${selected.id} &bull; started ${new Date(Number(selected.id)).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</p>
+    ${payPanel(selected)}</section>`;
+  let age=o=>{let m=Math.max(0,Math.round((Date.now()-Number(o.id))/60000));return m<60?m+' min':Math.floor(m/60)+' hr '+(m%60)+' min';};
+  return `<section class="card"><h1>Checkout Center</h1>
+    <div class="tabs">${types.map(([t,l])=>`<button class="${type===t?'active':''}" onclick="state.checkoutType='${t}';state.selectedOrder=null;render()">${l} (${checkoutOpenOrders(t).length})</button>`).join('')}</div>
+    <div class="checkout-list">${list.map(o=>`<button class="checkout-tile" onclick="state.selectedOrder=${o.id};render()"><b>${o.customer}</b><span class="checkout-total">${money(total(o))}</span><span class="small">${validItems(o).length} item(s) &bull; ${o.sent?'sent':'not sent'} &bull; ${age(o)}</span></button>`).join('')||'<p>No open orders with items.</p>'}</div>
+    <div class="row section"><button class="small-btn danger" onclick="clearEmptyCheckoutOrders()">Clear Empty/Stuck Orders</button></div>
+    ${orderSearchPanel()}
+    ${refundCenter()}
+    </section>`;
+}
+// ---- Find an Order ----
+// Search box on Checkout and Counter + To-Go. Typing updates only the results list, so the
+// box keeps focus. Matches customer/table name, order number, item names/mods/notes and
+// payment type. Order ids are creation times (Date.now()), used for the date filter.
+function orderSearchText(o){
+  let t=o.type==='table'?db.tables.find(x=>x.id===o.tableId):null;
+  return [o.customer,String(o.id),o.type,o.type==='togo'?'to-go':'',t?'table '+t.id:'',o.status,o.payment?.type,o.payment?.processedBy,
+    ...validItems(o).flatMap(i=>[i.name,...(i.mods||[]),i.note])].filter(Boolean).join(' ').toLowerCase();
+}
+function orderSearchMatches(){
+  let q=(state.orderSearch||'').trim().toLowerCase(), status=state.orderSearchStatus||'all', when=state.orderSearchWhen||'today';
+  let today=productionToday();
+  return (db.orders||[]).filter(o=>{
+    if(!validItems(o).length&&!o.paid)return false;
+    if(status==='open'&&o.paid)return false;
+    if(status==='paid'&&!o.paid)return false;
+    if(when==='today'&&new Date(Number(o.id)).toLocaleDateString('en-CA')!==today)return false;
+    if(!q)return true;
+    let text=orderSearchText(o);
+    return q.split(/\s+/).every(w=>text.includes(w));
+  }).sort((a,b)=>b.id-a.id);
+}
+function orderTypeLabel(o){return ({table:'Table',counter:'Counter',togo:'To-Go',catering:'Catering'})[o.type]||o.type;}
+function orderSearchResults(){
+  let all=orderSearchMatches(), list=all.slice(0,50);
+  if(!list.length)return '<p class="small">No orders match.</p>';
+  let rows=list.map(o=>{
+    let items=validItems(o), open=state.orderSearchOpen===o.id;
+    let summary=Object.entries(items.reduce((a,i)=>(a[i.name]=(a[i.name]||0)+1,a),{})).map(([n,c])=>c>1?`${c}× ${n}`:n).join(', ');
+    let status=o.paid?(o.refunds?.length?(remainingRefundable(o)<=0.001?'Refunded':'Part refunded'):'Paid'+(o.payment?.type?' ('+o.payment.type+')':'')):(o.sent?'Open • sent':'Open');
+    let actions=o.paid
+      ?(canProcessRefunds()&&remainingRefundable(o)>0?`<button class="small-btn" onclick="orderSearchRefund(${o.id})">Refund</button>`:'')
+      :`<button class="small-btn" onclick="orderSearchEdit(${o.id})">Edit</button>${allowedViews().includes('checkout')?`<button class="small-btn" onclick="state.view='checkout';state.checkoutType='${o.type}';state.selectedOrder=${o.id};render()">Checkout</button>`:''}`;
+    let detail=open?`<tr><td colspan="7">${items.map(i=>`<div>${i.seat?'Seat '+i.seat+' • ':''}<b>${i.name}</b> ${money(i.price)}${[...(i.mods||[]),i.note].filter(Boolean).length?' — '+[...(i.mods||[]),i.note].filter(Boolean).join(', '):''}</div>`).join('')}${o.payment?`<div class="small">Paid ${money(o.payment.amount)} by ${o.payment.type}${o.payment.processedBy?' • '+o.payment.processedBy:''}${o.paidAt?' • '+new Date(o.paidAt).toLocaleString():''}</div>`:''}${(o.refunds||[]).map(r=>`<div class="small">Refund ${money(r.amount)}${r.reason?' • '+r.reason:''}</div>`).join('')}</td></tr>`:'';
+    return `<tr><td>#${String(o.id).slice(-6)}</td><td>${new Date(Number(o.id)).toLocaleString([], {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})}</td><td>${orderTypeLabel(o)}</td><td><b>${o.customer||''}</b></td><td class="small">${summary}</td><td>${money(total(o))}<br><span class="small">${status}</span></td><td><div class="row"><button class="small-btn" onclick="state.orderSearchOpen=${open?'null':o.id};refreshOrderSearch()">${open?'Hide':'Details'}</button>${actions}</div></td></tr>${detail}`;
+  }).join('');
+  return `<table class="report-table"><tr><th>Order</th><th>Started</th><th>Type</th><th>Name</th><th>Items</th><th>Total</th><th></th></tr>${rows}</table>${all.length>list.length?`<p class="small">Showing the newest 50 of ${all.length}. Type more to narrow it down.</p>`:''}`;
+}
+function orderSearchPanel(){
+  let status=state.orderSearchStatus||'all', when=state.orderSearchWhen||'today';
+  let btn=(key,val,label,cur)=>`<button class="${cur===val?'primary':'small-btn'}" onclick="state.${key}='${val}';refreshOrderSearch()">${label}</button>`;
+  return `<div class="section panel order-search"><h2>Find an Order</h2>
+    <input class="input" id="orderSearchBox" type="search" placeholder="Name, order #, item, table, payment…" value="${(state.orderSearch||'').replace(/"/g,'&quot;')}" oninput="state.orderSearch=this.value;refreshOrderSearch(true)">
+    <div class="row" id="orderSearchFilters">${btn('orderSearchStatus','all','All',status)}${btn('orderSearchStatus','open','Open',status)}${btn('orderSearchStatus','paid','Paid',status)}<span class="spacer"></span>${btn('orderSearchWhen','today','Today',when)}${btn('orderSearchWhen','all','All Dates',when)}</div>
+    <div id="orderSearchResults">${state.orderSearch||state.orderSearchShow?orderSearchResults():'<p class="small">Type to search, or pick a filter to list orders.</p>'}</div></div>`;
+}
+window.refreshOrderSearch=(typing)=>{
+  if(!typing)state.orderSearchShow=true;
+  let panel=document.querySelector('.order-search'); if(!panel){render();return;}
+  let tmp=document.createElement('div'); tmp.innerHTML=orderSearchPanel();
+  $('#orderSearchFilters').innerHTML=tmp.querySelector('#orderSearchFilters').innerHTML;
+  $('#orderSearchResults').innerHTML=tmp.querySelector('#orderSearchResults').innerHTML;
+};
+// Checkout's Back to Order: reopen the order being rung up on its order screen (keeping the
+// menu tab in use, e.g. Exemption Day) so items can be changed before payment.
+window.checkoutBackToOrder=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; state.activeOrder=id; state.seat=1; if(o.type==='catering'){state.cateringOrderId=id;state.view='catering';} else state.view='order'; render(); window.scrollTo(0,0);};
+window.orderSearchEdit=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; state.activeOrder=id; state.seat=1; if(o.type==='catering'){state.cateringOrderId=id;state.view='catering';} else {if(o.type!=='table')state.menuTab='cafe';state.view='order';} render();};
+window.orderSearchRefund=id=>{state.refundOrder=id;state.selectedOrder=null;state.view='checkout';render();setTimeout(()=>document.getElementById('refundAmount')?.scrollIntoView({block:'center'}),50);};
+
+// Discount options (negative-priced modifiers, e.g. Veteran Free Entrée -$8) are already taken
+// off the line price. Checkout shows the item at full price with the discount as its own line.
+function lineDiscount(i){
+  let m=i?.menuId!=null?db.menu.find(x=>x.id===i.menuId):null; if(!m?.modPrices)return null;
+  let disc=(i.mods||[]).filter(md=>Number(m.modPrices[md])<0); if(!disc.length)return null;
+  let add=(i.mods||[]).reduce((a,md)=>a+Math.max(0,Number(m.modPrices[md])||0),0);
+  let gross=Math.round(((Number(i.basePrice??m.price)||0)+add)*100)/100, amount=Math.round((gross-(Number(i.price)||0))*100)/100;
+  return amount>0?{label:disc.join(', '),gross,amount}:null;
+}
+function orderDiscountTotal(o){return validItems(o).reduce((a,i)=>a+(lineDiscount(i)?.amount||0),0);}
+function checkoutTicketItems(o){
+  let items=validItems(o);
+  let disc=orderDiscountTotal(o), table=o.type==='table';
+  let rows=items.map((i,idx)=>{let d=lineDiscount(i), mods=(i.mods||[]).filter(md=>!d||!d.label.split(', ').includes(md));
+    return `<tr><td><b>${i.name}</b>${table?` <span class="small">Seat ${i.seat||'-'}</span>`:''}${mods.length||i.note?`<div class="small">${[...mods,i.note].filter(Boolean).join(', ')}</div>`:''}</td><td class="num">${money(d?d.gross:i.price)}</td><td><button class="small-btn danger" onclick="removeCheckoutLine(${o.id},'${i.lineId||''}',${idx})">Remove</button></td></tr>${d?`<tr class="discount-row"><td>Discount: ${d.label}</td><td class="num">&minus;${money(d.amount)}</td><td></td></tr>`:''}`;}).join('');
+  return items.length?`<div class="checkout-ticket"><table class="report-table"><tr><th>Item</th><th class="num">Price</th><th></th></tr>${rows}${disc?`<tr><td>Subtotal</td><td class="num">${money(total(o)+disc)}</td><td></td></tr><tr class="discount-row"><td>Discounts</td><td class="num">&minus;${money(disc)}</td><td></td></tr>`:''}<tr class="total-row"><td><b>Total</b></td><td class="num"><b>${money(total(o))}</b></td><td></td></tr></table></div><div class="row section"><button class="small-btn danger" onclick="clearCheckoutOrder(${o.id})">Clear All Items</button></div>`:'<p>No items left on this order.</p>'
+}
+function payPanel(o){if(!o||!validItems(o).length){return '<div class="card"><p>This order has no items and was removed from checkout.</p></div>';}return `<div class="checkout-columns"><div><h2>Ticket</h2>${checkoutTicketItems(o)}</div><div class="checkout-payment"><h2>Payment</h2><div class="checkout-due"><span>Total Due</span><b>${money(total(o))}</b></div><label>Payment Type</label><select class="input" id="paytype" onchange="renderPaymentFields()"><option>Cash</option><option>Card</option><option>Check</option><option>District Account</option><option>Donation</option></select><div id="paymentFields" data-total="${total(o).toFixed(2)}">${paymentFieldsHtml('Cash',total(o))}</div><button class="primary success pay-btn" onclick="pay(${o.id})">Mark Paid &bull; ${money(total(o))}</button></div></div>`}
+// Cash: amount due, quick-tender buttons, and a live change / short-by readout.
+function cashFieldsHtml(due){
+ due=Math.round((Number(due)||0)*100)/100;
+ let quick=[...new Set([due,Math.ceil(due),5,10,20,50,100].filter(v=>v>=due).map(v=>Math.round(v*100)/100))].slice(0,5);
+ return `<div class="cash-box"><div class="cash-due"><span>Amount Due</span><b>${money(due)}</b></div><label>Amount Given by Guest<input class="input cash-input" id="tender" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" oninput="updateCashChange()"></label><div class="row cash-quick">${quick.map(v=>`<button type="button" class="small-btn" onclick="setTender(${v})">${v===due?'Exact '+money(v):money(v)}</button>`).join('')}</div><div id="cashChange" class="cash-change">Enter the amount the guest gave you.</div></div>`;
+}
+window.setTender=v=>{let i=$('#tender'); if(i){i.value=Number(v).toFixed(2); updateCashChange();}};
+window.updateCashChange=()=>{
+ let box=$('#cashChange'), due=Number($('#paymentFields')?.dataset.total)||0, raw=$('#tender')?.value; if(!box)return;
+ if(raw===''||raw==null){box.className='cash-change';box.textContent='Enter the amount the guest gave you.';return;}
+ let diff=Math.round(((Number(raw)||0)-due)*100)/100;
+ if(diff<0){box.className='cash-change short';box.innerHTML=`Short by <b>${money(-diff)}</b> — collect more cash`;}
+ else if(diff===0){box.className='cash-change exact';box.innerHTML='Exact amount — <b>no change</b>';}
+ else{box.className='cash-change give';box.innerHTML=`Give change: <b>${money(diff)}</b>`;}
+};
+function paymentFieldsHtml(type,due){
+ if(type==='Check') return `<input class="input" id="checkNumber" placeholder="Check Number *"><input class="input" id="payor" placeholder="Payor / Organization"><input class="input" id="checkDate" type="date"><input class="input" id="paymentNotes" placeholder="Notes">`;
+ if(type==='Cash') return cashFieldsHtml(due);
+ if(type==='Card') return `<input class="input" id="transactionRef" placeholder="Card Transaction Reference / Last 4 Optional">`;
+ if(type==='District Account') return `<input class="input" id="payor" placeholder="Department / Account Name"><input class="input" id="paymentNotes" placeholder="Transfer / PO / Notes">`;
+ if(type==='Donation') return `<input class="input" id="payor" placeholder="Donor Name / Organization"><input class="input" id="paymentNotes" placeholder="Donation Notes">`;
+ return '';
+}
+window.renderPaymentFields=()=>{let type=$('#paytype')?.value||'Cash'; let box=$('#paymentFields'); if(box) box.innerHTML=paymentFieldsHtml(type,Number(box.dataset.total)||0);};
+
+window.clearEmptyCheckoutOrders=()=>{
+  normalizeOrders();
+  let before=db.orders.length;
+  // Only empty orders left for 15+ minutes: a newer one may be open on a register right now,
+  // and deleting it there showed "Order Not Found" in the middle of taking the order.
+  let cutoff=Date.now()-15*60*1000;
+  db.orders=db.orders.filter(o=>o.paid || (Array.isArray(o.items)&&o.items.length>0) || !(Number(o.id)<cutoff));
+  db.tables.forEach(t=>{ if(t.orderId && !db.orders.some(o=>o.id===t.orderId)){t.orderId=null;t.status='open';} });
+  state.selectedOrder=null;
+  save();
+  render();
+  toast(`Cleared ${before-db.orders.length} empty/stuck order(s) older than 15 minutes.`);
+};
+
+window.removeCheckoutLine=(orderId,lineId,idx)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; o.items=validItems(o); let itemIndex=o.items.findIndex(i=>String(i.lineId)===String(lineId)); if(itemIndex<0 && Number.isInteger(idx)) itemIndex=idx; if(itemIndex<0 || !o.items[itemIndex]){alert('This item is already gone. Refreshing checkout.'); normalizeOrders(); render(); return;} let item=o.items[itemIndex]; if(!confirm(`Remove ${item.name} from this order?`))return; restoreProduction(item.menuId,1); o.items.splice(itemIndex,1); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`Item removed at checkout: ${item.name}`,time:now(),by:state.user.name}); if(!o.items.length){ if(o.type==='table'&&o.tableId){let t=db.tables.find(t=>t.id===o.tableId); if(t&&t.orderId===o.id){t.orderId=null;t.status='open';}} db.orders=db.orders.filter(x=>x.id!==orderId); state.selectedOrder=null; save(); render(); toast('Last item removed; empty order cleared.'); return;} save(); render(); toast('Item removed from checkout.');};
+window.clearCheckoutOrder=(orderId)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; if(!o.items.length){db.orders=db.orders.filter(x=>x.id!==orderId);state.selectedOrder=null;save();render();toast('Empty order removed.'); return;} if(!confirm('Clear all items from this order and remove it from checkout?'))return; let count=o.items.length; o.items.forEach(it=>restoreProduction(it.menuId,1)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`All checkout items cleared and order removed (${count})`,time:now(),by:state.user.name}); if(o.type==='table'&&o.tableId){let t=db.tables.find(t=>t.id===o.tableId); if(t&&t.orderId===o.id){t.orderId=null;t.status='open';}} db.orders=db.orders.filter(x=>x.id!==orderId); state.selectedOrder=null; save(); render(); toast('Order cleared and removed from checkout.');};
+window.pay=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let paymentType=$('#paytype')?.value||'Cash'; let payment={type:paymentType,amount:total(o),processedBy:state.user.name,processedAt:now()}; let disc=Math.round(orderDiscountTotal(o)*100)/100; if(disc>0)payment.discount=disc;
+ if(paymentType==='Check'){
+   let checkNumber=String($('#checkNumber')?.value||'').trim();
+   if(!checkNumber){alert('Check number required before completing payment.');return;}
+   payment.checkNumber=checkNumber; payment.payor=$('#payor')?.value||''; payment.checkDate=$('#checkDate')?.value||''; payment.notes=$('#paymentNotes')?.value||'';
+ } else if(paymentType==='Cash'){
+   let raw=$('#tender')?.value;
+   if(raw===''||raw==null){alert('Enter the amount of cash the guest gave you.');return;}
+   payment.tendered=Math.round((Number(raw)||0)*100)/100;
+   if(payment.tendered+0.001<payment.amount){alert(`Not enough cash. The guest still owes ${money(payment.amount-payment.tendered)}.`);return;}
+   payment.change=Math.round((payment.tendered-payment.amount)*100)/100;
+ } else if(paymentType==='Card'){
+   payment.transactionRef=$('#transactionRef')?.value||'';
+ } else if(paymentType==='District Account' || paymentType==='Donation'){
+   payment.payor=$('#payor')?.value||''; payment.notes=$('#paymentNotes')?.value||'';
+ }
+ o.payment=payment; o.paid=true;o.status='paid';o.paidAt=now(); let t=db.tables.find(x=>x.orderId===id); if(t){t.status='open';t.orderId=null} save();render();if(paymentType==='Cash'&&payment.change>0){alert(`Cash received: ${money(payment.tendered)}\nGive the guest ${money(payment.change)} in change.`);}toast(paymentType==='Cash'&&payment.change>0?`Cash payment recorded. Change: ${money(payment.change)}`:`${paymentType} payment recorded.`);};
+
+function refundTotal(o){return (o.refunds||[]).reduce((a,r)=>a+(Number(r.amount)||0),0)}
+function remainingRefundable(o){return Math.max(0,total(o)-refundTotal(o))}
+function canProcessRefunds(){return state.user && (state.user.role==='manager' || /cashier/i.test(state.user.pos||''));}
+function refundCenter(){
+ if(!canProcessRefunds()) return '';
+ let paid=(db.orders||[]).filter(o=>o.paid && total(o)>0 && remainingRefundable(o)>0);
+ let selected=db.orders.find(o=>o.id===state.refundOrder);
+ let form=selected?`<div class="panel"><h3>Process Refund: ${selected.customer}</h3><p>Order total: ${money(total(selected))} • Already refunded: ${money(refundTotal(selected))} • Remaining: ${money(remainingRefundable(selected))}</p><div class="form-grid"><label>Refund Amount<input id="refundAmount" class="input" type="number" step="0.01" value="${remainingRefundable(selected).toFixed(2)}"></label><label>Reason<select id="refundReason" class="input"><option>Customer request</option><option>Order entered incorrectly</option><option>Item unavailable</option><option>Quality concern</option><option>Duplicate charge</option><option>Event cancelled</option><option>Manager approval</option><option>Other</option></select></label></div><label>Refund Notes<textarea id="refundNotes" class="input" placeholder="Required details for the refund record"></textarea></label><div class="row"><button class="primary danger" onclick="submitRefund(${selected.id})">Complete Refund</button><button class="small-btn" onclick="state.refundOrder=null;render()">Cancel</button></div></div>`:'';
+ return `<div class="section panel"><h2>Refund Center</h2><p class="small">Use this for paid orders that need a refund. A reason is required and the refund is saved to the refund log.</p>${form}<table class="report-table"><tr><th>Order</th><th>Type</th><th>Customer</th><th>Paid</th><th>Refunded</th><th>Remaining</th><th>Action</th></tr>${paid.map(o=>`<tr><td>${o.id}</td><td>${o.type}</td><td>${o.customer||''}</td><td>${money(total(o))}</td><td>${money(refundTotal(o))}</td><td>${money(remainingRefundable(o))}</td><td><button class="small-btn danger" onclick="state.refundOrder=${o.id};render()">Refund</button></td></tr>`).join('')||'<tr><td colspan="7">No refundable paid orders.</td></tr>'}</table></div>`;
+}
+window.submitRefund=(orderId)=>{
+ let o=db.orders.find(x=>x.id===orderId); if(!o)return;
+ let amount=Number($('#refundAmount')?.value)||0;
+ let reason=String($('#refundReason')?.value||'').trim();
+ let notes=String($('#refundNotes')?.value||'').trim();
+ if(amount<=0){alert('Enter a refund amount greater than zero.');return;}
+ if(amount>remainingRefundable(o)){alert('Refund amount cannot be greater than the remaining refundable amount.');return;}
+ if(!reason){alert('Refund reason is required.');return;}
+ if(!confirm(`Refund ${money(amount)} for ${o.customer}?`))return;
+ let refund={id:Date.now(),orderId:o.id,orderType:o.type,customer:o.customer||'',amount,reason,notes,processedBy:state.user.name,processedAt:now(),originalPaymentType:o.payment?.type||''};
+ o.refunds=o.refunds||[]; o.refunds.push(refund); db.refunds=db.refunds||[]; db.refunds.push(refund);
+ o.status=remainingRefundable(o)<=0.001?'refunded':'partially refunded';
+ state.refundOrder=null; save(); render(); toast('Refund recorded.');
+};
+
+const kmsStationList=[['all','All Tickets'],['expo','Expo'],['grill','Grill'],['fry','Fry'],['salad','Salad'],['beverage','Beverage'],['dessert','Dessert'],['catering','Catering']];
+const kmsStationLabels=Object.fromEntries(kmsStationList);
+// A ticket stays on the KMS until Expo completes it — paying the check does not clear it.
+// Paid tickets only carry over for the day they were sent, so old paid orders don't reappear.
+function kmsActive(o){
+ if(!o.sent||o.kmsStage==='completed'||['closed','completed','refunded'].includes(o.status)) return false;
+ if(!o.paid) return true;
+ return new Date(o.sent).toLocaleDateString('en-CA')===productionToday();
+}
+// Components of an item made at another station (e.g. a sandwich's fries). A side-swap
+// modifier replaces the component (fries → broccolini at the Grill).
+function itemComponents(i,o){
+ if(o?.type==='catering') return [];
+ let m=i?.menuId!=null?db.menu.find(x=>x.id===i.menuId):null;
+ return (m?.components||[]).map(c=>{let sw=Object.keys(c.swaps||{}).find(md=>(i.mods||[]).includes(md));let r=sw?c.swaps[sw]:c;return {key:c.key,name:r.name,station:r.station};});
+}
+// Every piece of work on a ticket: each item's main task at its station, plus one task per
+// component. The main task's state lives on the item (kmsStarted/kmsDone); components in kmsParts.
+function kmsTaskState(i,key){return key==='main'?i:(i.kmsParts&&i.kmsParts[key])||{};}
+function kmsTasks(o){
+ let out=[];
+ validItems(o).forEach(i=>{
+  out.push({i,key:'main',station:itemStation(i,o),name:i.name,component:false});
+  itemComponents(i,o).forEach(c=>out.push({i,key:c.key,station:c.station,name:c.name,component:true}));
+ });
+ return out.map(t=>({...t,started:!!kmsTaskState(t.i,t.key).kmsStarted,done:!!kmsTaskState(t.i,t.key).kmsDone}));
+}
+function kmsStationTasks(o,station){return kmsTasks(o).filter(t=>t.station===station);}
+function kmsItemDone(o,i){return kmsTasks(o).filter(t=>t.i===i).every(t=>t.done);}
+// Expo and All Tickets see every line on the ticket; other stations see only their own tasks.
+function kmsVisibleItems(o,station){return (station==='all'||station==='expo')?validItems(o):[...new Set(kmsStationTasks(o,station).map(t=>t.i))];}
+function kmsStationDone(o,station){let ts=kmsStationTasks(o,station);return ts.length>0&&ts.every(t=>t.done);}
+function kms(){
+ let station=state.kmsStation||'all', label=kmsStationLabels[station]||'All Tickets';
+ let active=db.orders.filter(kmsActive).sort((a,b)=>new Date(a.sent)-new Date(b.sent));
+ let list=active.filter(o=>kmsVisibleItems(o,station).length);
+ let perStation=!['all','expo'].includes(station);
+ let open=perStation?list.filter(o=>!kmsStationDone(o,station)):list, done=perStation?list.filter(o=>kmsStationDone(o,station)):[];
+ let counts=Object.fromEntries(kmsStationList.map(([key])=>[key,active.filter(o=>kmsVisibleItems(o,key).length&&(['all','expo'].includes(key)||!kmsStationDone(o,key))).length]));
+ let allRecent=db.orders.filter(o=>o.kmsStage==='completed'&&o.sent).sort((a,b)=>kmsLastTime(b)-kmsLastTime(a));
+ let recentLimit=Number(state.kmsRecentLimit)||10, recent=allRecent.slice(0,recentLimit);
+ let inactive=['all','expo'].includes(station)?active.filter(kmsInactive):[];
+ return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). Items with parts from another station (like a sandwich's fries) show that part on that station's screen too. This only marks your station's work; the ticket stays up for the other stations. Expo sees every item, part, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${inactive.length?`<div class="row section kms-inactive"><span><b>${inactive.length}</b> ticket(s) with no activity for over an hour.</span><button class="small-btn danger" onclick="clearInactiveKmsTickets()">Clear Inactive Tickets (1 hr+)</button></div>`:''}${allRecent.length?`<details class="section" ${state.kmsRecentOpen?'open':''} ontoggle="state.kmsRecentOpen=this.open"><summary><b>Recently Completed</b> (${allRecent.length})</summary><div class="row kms-recent-actions"><button class="small-btn" onclick="recallSelectedKmsTickets()">Recall Selected</button><button class="small-btn" onclick="document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=true);kmsRecallPick()">Select All Shown</button><button class="small-btn" onclick="state.kmsRecallSel=[];document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=false)">Clear Selection</button></div>${recent.map(o=>`<div class="row kms-recent"><label class="kms-recall-label"><input type="checkbox" class="kms-recall-check" value="${o.id}" ${(state.kmsRecallSel||[]).includes(o.id)?'checked':''} onchange="kmsRecallPick()"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • ${(o.kmsLog||[]).slice(-1)[0]?.stage==='Cleared (Inactive)'?'cleared':'completed'} ${new Date(kmsLastTime(o)).toLocaleString([], {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></label><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}<div class="row">${allRecent.length>recent.length?`<button class="small-btn" onclick="state.kmsRecentLimit=${recentLimit+10};state.kmsRecentOpen=true;render()">Show 10 More</button><button class="small-btn" onclick="state.kmsRecentLimit=${allRecent.length};state.kmsRecentOpen=true;render()">Show All (${allRecent.length})</button>`:''}<span class="small">Showing ${recent.length} of ${allRecent.length}</span></div></details>`:''}</section>`;
+}
+// Last time anything happened on a ticket: sent, a log entry (start, recall...) or any item/part
+// started or completed. Tickets idle for over an hour can be cleared from Expo / All Tickets.
+const KMS_INACTIVE_MS=60*60*1000;
+function kmsLastActivity(o){
+ let times=[o.sent,...(o.kmsLog||[]).map(l=>l.time)];
+ validItems(o).forEach(i=>[i,...Object.values(i.kmsParts||{})].forEach(st=>times.push(st?.kmsStartedAt,st?.kmsDoneAt)));
+ if(o.updatedAt)times.push(o.updatedAt);
+ return Math.max(0,...times.map(t=>new Date(t||0).getTime()).filter(n=>!isNaN(n)));
+}
+function kmsInactive(o){return Date.now()-kmsLastActivity(o)>KMS_INACTIVE_MS;}
+window.clearInactiveKmsTickets=()=>{
+ let list=db.orders.filter(o=>kmsActive(o)&&kmsInactive(o)); if(!list.length){toast('No inactive tickets.');return;}
+ if(!confirm(`Clear ${list.length} ticket(s) with no activity for over an hour from the KMS? They move to Recently Completed and can be recalled. Unpaid orders stay open for checkout.`))return;
+ list.forEach(o=>{o.kmsStage='completed';o.kmsLog=o.kmsLog||[];o.kmsLog.push({stage:'Cleared (Inactive)',time:now(),by:state.user.name});});
+ save(); render(); toast(`Cleared ${list.length} inactive ticket(s).`);
+};
+// Checked tickets are kept in state so a screen refresh from another device doesn't clear them.
+window.kmsRecallPick=()=>{let shown=[...document.querySelectorAll('.kms-recall-check')];let keep=(state.kmsRecallSel||[]).filter(id=>!shown.some(c=>Number(c.value)===id));state.kmsRecallSel=[...keep,...shown.filter(c=>c.checked).map(c=>Number(c.value))];};
+window.recallSelectedKmsTickets=()=>{
+ kmsRecallPick(); let ids=(state.kmsRecallSel||[]).filter(id=>db.orders.some(o=>o.id===id&&o.kmsStage==='completed')); if(!ids.length){alert('Check the tickets to recall first.');return;}
+ ids.forEach(id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage='started'; if(!o.paid)o.status='sent'; o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:'Recalled',time:now(),by:state.user.name});});
+ state.kmsRecallSel=[]; save(); render(); toast(`Recalled ${ids.length} ticket(s).`);
+};
+function kmsLastTime(o){let l=(o.kmsLog||[]).slice(-1)[0];return new Date(l?.time||o.sent||0).getTime();}
+function itemStation(item,order){
+ let name=(item?.name||'').toLowerCase();
+ let m=item?.menuId!=null?db.menu.find(x=>x.id===item.menuId):null;
+ if(order?.type!=='catering'&&m?.station) return m.station;
+ if(order?.type==='catering'||name.includes('catering')||name.includes('box lunch')) return 'catering';
+ if(name.includes('tea')||name.includes('drink')||name.includes('beverage')||name.includes('lemonade')||name.includes('coffee')||name.includes('latte')||name.includes('refresher')) return 'beverage';
+ if(name.includes('cookie')||name.includes('dessert')||name.includes('tray')||name.includes('cake')||name.includes('muffin')) return 'dessert';
+ if(name.includes('frites')||name.includes('fries')) return 'fry';
+ if(name.includes('salad')||name.includes('cobb')) return 'salad';
+ if(name.includes('burger')||name.includes('sandwich')||name.includes('grill')||name.includes('wrap')||name.includes('quesadilla')||name.includes('bowl')) return 'grill';
+ return 'expo';
+}
+function stationItems(order,station){
+ let items=validItems(order);
+ if(station==='all') return items;
+ return items.filter(i=>itemStation(i,order)===station);
+}
+function stationSummary(order){
+ let stations=[...new Set(kmsTasks(order).map(t=>t.station))];
+ return stations.map(s=>kmsStationLabels[s]||s).join(' • ');
+}
+function kmsElapsed(sent){
+ let elapsed=Math.max(0,Date.now()-new Date(sent).getTime()), mins=Math.floor(elapsed/60000), secs=String(Math.floor(elapsed/1000)%60).padStart(2,'0');
+ return {text:`${mins}:${secs}`,cls:mins>=15?'late':mins>=10?'warn':''};
+}
+function kmsTicket(o,station){
+ o.kmsStage=kmsStageOf(o);
+ let t=kmsElapsed(o.sent), all=validItems(o), doneCount=all.filter(i=>kmsItemDone(o,i)).length;
+ let perStation=!['all','expo'].includes(station), stationLabel=kmsStationLabels[station]||station, mine=perStation?kmsStationTasks(o,station):[];
+ let where=o.type==='table'&&o.tableId?`TABLE ${o.tableId}`:o.type==='togo'?'TO-GO':o.type.toUpperCase();
+ let bump=!perStation?'':mine.some(x=>!x.started&&!x.done)?`<button class="primary" onclick="markStationStarted(${o.id},'${station}')">Start All ${stationLabel}</button>`:mine.some(x=>!x.done)?`<button class="primary success" onclick="markStationDone(${o.id},'${station}')">Complete All ${stationLabel}</button>`:'';
+ return `<div class="ticket ${t.cls} ${perStation&&kmsStationDone(o,station)?'station-done':''}"><div class="row"><div><h2>${o.customer}${o.paid?' <span class="kms-paid">PAID</span>':''}</h2><p class="small">${where} • ${stationSummary(o)} • ${doneCount}/${all.length} items done</p></div><span class="spacer"></span><div class="timer" data-kms-sent="${o.sent}">${t.text}</div></div>${kmsProgress(o)}${kmsItemsList(o,null,station)}<div class="row section">${bump}${perStation?'':kmsButtons(o)}</div>${kmsLog(o)}</div>`;
+}
+// Two-step flow: sent → started → completed. Tickets saved under the old
+// Prep / Plating / Ready stages count as started.
+function kmsStageOf(o){let st=o.kmsStage||'sent';return ['prepping','plating','ready'].includes(st)?'started':st;}
+function kmsProgress(o){
+ let stages=['sent','started','completed'], labels={sent:'Sent',started:'Started',completed:'Complete'}, at=stages.indexOf(kmsStageOf(o));
+ return `<div class="progress kms-progress-2">${stages.map((st,ix)=>`<div class="step ${ix<=at?'done':''}">${labels[st]}</div>`).join('')}</div>`;
+}
+function kmsStepButton(o,t){
+ let args=`${o.id},'${t.i.lineId}','${t.key}'`;
+ return t.done?`<button class="kms-step done" title="Tap to undo" onclick="undoKmsTask(${args})">✓ Done</button>`:t.started?`<button class="kms-step complete" onclick="completeKmsTask(${args})">Complete</button>`:`<button class="kms-step start" onclick="startKmsTask(${args})">Start</button>`;
+}
+// One row per task. Station screens list their own tasks (a component shows which item it
+// belongs to); Expo / All list each item with its component rows underneath. Every row shows
+// the NEW badge, seat, each modifier as a chip (allergy alerts in red) and the custom note.
+function kmsItemsList(o,_items,station){
+ let showAll=['all','expo'].includes(station);
+ let tasks=kmsTasks(o).filter(t=>showAll||t.station===station);
+ if(!tasks.length) return '<p>No station items.</p>';
+ let row=t=>{
+  let i=t.i, isNew=(Number(i.sendRound)||1)>1&&i.sendRound===o.sendCount;
+  let mods=(i.mods||[]).map(md=>`<span class="kms-mod ${/allerg/i.test(md)?'alert':''}">${md}</span>`).join('');
+  let note=i.note?`<span class="kms-note">Note: ${i.note}</span>`:'';
+  let title=t.component?`<b>${t.name}</b><span class="small">for ${i.name}</span>`:`<b>${i.name}</b>`;
+  return `<div class="kms-line ${t.component&&showAll?'kms-part':''} ${t.done?'done':t.started?'started':''}">${kmsStepButton(o,t)}<div class="kms-line-body"><div class="kms-line-head">${title}${isNew?'<span class="kms-new">NEW</span>':''}${showAll?`<span class="kms-station">${(kmsStationLabels[t.station]||t.station).toUpperCase()}</span>`:''}${o.type==='table'?`<span class="small">Seat ${i.seat||'-'}</span>`:''}</div>${(mods||note)&&!(t.component&&showAll)?`<div class="kms-mods">${mods}${note}</div>`:''}</div></div>`;
+ };
+ return `<div class="kms-lines">${tasks.map(row).join('')}</div>`;
+}
+function kmsLog(o){
+ let logs=(o.kmsLog||[]).slice(-4).reverse();
+ return logs.length?`<details class="small"><summary>Ticket action log</summary>${logs.map(l=>`<p>${new Date(l.time).toLocaleTimeString()} • ${l.stage} • ${l.by||''}</p>`).join('')}</details>`:'';
+}
+function kmsButtons(o){let st=kmsStageOf(o); if(st==='sent')return `<button class="primary" onclick="kmsStage(${o.id},'started')">Start Ticket</button>`; if(st==='started')return `<button class="primary success" onclick="kmsStage(${o.id},'completed')">Complete Ticket</button>`; return '';}
+// Tick the timers in place instead of re-rendering, so open logs and scroll position stay put.
+setInterval(()=>{
+ if(!(state.user&&state.view==='kms'))return;
+ document.querySelectorAll('[data-kms-sent]').forEach(el=>{let t=kmsElapsed(el.dataset.kmsSent), tk=el.closest('.ticket'); el.textContent=t.text; if(tk){tk.classList.toggle('warn',t.cls==='warn');tk.classList.toggle('late',t.cls==='late');}});
+},1000);
+function kmsLine(orderId,lineId){let o=db.orders.find(x=>x.id===orderId);return {o,i:o&&validItems(o).find(x=>x.lineId===lineId)};}
+function kmsStateFor(i,key){if(key==='main')return i;i.kmsParts=i.kmsParts||{};return i.kmsParts[key]=i.kmsParts[key]||{};}
+// Starting any task starts the ticket, so Expo doesn't need a separate tap.
+function kmsAutoStart(o){if(kmsStageOf(o)==='sent'){o.kmsStage='started';o.kmsLog=o.kmsLog||[];o.kmsLog.push({stage:'Started',time:now(),by:state.user.name});}}
+function kmsStartTask(o,i,key){let st=kmsStateFor(i,key);if(st.kmsStarted||st.kmsDone)return;st.kmsStarted=true;st.kmsStartedBy=state.user.name;st.kmsStartedAt=now();kmsAutoStart(o);}
+function kmsDoneTask(o,i,key){let st=kmsStateFor(i,key);if(st.kmsDone)return;if(!st.kmsStarted){st.kmsStarted=true;st.kmsStartedAt=now();st.kmsStartedBy=state.user.name;}st.kmsDone=true;st.kmsDoneBy=state.user.name;st.kmsDoneAt=now();kmsAutoStart(o);}
+window.startKmsTask=(orderId,lineId,key)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; kmsStartTask(o,i,key||'main'); save(); render();};
+window.completeKmsTask=(orderId,lineId,key)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; kmsDoneTask(o,i,key||'main'); save(); render();};
+window.undoKmsTask=(orderId,lineId,key)=>{let {o,i}=kmsLine(orderId,lineId); if(!i)return; let st=kmsStateFor(i,key||'main'); st.kmsDone=false; st.kmsDoneBy=''; st.kmsDoneAt=''; save(); render();};
+window.startKmsItem=(orderId,lineId)=>startKmsTask(orderId,lineId,'main');
+window.completeKmsItem=(orderId,lineId)=>completeKmsTask(orderId,lineId,'main');
+window.undoKmsItem=(orderId,lineId)=>undoKmsTask(orderId,lineId,'main');
+window.markStationStarted=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationLabels[station]||station; kmsStationTasks(o,station).forEach(t=>kmsStartTask(o,t.i,t.key)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Started`,time:now(),by:state.user.name}); save(); render(); toast(`${label} started`);};
+window.markStationDone=(orderId,station)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; let label=kmsStationLabels[station]||station; kmsStationTasks(o,station).forEach(t=>kmsDoneTask(o,t.i,t.key)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`${label} Complete`,time:now(),by:state.user.name}); save(); render(); toast(`${label} complete`);};
+window.recallKmsTicket=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage='started'; if(!o.paid)o.status='sent'; o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:'Recalled',time:now(),by:state.user.name}); save(); render(); toast('Ticket recalled');};
+window.ready=id=>kmsStage(id,'completed'); window.kmsStage=(id,stage)=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let open=kmsTasks(o).filter(t=>!t.done).length; if(stage==='completed'&&open&&!confirm(`${open} item(s) or part(s) on this ticket are not marked complete by their station yet. Complete the ticket anyway?`))return; o.kmsStage=stage; o.kmsLog=o.kmsLog||[]; let label={started:'Started',completed:'Completed'}[stage]||stage; o.kmsLog.push({stage:label,time:now(),by:state.user.name}); if(!o.paid&&stage==='completed')o.status='completed'; let t=db.tables.find(x=>x.orderId===id); if(t&&stage==='completed')t.status='ready'; save(); render(); toast(label);};
+function inventory(){
+ if(state.user.inventoryScope==='culinary') state.invDivision='culinary';
+ const allItems=db.inventory.filter(i=>i.division===state.invDivision);
+ const search=(state.inventorySearch||'').trim().toLowerCase();
+ const items=search?allItems.filter(i=>[i.name,i.barcode,i.vendor,i.location,i.unit].join(' ').toLowerCase().includes(search)):allItems;
+ const tabs=state.user.inventoryScope==='culinary'?`<div class="notice">Teacher access: Culinary Department Inventory only.</div>`:`<div class="tabs"><button class="${state.invDivision==='bistro'?'active':''}" onclick="state.invDivision='bistro';render()">Bistro Inventory</button><button class="${state.invDivision==='culinary'?'active':''}" onclick="state.invDivision='culinary';render()">Culinary Department Inventory</button></div>`;
+ const low=allItems.filter(i=>Number(i.onHand)<Number(i.par));
+ return `<section class="card"><h1>Inventory</h1>${tabs}
+ <div class="stats"><div><b>${allItems.length}</b><span>Total Items</span></div><div><b>${low.length}</b><span>Below Par</span></div><div><b>${db.deliveries.filter(d=>d.division===state.invDivision).length}</b><span>Deliveries</span></div></div>
+ <div class="inventory-actions">
+  <button class="primary success" onclick="addInventoryItemForm()">Add Inventory Item</button>
+  <button class="primary" onclick="checkDelivery()">Check In Delivery</button>
+  <button class="primary" onclick="inventoryCount()">Inventory Count</button>
+  <button class="primary" onclick="scanInventory()">Scan / Manual Entry</button>
+  <button class="primary" onclick="wasteTracking()">Waste Tracking</button>
+  <button class="primary" onclick="orderPage()">Generate Vendor Order</button>
+  <button class="primary" onclick="exportInventoryData(state.invDivision)">Export This Inventory CSV</button>
+  <button class="primary" onclick="exportAllInventoryData()">Export All Inventory CSV</button>
+ </div>
+ <h2>${state.invDivision==='bistro'?'Bistro':'Culinary Department'} Inventory List</h2>
+ <p class="small">Quantities and storage locations can be updated directly below. Use Edit for the full item record.</p>
+ <div class="row">
+  <label>Search<input id="inventorySearchInput" class="input" placeholder="Search by item, barcode, vendor, location, or unit" value="${search?state.inventorySearch:''}" oninput="filterInventoryByText(this.value)"></label>
+  ${search?`<button class="small-btn" onclick="state.inventorySearch='';render()">Clear Search</button>`:''}
+ </div>
+ <table class="report-table"><tr><th>Item</th><th>Barcode</th><th>Vendor</th><th>Location</th><th>On Hand</th><th>Par</th><th>Unit</th><th>Status</th><th>Actions</th></tr>${items.map(i=>`<tr><td>${i.name}</td><td>${i.barcode||'<span class="small">Not assigned</span>'}</td><td>${i.vendor}</td><td><select class="input inventory-inline" onchange="updInv(${i.id},'location',this.value)">${inventoryLocationOptions(i.location,state.invDivision)}</select></td><td><input class="input inventory-number" type="number" step="0.01" value="${Number(i.onHand)||0}" onchange="updInv(${i.id},'onHand',this.value)"></td><td><input class="input inventory-number" type="number" step="0.01" value="${Number(i.par)||0}" onchange="updInv(${i.id},'par',this.value)"></td><td>${i.unit}</td><td>${Number(i.onHand)<Number(i.par)?'<span class="badge danger">Below Par</span>':'<span class="badge good">OK</span>'}</td><td><div class="row inventory-row-actions"><button class="small-btn" onclick="editInventoryItem(${i.id})">Edit</button><button class="small-btn danger" onclick="deleteInventoryItem(${i.id})">Delete</button></div></td></tr>`).join('')||`<tr><td colspan="9">${search?'No inventory items match your search.':'No inventory items yet.'}</td></tr>`}</table><div id="invExtra"></div></section>`
+}
+window.filterInventoryByText=(val)=>{
+  state.inventorySearch=val;render();
+  let el=$('#inventorySearchInput');
+  if(el){el.focus();let pos=val.length;el.setSelectionRange(pos,pos);}
+};
+function inventoryLocationOptions(current,division){let opts=[...new Set([...(locations(division)||[]),current||'Unassigned'])];return opts.map(x=>`<option ${x===current?'selected':''}>${x}</option>`).join('')}
+window.updInv=(id,f,v)=>{let item=db.inventory.find(i=>i.id===id); if(!item)return; item[f]=['onHand','par'].includes(f)?(Number(v)||0):v;save();toast('Inventory item updated.');};
+window.addInventoryItemForm=()=>{$('#invExtra').innerHTML=`<div class="section panel"><h2>Add Inventory Item</h2><div class="camera-scan-row"><label>Barcode<input id="newInvBarcode" class="input" inputmode="numeric" placeholder="Scan or type UPC/EAN" onkeydown="if(event.key==='Enter'){event.preventDefault();lookupBarcodeIntoField('newInvBarcode','newInvName','newInvLookupStatus')}"></label><button class="primary" onclick="openBarcodeCamera('newInvBarcode','newItem')">Scan with Tablet Camera</button></div><div class="row"><button class="small-btn" onclick="lookupBarcodeIntoField('newInvBarcode','newInvName','newInvLookupStatus')">Look Up Product Online</button></div><p id="newInvLookupStatus" class="small"></p><div id="barcodeCameraMount"></div><div class="form-grid"><label>Item Name<input id="newInvName" class="input" placeholder="Item name"></label><label>Vendor<select id="newInvVendor" class="input">${(db.settings?.vendors||[]).map(v=>`<option>${v}</option>`).join('')}</select></label><label>Starting Quantity<input id="newInvQty" type="number" step="0.01" class="input" value="0"></label><label>Par Level<input id="newInvPar" type="number" step="0.01" class="input" value="0"></label><label>Unit<input id="newInvUnit" class="input" placeholder="each, lb, case, gal"></label><label>Storage Location<select id="newInvLocation" class="input">${locations(state.invDivision).map(x=>`<option>${x}</option>`).join('')}</select></label></div><button class="primary success" onclick="saveNewInventoryItem()">Add Item</button></div>`};
+window.saveNewInventoryItem=()=>{let name=$('#newInvName')?.value.trim();let barcode=normalizeBarcode($('#newInvBarcode')?.value);if(!name){alert('Item name is required.');return;}if(db.inventory.some(i=>i.division===state.invDivision&&i.name.toLowerCase()===name.toLowerCase())){alert('That item already exists in this inventory.');return;}if(barcode&&db.inventory.some(i=>normalizeBarcode(i.barcode)===barcode)){alert('That barcode is already assigned to another inventory item.');return;}db.inventory.push({id:Date.now(),division:state.invDivision,vendor:$('#newInvVendor')?.value||'',name,barcode,onHand:Number($('#newInvQty')?.value)||0,par:Number($('#newInvPar')?.value)||0,unit:$('#newInvUnit')?.value||'each',location:$('#newInvLocation')?.value||'Unassigned'});save();stopBarcodeCamera();render();toast('Inventory item added.');};
+window.editInventoryItem=id=>{let i=db.inventory.find(x=>x.id===id);if(!i)return;$('#invExtra').innerHTML=`<div class="section panel"><div class="row"><h2>Edit Inventory Item</h2><span class="spacer"></span><button class="small-btn" onclick="stopBarcodeCamera();document.getElementById('invExtra').innerHTML=''">Close</button></div><div class="camera-scan-row"><label>Barcode<input id="editInvBarcode" class="input" inputmode="numeric" value="${i.barcode||''}" placeholder="Scan or type UPC/EAN" onkeydown="if(event.key==='Enter'){event.preventDefault();lookupBarcodeIntoField('editInvBarcode','editInvName','editInvLookupStatus')}"></label><button class="primary" onclick="openBarcodeCamera('editInvBarcode','editItem')">Scan with Tablet Camera</button></div><div class="row"><button class="small-btn" onclick="lookupBarcodeIntoField('editInvBarcode','editInvName','editInvLookupStatus')">Look Up Product Online</button></div><p id="editInvLookupStatus" class="small"></p><div id="barcodeCameraMount"></div><div class="form-grid"><label>Item Name<input id="editInvName" class="input" value="${i.name}"></label><label>Vendor<select id="editInvVendor" class="input">${(db.settings?.vendors||[]).map(v=>`<option ${v===i.vendor?'selected':''}>${v}</option>`).join('')}</select></label><label>Quantity On Hand<input id="editInvQty" type="number" step="0.01" class="input" value="${Number(i.onHand)||0}"></label><label>Par Level<input id="editInvPar" type="number" step="0.01" class="input" value="${Number(i.par)||0}"></label><label>Unit<input id="editInvUnit" class="input" value="${i.unit||''}"></label><label>Storage Location<select id="editInvLocation" class="input">${inventoryLocationOptions(i.location,i.division)}</select></label></div><div class="row"><button class="primary success" onclick="saveInventoryItemEdit(${id})">Save Changes</button><button class="small-btn danger" onclick="deleteInventoryItem(${id})">Delete Item</button></div></div>`};
+window.saveInventoryItemEdit=id=>{let i=db.inventory.find(x=>x.id===id);if(!i)return;let barcode=normalizeBarcode($('#editInvBarcode')?.value);if(barcode&&db.inventory.some(x=>x.id!==id&&normalizeBarcode(x.barcode)===barcode)){alert('That barcode is already assigned to another item.');return;}i.name=$('#editInvName')?.value.trim()||i.name;i.barcode=barcode;i.vendor=$('#editInvVendor')?.value||i.vendor;i.onHand=Number($('#editInvQty')?.value)||0;i.par=Number($('#editInvPar')?.value)||0;i.unit=$('#editInvUnit')?.value||i.unit;i.location=$('#editInvLocation')?.value||i.location;save();stopBarcodeCamera();render();toast('Inventory item saved.');};
+window.deleteInventoryItem=id=>{let i=db.inventory.find(x=>x.id===id);if(!i)return;if(!confirm(`Delete ${i.name} from ${i.division==='bistro'?'Bistro':'Culinary'} inventory?\n\nThis removes the item from the active inventory list. Historical delivery, waste, and usage records will remain.`))return;db.inventoryDeleteLog=db.inventoryDeleteLog||[];db.inventoryDeleteLog.push({id:Date.now(),itemId:i.id,name:i.name,barcode:i.barcode||'',division:i.division,quantity:i.onHand,location:i.location||'',deletedBy:state.user?.name||'',deletedAt:now()});db.inventory=db.inventory.filter(x=>x.id!==id);save();render();toast('Inventory item removed.');};
+window.orderPage=()=>{let below=db.inventory.filter(i=>i.division===state.invDivision&&Number(i.onHand)<Number(i.par)); let by={}; below.forEach(i=>(by[i.vendor]??=[]).push(i)); $('#invExtra').innerHTML=`<div class="section"><h2>Suggested Orders by Vendor</h2>${Object.entries(by).map(([v,arr])=>`<div class="ticket"><h3>${v}</h3><table class="report-table"><tr><th>Item</th><th>On Hand</th><th>Par</th><th>Suggested Order</th><th>Unit</th></tr>${arr.map(i=>`<tr><td>${i.name}</td><td>${i.onHand}</td><td>${i.par}</td><td>${Number(i.par)-Number(i.onHand)}</td><td>${i.unit}</td></tr>`).join('')}</table></div>`).join('')||'<p>All items are at or above par.</p>'}</div>`};
+window.checkDelivery=()=>{$('#invExtra').innerHTML=`<div class="section"><h2>Check In Delivery</h2><div class="camera-scan-row"><label>Barcode<input id="deliveryBarcode" class="input" inputmode="numeric" placeholder="Scan UPC/EAN" onkeydown="if(event.key==='Enter'){event.preventDefault();fillDeliveryFieldsFromBarcode(this.value)}"></label><button class="primary" onclick="openBarcodeCamera('deliveryBarcode','delivery')">Scan with Tablet Camera</button></div><div id="barcodeCameraMount"></div><div class="form-grid"><label>Vendor<select id="vendor" class="input">${(db.settings?.vendors||[]).map(v=>`<option>${v}</option>`).join('')}</select></label><label>Invoice #<input id="invoice" class="input" placeholder="Invoice number"></label><label>Product / Item<input id="item" class="input" placeholder="Item name" autofocus></label><label>Quantity Received<input id="qty" class="input" type="number" value="1"></label><label>Unit<input id="unit" class="input" placeholder="each, lb, case, gal"></label><label>Storage Location<select id="location" class="input">${locations(state.invDivision).map(x=>`<option>${x}</option>`).join('')}</select></label><label>Temperature °F<input id="temp" class="input" placeholder="Optional"></label><label>Quality Check<select id="quality" class="input"><option>Pass</option><option>Packaging Damaged</option><option>Short Delivery</option><option>Wrong Product</option><option>Temperature Concern</option></select></label></div><label>Notes<textarea id="notes" class="input" placeholder="Delivery notes"></textarea></label><button class="primary" onclick="addDelivery()">Submit Delivery</button></div>`};
+window.addDelivery=()=>{let barcode=normalizeBarcode($('#deliveryBarcode')?.value),name=$('#item').value.trim(), qty=Number($('#qty').value)||0, vendor=$('#vendor').value, unit=$('#unit').value||'each', location=$('#location').value, invoice=$('#invoice').value, temp=$('#temp').value, quality=$('#quality').value, notes=$('#notes').value;if(!name&&!barcode){alert('Scan a barcode or enter an item name.');return;}let it=findInventoryItem(barcode||name,state.invDivision);if(it){it.onHand=Number(it.onHand)+qty;it.vendor=vendor;it.unit=unit||it.unit;it.location=location;if(barcode&&!it.barcode)it.barcode=barcode;name=it.name;}else{if(!name){alert('This barcode is not assigned yet. Enter the item name before checking in the delivery.');return;}it={id:Date.now(),division:state.invDivision,vendor,name,barcode,onHand:qty,par:0,unit,location};db.inventory.push(it);}db.deliveries.push({date:now(),by:state.user.name,division:state.invDivision,vendor,invoice,name,barcode:it.barcode||barcode,qty,unit,location,temp,quality,notes});save();stopBarcodeCamera();toast('Delivery checked in and inventory updated.');render()};
+window.scanInventory=()=>{$('#invExtra').innerHTML=`<div class="section panel ipad-scan-panel"><h2>iPad Barcode Inventory</h2><p>Use the iPad rear camera to scan an item, update the quantity, save, and continue to the next item. Bluetooth scanners and manual barcode entry remain available.</p><div class="scan-workflow"><div class="scan-step active"><b>1</b><span>Scan</span></div><div class="scan-step"><b>2</b><span>Count</span></div><div class="scan-step"><b>3</b><span>Save</span></div><div class="scan-step"><b>4</b><span>Next Item</span></div></div><div class="camera-scan-row"><label>Barcode / Item<input id="scanItem" class="input ipad-barcode-input" inputmode="numeric" autocomplete="off" placeholder="Scan barcode or type item name" autofocus onkeydown="if(event.key==='Enter'){event.preventDefault();lookupScannedInventory(this.value)}"></label><button class="primary success ipad-scan-button" onclick="openBarcodeCamera('scanItem','inventory')">📷 Scan with iPad Camera</button></div><div id="barcodeCameraMount"></div><div class="row"><button class="small-btn" onclick="lookupScannedInventory($('#scanItem')?.value)">Look Up Item</button><button class="small-btn" onclick="stopBarcodeCamera()">Stop Camera</button></div><div id="scanLookupResult" class="section"></div></div>`};
+function normalizeBarcode(v){return String(v||'').trim().replace(/\s+/g,'')}
+async function fetchWithTimeout(url,ms){
+  let ctrl=new AbortController();
+  let timer=setTimeout(()=>ctrl.abort(),ms);
+  try{return await fetch(url,{signal:ctrl.signal});}finally{clearTimeout(timer);}
+}
+async function lookupBarcodeOnline(code){
+  code=normalizeBarcode(code);
+  if(!code)return null;
+  try{
+    let res=await fetchWithTimeout(`https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,6000);
+    if(res.ok){
+      let data=await res.json();
+      let p=data&&data.status===1&&data.product;
+      let name=p&&(p.product_name||p.product_name_en||p.generic_name);
+      if(name&&name.trim())return{name:name.trim(),brand:(p.brands||'').split(',')[0].trim(),source:'Open Food Facts'};
+    }
+  }catch(e){}
+  try{
+    let res=await fetchWithTimeout(`https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(code)}`,6000);
+    if(res.ok){
+      let data=await res.json();
+      let item=data&&Array.isArray(data.items)&&data.items[0];
+      if(item&&item.title&&item.title.trim())return{name:item.title.trim(),brand:(item.brand||'').trim(),source:'UPC Database'};
+    }
+  }catch(e){}
+  return null;
+}
+window.lookupBarcodeIntoField=async(barcodeInputId,nameInputId,statusElId)=>{
+  let code=normalizeBarcode(document.getElementById(barcodeInputId)?.value);
+  if(!code){alert('Scan or enter a barcode first.');return;}
+  let statusEl=document.getElementById(statusElId);
+  if(statusEl)statusEl.innerHTML='<span class="badge warn">Searching&hellip;</span> Looking up this barcode online.';
+  let result=await lookupBarcodeOnline(code);
+  statusEl=document.getElementById(statusElId);
+  if(!statusEl)return;
+  if(result){
+    let nameInput=document.getElementById(nameInputId);
+    if(nameInput)nameInput.value=result.brand?`${result.brand} ${result.name}`:result.name;
+    statusEl.innerHTML=`<span class="badge good">Matched Online</span> ${result.name}${result.brand?' &bull; '+result.brand:''} (${result.source})`;
+  }else{
+    statusEl.innerHTML='<span class="badge warn">No Online Match</span> Enter the item details manually.';
+  }
+};
+function findInventoryItem(codeOrName,division){let raw=String(codeOrName||'').trim(),code=normalizeBarcode(raw);return db.inventory.find(i=>(!division||i.division===division)&&((i.barcode&&normalizeBarcode(i.barcode)===code)||(i.name||'').toLowerCase()===raw.toLowerCase()))}
+window.renderOnlineMatchStatus=async(code,statusElId)=>{
+  let statusEl=document.getElementById(statusElId);
+  if(statusEl)statusEl.innerHTML='<span class="badge warn">Searching&hellip;</span> Looking up this barcode online.';
+  let result=await lookupBarcodeOnline(code);
+  statusEl=document.getElementById(statusElId);
+  if(!statusEl)return;
+  if(result){
+    statusEl.innerHTML=`<span class="badge good">Online Match</span> ${result.name}${result.brand?' &bull; '+result.brand:''} (${result.source})`;
+  }else{
+    statusEl.innerHTML='<span class="badge warn">No Online Match</span> This barcode was not found in the connected product databases.';
+  }
+};
+window.lookupScannedInventory=(value)=>{let raw=String(value||'').trim();if(!raw)return;let item=findInventoryItem(raw,state.invDivision);let box=$('#scanLookupResult');if(!box)return;let code=normalizeBarcode(raw);if(item){box.innerHTML=`<div class="scan-result found ipad-scan-result"><h3>${item.name}</h3><p><b>Barcode:</b> ${item.barcode||'Not assigned'} &nbsp; <b>Current Qty:</b> ${item.onHand} ${item.unit||''} &nbsp; <b>Location:</b> ${item.location||'Unassigned'}</p><p id="scanOnlineLookupStatus" class="small"></p><div class="form-grid"><label>Quantity<input id="scanQty" class="input ipad-qty" type="number" step="0.01" value="1"></label><label>Action<select id="scanAction" class="input"><option value="add">Add to On Hand</option><option value="set">Set Exact Count</option><option value="subtract">Subtract / Use</option></select></label></div><div class="row ipad-action-row"><button class="primary success" onclick="applyScannedInventoryToItem(${item.id},false)">Save Quantity</button><button class="primary" onclick="applyScannedInventoryToItem(${item.id},true)">Save & Scan Next</button><button class="small-btn" onclick="editInventoryItem(${item.id})">Edit Full Item</button><button class="small-btn danger" onclick="deleteInventoryItem(${item.id})">Delete Item</button></div></div>`;renderOnlineMatchStatus(code,'scanOnlineLookupStatus');}else{box.innerHTML=`<div class="scan-result unknown ipad-scan-result"><h3>New Barcode</h3><p>No ${state.invDivision==='bistro'?'Bistro':'Culinary'} inventory item is assigned to <b>${code}</b>.</p><p id="scanOnlineLookupStatus" class="small"><span class="badge warn">Searching&hellip;</span> Looking up this barcode online.</p><div class="form-grid"><label>Item Name<input id="scanNewName" class="input" placeholder="Item name"></label><label>Starting Quantity<input id="scanNewQty" class="input ipad-qty" type="number" step="0.01" value="1"></label><label>Par Level<input id="scanNewPar" class="input" type="number" step="0.01" value="0"></label><label>Unit<input id="scanNewUnit" class="input" value="each"></label><label>Vendor<select id="scanNewVendor" class="input">${(db.settings?.vendors||[]).map(v=>`<option>${v}</option>`).join('')}</select></label><label>Location<select id="scanNewLocation" class="input">${locations(state.invDivision).map(x=>`<option>${x}</option>`).join('')}</select></label></div><div class="row ipad-action-row"><button class="primary success" onclick="saveScannedNewItem('${code.replace(/'/g,"\\'")}',false)">Add Item</button><button class="primary" onclick="saveScannedNewItem('${code.replace(/'/g,"\\'")}',true)">Add & Scan Next</button></div></div>`;lookupBarcodeIntoField('scanItem','scanNewName','scanOnlineLookupStatus');}};
+window.resetInventoryScanner=()=>{stopBarcodeCamera();let input=$('#scanItem');if(input){input.value='';input.focus();}let box=$('#scanLookupResult');if(box)box.innerHTML='';setTimeout(()=>openBarcodeCamera('scanItem','inventory'),250);};
+window.applyScannedInventoryToItem=(id,scanNext=false)=>{let item=db.inventory.find(i=>i.id===id);if(!item)return;let qty=Number($('#scanQty')?.value)||0,action=$('#scanAction')?.value||'add';if(action==='add')item.onHand=Number(item.onHand)+qty;if(action==='subtract')item.onHand=Math.max(0,Number(item.onHand)-qty);if(action==='set')item.onHand=qty;db.deliveries.push({date:now(),by:state.user.name,division:item.division,vendor:'Barcode Entry',name:item.name,barcode:item.barcode||'',qty:action==='subtract'?-qty:qty,unit:item.unit,location:item.location,quality:'Barcode Inventory Entry',notes:`${action} quantity via barcode/manual scan`});save();toast('Quantity updated.');if(scanNext){resetInventoryScanner();}else{lookupScannedInventory(item.barcode||item.name);}};
+window.saveScannedNewItem=(barcode,scanNext=false)=>{let name=$('#scanNewName')?.value.trim();if(!name){alert('Enter an item name.');return;}if(barcode&&db.inventory.some(i=>normalizeBarcode(i.barcode)===normalizeBarcode(barcode))){alert('That barcode is already assigned.');return;}let item={id:Date.now(),division:state.invDivision,vendor:$('#scanNewVendor')?.value||'',name,barcode:normalizeBarcode(barcode),onHand:Number($('#scanNewQty')?.value)||0,par:Number($('#scanNewPar')?.value)||0,unit:$('#scanNewUnit')?.value||'each',location:$('#scanNewLocation')?.value||'Unassigned'};db.inventory.push(item);save();toast('Scanned item added to inventory.');if(scanNext){resetInventoryScanner();}else{lookupScannedInventory(item.barcode);}};
+let barcodeCameraStream=null,barcodeCameraTimer=null,barcodeDetectorInstance=null,html5BarcodeScanner=null,audioCtx=null;
+function isAppleMobile(){return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
+function ensureAudioContext(){
+  if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+  if(audioCtx&&audioCtx.state==='suspended'){audioCtx.resume().catch(()=>{});}
+  return audioCtx;
+}
+function playScanBeep(){
+  let ctx=ensureAudioContext();
+  if(!ctx)return;
+  try{
+    let osc=ctx.createOscillator(),gain=ctx.createGain();
+    osc.type='sine';osc.frequency.value=1046.5;
+    gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.4,ctx.currentTime+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.18);
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.start();osc.stop(ctx.currentTime+0.2);
+  }catch(e){}
+}
+function html5QrcodeFormats(){
+  if(typeof Html5QrcodeSupportedFormats==='undefined')return undefined;
+  const F=Html5QrcodeSupportedFormats;
+  return [F.QR_CODE,F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.UPC_EAN_EXTENSION,F.CODE_128,F.CODE_39,F.CODE_93,F.CODABAR,F.ITF].filter(x=>x!==undefined);
+}
+window.stopBarcodeCamera=async()=>{if(barcodeCameraTimer){clearTimeout(barcodeCameraTimer);barcodeCameraTimer=null;}if(html5BarcodeScanner){try{await html5BarcodeScanner.stop();}catch(e){}try{html5BarcodeScanner.clear();}catch(e){}html5BarcodeScanner=null;}if(barcodeCameraStream){barcodeCameraStream.getTracks().forEach(t=>t.stop());barcodeCameraStream=null;}let mount=$('#barcodeCameraMount');if(mount)mount.innerHTML='';};
+function fillDeliveryFieldsFromBarcode(code){code=normalizeBarcode(code);let item=findInventoryItem(code,state.invDivision);if(item){let name=$('#item');if(name)name.value=item.name;let unit=$('#unit');if(unit)unit.value=item.unit||'';let loc=$('#location');if(loc&&item.location)loc.value=item.location;let ven=$('#vendor');if(ven&&item.vendor)ven.value=item.vendor;}}
+function handleScannedBarcode(code,targetInputId,mode){code=normalizeBarcode(code);playScanBeep();let input=document.getElementById(targetInputId);if(input)input.value=code;stopBarcodeCamera();toast(`Barcode scanned: ${code}`);if(mode==='inventory')lookupScannedInventory(code);if(mode==='newItem')lookupBarcodeIntoField('newInvBarcode','newInvName','newInvLookupStatus');if(mode==='editItem')lookupBarcodeIntoField('editInvBarcode','editInvName','editInvLookupStatus');if(mode==='delivery')fillDeliveryFieldsFromBarcode(code);}
+async function startHtml5QrcodeScanner(targetInputId,mode,mount){if(typeof Html5Qrcode==='undefined'){mount.innerHTML='<div class="notice danger"><b>iPad scanner library could not load.</b><br>Check the internet connection, refresh the page, or use Bluetooth/manual entry.</div>';return;}mount.innerHTML=`<div class="barcode-camera ipad-camera"><div class="ipad-camera-head"><b>iPad Rear Camera</b><span class="small">Hold the barcode inside the frame</span></div><div id="html5BarcodeReader"></div><div class="scan-guidance">Move the iPad slowly until the barcode is sharp and fills the center box. You will hear a beep once it is recognized.</div><button class="small-btn danger" onclick="stopBarcodeCamera()">Cancel Camera</button></div>`;try{html5BarcodeScanner=new Html5Qrcode('html5BarcodeReader',{verbose:false,formatsToSupport:html5QrcodeFormats()});let scanConfig={fps:15,qrbox:(w,h)=>({width:Math.min(Math.floor(w*.85),480),height:Math.min(Math.floor(h*.4),220)}),aspectRatio:1.777778,disableFlip:true};await html5BarcodeScanner.start({facingMode:'environment'},scanConfig,decoded=>handleScannedBarcode(decoded,targetInputId,mode),()=>{});}catch(err){html5BarcodeScanner=null;mount.innerHTML=`<div class="notice danger"><b>Unable to start the iPad camera.</b><br>In Safari, open Settings → Safari → Camera and allow camera access for this site, then reload Guthrie RMS.<br><span class="small">${err?.message||err||''}</span></div>`;}}
+window.openBarcodeCamera=async(targetInputId,mode='inventory')=>{ensureAudioContext();await stopBarcodeCamera();let mount=$('#barcodeCameraMount');if(!mount)return;if(!navigator.mediaDevices?.getUserMedia){mount.innerHTML='<div class="notice danger">Camera access is not available in this browser. Use Bluetooth scanner or manual barcode entry.</div>';return;}if(isAppleMobile()){return startHtml5QrcodeScanner(targetInputId,mode,mount);}if('BarcodeDetector' in window){try{barcodeDetectorInstance=barcodeDetectorInstance||new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});barcodeCameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});mount.innerHTML=`<div class="barcode-camera"><video id="barcodeVideo" autoplay playsinline muted></video><div class="barcode-frame"></div><p id="barcodeStatus" class="small">Point the rear camera at the barcode.</p><button class="small-btn danger" onclick="stopBarcodeCamera()">Cancel Camera</button></div>`;let video=$('#barcodeVideo');video.srcObject=barcodeCameraStream;await video.play();let scan=async()=>{if(!barcodeCameraStream||!video)return;try{let codes=await barcodeDetectorInstance.detect(video);if(codes?.length){handleScannedBarcode(codes[0].rawValue,targetInputId,mode);return;}}catch(e){}barcodeCameraTimer=setTimeout(scan,250);};scan();return;}catch(err){}}return startHtml5QrcodeScanner(targetInputId,mode,mount);};
+
+// ---- Production / 86 tracking ----
+// Local calendar date so the daily par count doesn't reset mid-evening at UTC midnight.
+function productionToday(){return new Date().toLocaleDateString('en-CA');}
+// On the first use each day, log yesterday's counts to history, refill every item to its
+// par (pars carry forward day to day), and clear manual 86s.
+function rollProductionDay(){
+  let today=productionToday();
+  if(db.production.date===today) return false;
+  db.production.items=db.production.items||{};
+  db.production.history=db.production.history||[];
+  if(db.production.date){
+    let sold=soldCounts(db.production.date), items=JSON.parse(JSON.stringify(db.production.items));
+    Object.entries(items).forEach(([id,p])=>{p.sold=sold[id]||0;p.remaining=Math.max(0,(Number(p.startingPar)||0)-p.sold);delete p.countFrom;});
+    db.production.history.push({date:db.production.date,items});
+  }
+  db.production.history=db.production.history.slice(-30);
+  Object.values(db.production.items).forEach(p=>{delete p.remaining;delete p.countFrom;p.manual86=false;p.reason='';});
+  db.production.date=today;
+  save();
+  return true;
+}
+// Sold counts come from the order lines themselves (orders with items are never deleted), so
+// every register's sales count no matter which device syncs last. A stored "remaining" number
+// used to be overwritten when two devices saved around the same time. Removing a line puts it
+// back automatically. "Refill All to Par" sets countFrom so only sales after it count.
+var soldCache=null;
+function lineTime(i){return Number(i.addedAt)||Number(i.id)||0;}
+function soldCounts(date){
+  date=date||productionToday();
+  if(soldCache&&soldCache.date===date)return soldCache.counts;
+  let counts={}, from=db.production?.items||{};
+  (db.orders||[]).forEach(o=>(o.items||[]).forEach(i=>{
+    if(!i||i.menuId==null)return;
+    let t=lineTime(i); if(!t||new Date(t).toLocaleDateString('en-CA')!==date)return;
+    if(date===productionToday()&&t<(Number(from[i.menuId]?.countFrom)||0))return;
+    counts[i.menuId]=(counts[i.menuId]||0)+1;
+  }));
+  soldCache={date,counts};
+  setTimeout(()=>{soldCache=null;},0);
+  return counts;
+}
+function soldToday(menuId){return soldCounts()[menuId]||0;}
+function remainingToday(menuId){let p=productionItem(menuId);return Math.max(0,(Number(p.startingPar)||0)-soldToday(menuId));}
+function productionItem(menuId){
+  rollProductionDay();
+  db.production.items=db.production.items||{};
+  if(!db.production.items[menuId]){
+    let m=db.menu.find(x=>x.id===menuId);
+    db.production.items[menuId]={startingPar:Number(m&&m.dailyPar)||0,manual86:false,reason:''};
+  }
+  return db.production.items[menuId];
+}
+function isMenu86(m){
+  let p=productionItem(m.id);
+  if(p.manual86) return true;
+  if(p.startingPar>0 && remainingToday(m.id)<=0) return true;
+  return false;
+}
+function productionRemaining(menuId){
+  let p=productionItem(menuId);
+  return p.startingPar>0 ? remainingToday(menuId) : '∞';
+}
+function deductProduction(menuId,qty){
+  let p=productionItem(menuId);
+  if(p.manual86) return false;
+  if(p.startingPar>0){
+    if(remainingToday(menuId)<qty) return false;
+  }
+  return true;
+}
+// Counts follow the order lines, so adding or removing the line is what changes them.
+function restoreProduction(menuId,qty){}
+// Dining Room tables always use the Bistro menu; Counter + To-Go defaults to the Café menu
+// with tabs to switch to Bistro or Exemption Day.
+function menuTabFor(o){return o.type==='table'?'bistro':(state.menuTab||'cafe');}
+function menuOf(m){return m.menu||'bistro';}
+// Items with a sortOrder (the Exemption Day menu) list in menu order; others keep their order.
+function menuSorted(items){let key=([m,i])=>m.sortOrder!=null?1e6+Number(m.sortOrder):i;return items.map((m,i)=>[m,i]).sort((a,b)=>key(a)-key(b)).map(x=>x[0]);}
+function renderBistroMenuButtons(orderType,menu){
+  menu=menu||(orderType==='table'?'bistro':'cafe');
+  let items=menuSorted(db.menu.filter(m=>m.active!==false&&menuOf(m)===menu&&(menu==='bistro'||!Array.isArray(m.services)||m.services.includes(orderType))));
+  if(!items.length) return '<p>No menu items configured.</p>';
+  // Holiday Specials list first; Catering last.
+  let categories=[...new Set(items.map(m=>m.category||'Other'))].sort((a,b)=>((b==='Holiday Specials')-(a==='Holiday Specials'))||((a==='Catering')-(b==='Catering')));
+  return categories.map(c=>`<h4 class="menu-category">${c}</h4><div class="menu-grid">${items.filter(m=>(m.category||'Other')===c).map(m=>{
+    let d86=isMenu86(m);
+    return `<button class="menu-item ${d86?'disabled86':''}" onclick="modifierModal(${m.id},state.seat)">${m.name}<br><span class="small">${money(m.price)}${d86?' &bull; Sold Out':''}</span></button>`;
+  }).join('')}</div>`).join('');
+}
+
+// ---- Daily Pars ----
+function parsScreen(){
+  rollProductionDay();
+  let filter=state.parsFilter||'all';
+  if(!['all','cafe','bistro','exemption'].includes(filter))filter='all';
+  let filters=[['all','All Items'],['cafe','Café Menu'],['bistro','Bistro Menu'],['exemption','Exemption Day']];
+  let items=menuSorted(db.menu.filter(m=>m.active!==false&&(filter==='all'||menuOf(m)===filter)));
+  let categories=[...new Set(items.map(m=>m.category||'Other'))];
+  let withPar=items.filter(m=>productionItem(m.id).startingPar>0);
+  let soldOut=items.filter(m=>isMenu86(m));
+  let row=m=>{
+    let p=productionItem(m.id), par=Number(p.startingPar)||0, d86=isMenu86(m);
+    let sold=soldToday(m.id);
+    return `<tr><td><b>${m.name}</b></td><td><input class="input par-input" type="number" min="0" step="1" inputmode="numeric" data-par-id="${m.id}" value="${par||''}" placeholder="No limit" style="max-width:120px"></td><td>${sold}</td><td>${par>0?remainingToday(m.id):'No limit'}</td><td>${d86?`<b style="color:var(--red)">${p.manual86?'86\'d':'Sold Out'}</b>`:'Available'}</td><td><button class="small-btn ${p.manual86?'':'danger'}" onclick="toggleManual86(${m.id})">${p.manual86?'Un-86':'86 Item'}</button></td></tr>`;
+  };
+  return `<section class="card"><h1>Daily Pars</h1>
+    <p class="notice">Set how many of each item are available today (${productionToday()}). Leave a par blank or 0 for no limit. When an item's count reaches 0 it shows as Sold Out on the order screens. Pars carry over to the next day and counts refill automatically each morning.</p>
+    <div class="stats"><div><b>${withPar.length}</b><span>Items with a Par</span></div><div><b>${soldOut.length}</b><span>Sold Out / 86'd</span></div></div>
+    <div class="row section">${filters.map(([k,l])=>`<button class="${filter===k?'primary':'small-btn'}" onclick="state.parsFilter='${k}';render()">${l}</button>`).join('')}</div>
+    ${categories.map(c=>`<h2>${c}</h2><table class="report-table" style="table-layout:fixed;width:100%"><colgroup><col style="width:32%"><col style="width:18%"><col style="width:10%"><col style="width:14%"><col style="width:12%"><col style="width:14%"></colgroup><tr><th>Item</th><th>Today's Par</th><th>Sold</th><th>Remaining</th><th>Status</th><th>86</th></tr>${items.filter(m=>(m.category||'Other')===c).map(row).join('')}</table>`).join('')||'<p>No menu items configured.</p>'}
+    <div class="row section"><button class="primary success" onclick="saveDailyPars()">Save Pars</button><button class="primary" onclick="refillDailyPars()">Refill All to Par</button><button class="primary danger" onclick="clearDailyPars()">Clear All Pars</button></div>
+  </section>`;
+}
+// Changing a par mid-day keeps what has already sold: remaining = new par − sold so far.
+window.saveDailyPars=()=>{
+  document.querySelectorAll('[data-par-id]').forEach(inp=>{
+    let id=Number(inp.dataset.parId), m=db.menu.find(x=>x.id===id); if(!m)return;
+    let p=productionItem(id), par=Math.max(0,Math.floor(Number(inp.value)||0));
+    if(p.startingPar!==par)p.startingPar=par;
+    if(m.dailyPar!==par)m.dailyPar=par;
+  });
+  save(); render(); alert('Daily pars saved.');
+};
+window.refillDailyPars=()=>{
+  if(!confirm('Reset every item\'s remaining count back to its full par? Use this only at the start of service.'))return;
+  let t=Date.now(); Object.values(db.production.items||{}).forEach(p=>{p.countFrom=t;});
+  save(); render();
+};
+window.clearDailyPars=()=>{
+  if(!confirm('Remove the par from every item so nothing has a limit today?'))return;
+  db.menu.forEach(m=>{let p=productionItem(m.id); p.startingPar=0; m.dailyPar=0;});
+  save(); render();
+};
+window.toggleManual86=id=>{let p=productionItem(id); p.manual86=!p.manual86; p.reason=p.manual86?'Manual 86':''; save(); render();};
+
+// ---- Shared inventory / CSV helpers ----
+function locations(division){
+  return db.settings.inventoryLocations||[];
+}
+function downloadCSV(filename, rows){
+  let csv=rows.map(r=>r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  let blob=new Blob([csv],{type:'text/csv'});
+  let url=URL.createObjectURL(blob);
+  let a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+window.exportInventoryData=(division)=>{
+  let rows=[['Item','Barcode','Vendor','Location','On Hand','Par','Unit']];
+  db.inventory.filter(i=>i.division===division).forEach(i=>rows.push([i.name,i.barcode||'',i.vendor,i.location||'',i.onHand,i.par,i.unit]));
+  downloadCSV(`guthrie-rms-${division}-inventory.csv`,rows);
+};
+window.exportAllInventoryData=()=>{
+  let rows=[['Division','Item','Barcode','Vendor','Location','On Hand','Par','Unit']];
+  db.inventory.forEach(i=>rows.push([i.division,i.name,i.barcode||'',i.vendor,i.location||'',i.onHand,i.par,i.unit]));
+  downloadCSV('guthrie-rms-all-inventory.csv',rows);
+};
+window.inventoryCount=()=>{
+  let items=db.inventory.filter(i=>i.division===state.invDivision);
+  let box=$('#invExtra'); if(!box) return;
+  box.innerHTML=`<div class="section panel"><h2>Inventory Count</h2><p class="small">Enter the physical count for each item, then save to update on-hand quantities.</p>
+    <table class="report-table"><tr><th>Item</th><th>Current On Hand</th><th>Counted Qty</th></tr>${items.map(i=>`<tr><td>${i.name}</td><td>${i.onHand}</td><td><input class="input inventory-number countInput" data-id="${i.id}" type="number" step="0.01" value="${i.onHand}"></td></tr>`).join('')}</table>
+    <button class="primary success" onclick="saveInventoryCount()">Save Count</button></div>`;
+};
+window.saveInventoryCount=()=>{
+  [...document.querySelectorAll('.countInput')].forEach(inp=>{let item=db.inventory.find(i=>i.id===Number(inp.dataset.id));if(item)item.onHand=Number(inp.value)||0;});
+  save();render();toast('Inventory count saved.');
+};
+window.wasteTracking=()=>{
+  let items=db.inventory.filter(i=>i.division===state.invDivision);
+  let box=$('#invExtra'); if(!box) return;
+  box.innerHTML=`<div class="section panel"><h2>Waste Tracking</h2>
+    <div class="form-grid"><label>Item<select id="wasteItem" class="input">${items.map(i=>`<option value="${i.id}">${i.name}</option>`).join('')}</select></label><label>Quantity<input id="wasteQty" type="number" step="0.01" class="input" value="1"></label><label>Reason<select id="wasteReason" class="input"><option>Spoilage</option><option>Prep Error</option><option>Dropped or Contaminated</option><option>Overproduction</option><option>Other</option></select></label></div>
+    <label>Notes<textarea id="wasteNotes" class="input"></textarea></label>
+    <button class="primary danger" onclick="saveWaste()">Log Waste</button>
+    <h3>Recent Waste</h3><table class="report-table"><tr><th>Date</th><th>Item</th><th>Qty</th><th>Reason</th></tr>${(db.waste||[]).filter(w=>w.division===state.invDivision).slice(-10).reverse().map(w=>`<tr><td>${new Date(w.date).toLocaleString()}</td><td>${w.name}</td><td>${w.qty}</td><td>${w.reason}</td></tr>`).join('')||'<tr><td colspan="4">No waste logged yet.</td></tr>'}</table>
+    </div>`;
+};
+window.saveWaste=()=>{
+  let itemId=Number($('#wasteItem')?.value);let item=db.inventory.find(i=>i.id===itemId);if(!item)return;
+  let qty=Number($('#wasteQty')?.value)||0;if(qty<=0){alert('Enter a quantity greater than zero.');return;}
+  item.onHand=Math.max(0,Number(item.onHand)-qty);
+  db.waste=db.waste||[];
+  db.waste.push({id:Date.now(),division:item.division,itemId:item.id,name:item.name,qty,reason:$('#wasteReason')?.value||'Other',notes:$('#wasteNotes')?.value||'',by:state.user.name,date:now()});
+  save();wasteTracking();toast('Waste logged.');
+};
+
+// ---- Scheduling helpers ----
+function shiftDateTime(s){return new Date(`${s.date}T${s.startTime||'00:00'}`);}
+function shiftHours(s){return s.out ? +(((new Date(s.out))-(new Date(s.in)))/3600000).toFixed(2) : 0;}
+function scheduledForStudent(userId){return (db.scheduledShifts||[]).filter(s=>(s.assignments||[]).some(a=>a.userId===userId));}
+function scheduledForTeacher(teacherId){return (db.scheduledShifts||[]).filter(s=>(s.assignments||[]).some(a=>{let u=db.users.find(x=>x.id===a.userId);return u&&u.teacherId===teacherId;}));}
+
+// ---- Catering ----
+function catering(){
+  let extra=state.cateringOrderId? cateringOrderBuilder(state.cateringOrderId) : '';
+  let openOrders=db.orders.filter(o=>o.type==='catering'&&!o.paid);
+  return `<section class="card"><h1>Catering</h1>
+    <div class="row"><button class="primary success" onclick="createCateringOrder()">New Catering Order</button></div>
+    <h2>Catering Packages</h2>
+    <div class="grid">${db.cateringMenus.map(m=>`<div class="tile" style="display:block;text-align:left;padding:14px;cursor:default"><b>${m.name}</b><p class="small">${m.description||''}</p><p>${money(m.price)}</p></div>`).join('')}</div>
+    <h2>Open Catering Orders</h2>
+    <div class="grid">${openOrders.map(o=>`<div class="order-card"><b>${o.customer}</b><p>${o.guestCount?o.guestCount+' guests &bull; ':''}${money(total(o))} &bull; ${o.status}</p><div class="row"><button class="small-btn" onclick="state.cateringOrderId=${o.id};render()">Edit</button><button class="small-btn" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="small-btn" onclick="state.checkoutType='catering';state.selectedOrder=${o.id};state.view='checkout';render()">Checkout</button></div></div>`).join('')||'<p>No open catering orders.</p>'}</div>
+    ${extra}
+  </section>`;
+}
+window.createCateringOrder=()=>{let customer=prompt('Event / Customer name:','Catering Event')||'Catering Event';let o={id:Date.now(),type:'catering',customer,guestCount:0,items:[],status:'open',created:now(),sent:null,paid:false};db.orders.push(o);state.cateringOrderId=o.id;save();render();};
+function cateringOrderBuilder(orderId){
+  let o=db.orders.find(x=>x.id===orderId);if(!o)return'';
+  return `<div class="section panel"><h2>${o.customer}</h2>
+    <div class="catering-guest-block"><label>Guest Count<input class="input" type="number" value="${o.guestCount||0}" onchange="setCateringGuestCount(${o.id},this.value)"></label><span class="small">Used to size packages and per-guest items.</span></div>
+    <h3>Add Package</h3><div class="grid">${db.cateringMenus.map(m=>`<button class="tile" onclick="addCateringPackage(${o.id},${m.id})">${m.name} &mdash; ${money(m.price)}</button>`).join('')}</div>
+    <h3>Add A La Carte Item</h3><div class="grid">${(db.cateringItems||[]).map(ci=>`<button class="tile" onclick="addCateringItem(${o.id},${ci.id})">${ci.name} &mdash; ${money(ci.price)}</button>`).join('')}</div>
+    <h3>Ticket</h3>${ticketItems(o)}
+    <div class="row"><button class="primary" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="primary" onclick="state.checkoutType='catering';state.selectedOrder=${o.id};state.view='checkout';render()">Checkout</button><button class="small-btn" onclick="state.cateringOrderId=null;render()">Close</button></div>
+  </div>`;
+}
+window.setCateringGuestCount=(id,v)=>{let o=db.orders.find(x=>x.id===id);if(!o)return;o.guestCount=Number(v)||0;save();};
+window.addCateringPackage=(orderId,menuId)=>{let o=db.orders.find(x=>x.id===orderId),m=db.cateringMenus.find(x=>x.id===menuId);if(!o||!m)return;o.items.push({id:Date.now(),lineId:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),name:m.name,price:m.price,mods:[],note:'Catering Package'});save();render();};
+window.addCateringItem=(orderId,itemId)=>{let o=db.orders.find(x=>x.id===orderId),ci=(db.cateringItems||[]).find(x=>x.id===itemId);if(!o||!ci)return;o.items.push({id:Date.now(),lineId:String(Date.now())+'-'+Math.random().toString(36).slice(2,7),name:ci.name,price:ci.price,mods:[],note:''});save();render();};
+
+// ---- Recipes / Labs ----
+function recipesLab(){
+  let extra=state.addingRecipe?recipeForm(null):(state.editingRecipe?recipeForm(state.editingRecipe):'');
+  return `<section class="card"><h1>Recipes / Labs</h1><p class="notice">Standardized recipes for culinary labs. Logging lab usage deducts ingredients from Culinary inventory.</p>
+    <div class="row"><button class="primary success" onclick="state.addingRecipe=true;state.editingRecipe=null;render()">Add Recipe</button></div>
+    ${extra}
+    <div class="grid">${(db.recipes||[]).map(r=>`<div class="tile" style="display:block;text-align:left;padding:14px;cursor:default"><b>${r.name}</b><p class="small">Yield: ${r.yield||''}</p><div class="row"><button class="small-btn" onclick="state.editingRecipe=${r.id};state.addingRecipe=false;render()">Edit</button><button class="small-btn" onclick="logLabUsage(${r.id})">Log Lab Usage</button><button class="small-btn danger" onclick="deleteRecipe(${r.id})">Delete</button></div></div>`).join('')||'<p>No recipes added yet.</p>'}</div>
+    <h2>Recent Lab Usage</h2>
+    <table class="report-table"><tr><th>Date</th><th>Recipe</th><th>By</th></tr>${(db.labUsage||[]).slice(-10).reverse().map(l=>`<tr><td>${new Date(l.date).toLocaleString()}</td><td>${l.recipeName}</td><td>${l.by}</td></tr>`).join('')||'<tr><td colspan="3">No lab usage logged yet.</td></tr>'}</table>
+  </section>`;
+}
+function recipeForm(id){
+  let r=id?db.recipes.find(x=>x.id===id):null;
+  let ingredientRows=(r&&r.ingredients&&r.ingredients.length)?r.ingredients:[{}];
+  return `<div class="section panel"><h3>${r?'Edit Recipe':'Add Recipe'}</h3>
+    <div class="form-grid"><label>Recipe Name<input id="recName" class="input" value="${r?r.name:''}"></label><label>Yield<input id="recYield" class="input" value="${r?r.yield||'':''}"></label></div>
+    <label>Instructions<textarea id="recInstructions" class="input">${r?r.instructions||'':''}</textarea></label>
+    <h4>Ingredients (Culinary Inventory)</h4>
+    <div id="recIngredients">${ingredientRows.map((ing,idx)=>ingredientRow(ing,idx)).join('')}</div>
+    <button class="small-btn" onclick="addIngredientRow()">Add Ingredient Line</button>
+    <div class="row section"><button class="primary success" onclick="saveRecipe(${id||'null'})">Save Recipe</button><button class="small-btn" onclick="state.addingRecipe=false;state.editingRecipe=null;render()">Cancel</button></div>
+  </div>`;
+}
+function ingredientRow(ing,idx){
+  let culinary=db.inventory.filter(i=>i.division==='culinary');
+  return `<div class="row ingredient-row" data-idx="${idx}"><select class="input ingIngredient">${culinary.map(i=>`<option value="${i.id}" ${ing&&ing.inventoryId===i.id?'selected':''}>${i.name}</option>`).join('')}</select><input class="input ingQty" type="number" step="0.01" placeholder="Qty" value="${ing&&ing.qty?ing.qty:''}"></div>`;
+}
+window.addIngredientRow=()=>{let box=$('#recIngredients');if(box)box.insertAdjacentHTML('beforeend',ingredientRow({},box.children.length));};
+window.saveRecipe=(id)=>{
+  let name=$('#recName')?.value.trim();if(!name){alert('Recipe name is required.');return;}
+  let ingredients=[...document.querySelectorAll('.ingredient-row')].map(row=>({inventoryId:Number(row.querySelector('.ingIngredient').value),qty:Number(row.querySelector('.ingQty').value)||0})).filter(i=>i.qty>0);
+  let data={name,yield:$('#recYield')?.value||'',instructions:$('#recInstructions')?.value||'',ingredients};
+  if(id){let r=db.recipes.find(x=>x.id===id);Object.assign(r,data);}else{db.recipes.push({id:Date.now(),...data});}
+  state.addingRecipe=false;state.editingRecipe=null;save();render();toast('Recipe saved.');
+};
+window.deleteRecipe=(id)=>{if(!confirm('Delete this recipe?'))return;db.recipes=db.recipes.filter(x=>x.id!==id);save();render();};
+window.logLabUsage=(id)=>{
+  let r=db.recipes.find(x=>x.id===id);if(!r)return;
+  let missing=[];
+  (r.ingredients||[]).forEach(ing=>{let item=db.inventory.find(i=>i.id===ing.inventoryId);if(!item||Number(item.onHand)<ing.qty)missing.push(item?item.name:'Unknown item');});
+  if(missing.length&&!confirm(`Low or insufficient stock for: ${missing.join(', ')}. Log usage anyway?`))return;
+  (r.ingredients||[]).forEach(ing=>{let item=db.inventory.find(i=>i.id===ing.inventoryId);if(item)item.onHand=Math.max(0,Number(item.onHand)-ing.qty);});
+  db.labUsage=db.labUsage||[];db.labUsage.push({id:Date.now(),recipeId:id,recipeName:r.name,by:state.user.name,date:now()});
+  save();render();toast('Lab usage logged and inventory deducted.');
+};
+
+// ---- Reports ----
+// Local-date bounds (YYYY-MM-DD) for the report's selected range; null means no bound.
+function reportRange(){
+  let r=state.reportRange||'today', d=new Date(), ymd=x=>x.toLocaleDateString('en-CA'), today=ymd(d);
+  if(r==='today') return {from:today,to:today,label:'Today'};
+  if(r==='week'){let s=new Date(d);s.setDate(s.getDate()-6);return {from:ymd(s),to:today,label:'Last 7 Days'};}
+  if(r==='month') return {from:today.slice(0,8)+'01',to:today,label:'This Month'};
+  if(r==='custom') return {from:state.reportFrom||null,to:state.reportTo||null,label:`${state.reportFrom||'Start'} to ${state.reportTo||'Today'}`};
+  return {from:null,to:null,label:'All Time'};
+}
+function inReportRange(iso){
+  if(!iso) return state.reportRange==='all';
+  let {from,to}=reportRange(), day=new Date(iso).toLocaleDateString('en-CA');
+  return (!from||day>=from)&&(!to||day<=to);
+}
+// Paid order lines grouped by item name, with quantity, sales, and a count of each modifier.
+function itemSalesBreakdown(orders){
+  let map={};
+  orders.forEach(o=>validItems(o).forEach(i=>{
+    let m=db.menu.find(x=>x.id===i.menuId);
+    let row=map[i.name]||(map[i.name]={name:i.name,category:m?.category||(o.type==='catering'?'Catering':'Other'),qty:0,sales:0,mods:{}});
+    row.qty++; row.sales+=Number(i.price)||0;
+    (i.mods||[]).forEach(md=>{row.mods[md]=(row.mods[md]||0)+1;});
+  }));
+  return Object.values(map).sort((a,b)=>b.sales-a.sales||b.qty-a.qty);
+}
+function reports(){
+  let range=reportRange();
+  let paidOrders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
+  let sales=paidOrders.reduce((a,o)=>a+total(o),0);
+  let refunds=(db.refunds||[]).filter(r=>inReportRange(r.processedAt)).reduce((a,r)=>a+(Number(r.amount)||0),0);
+  let byType={};paidOrders.forEach(o=>{byType[o.type]=(byType[o.type]||0)+total(o);});
+  let items=itemSalesBreakdown(paidOrders);
+  let itemCount=items.reduce((a,r)=>a+r.qty,0);
+  let hours=db.shifts.filter(s=>s.out).reduce((a,s)=>a+(Number(s.hours)||0),0);
+  let low=db.inventory.filter(i=>Number(i.onHand)<Number(i.par));
+  let ranges=[['today','Today'],['week','Last 7 Days'],['month','This Month'],['all','All Time'],['custom','Custom']];
+  let modText=r=>Object.entries(r.mods).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k} ×${v}`).join(', ');
+  return `<section class="card"><h1>Reports</h1>
+    <div class="row">${ranges.map(([k,l])=>`<button class="${(state.reportRange||'today')===k?'primary':'small-btn'}" onclick="state.reportRange='${k}';render()">${l}</button>`).join('')}</div>
+    ${(state.reportRange==='custom')?`<div class="row section"><label>From<input type="date" class="input" value="${state.reportFrom||''}" onchange="state.reportFrom=this.value;render()"></label><label>To<input type="date" class="input" value="${state.reportTo||''}" onchange="state.reportTo=this.value;render()"></label></div>`:''}
+    <p class="notice">Showing sales for <b>${range.label}</b>. Labor hours and inventory are current totals.</p>
+    <div class="stats">
+      <div><b>${money(sales)}</b><span>Total Sales</span></div>
+      <div><b>${money(refunds)}</b><span>Total Refunds</span></div>
+      <div><b>${paidOrders.length}</b><span>Paid Orders</span></div>
+      <div><b>${itemCount}</b><span>Items Sold</span></div>
+      <div><b>${hours.toFixed(2)}</b><span>Labor Hours</span></div>
+      <div><b>${low.length}</b><span>Items Below Par</span></div>
+    </div>
+    <h2>Sales by Item</h2>
+    <table class="report-table"><tr><th>Item</th><th>Category</th><th>Qty Sold</th><th>Sales</th><th>% of Sales</th><th>Modifiers</th></tr>${items.map(r=>`<tr><td><b>${r.name}</b></td><td>${r.category}</td><td>${r.qty}</td><td>${money(r.sales)}</td><td>${sales>0?(r.sales/sales*100).toFixed(1)+'%':'—'}</td><td class="small">${modText(r)||'—'}</td></tr>`).join('')}${items.length?`<tr><td colspan="2"><b>Total</b></td><td><b>${itemCount}</b></td><td><b>${money(sales)}</b></td><td></td><td></td></tr>`:'<tr><td colspan="6">No items sold in this range.</td></tr>'}</table>
+    <p class="small">Item sales are before refunds; refunds are recorded per order and shown in Total Refunds.</p>
+    <h2>Sales by Order Type</h2>
+    <table class="report-table"><tr><th>Type</th><th>Total</th></tr>${Object.entries(byType).map(([t,v])=>`<tr><td>${t.toUpperCase()}</td><td>${money(v)}</td></tr>`).join('')||'<tr><td colspan="2">No paid orders in this range.</td></tr>'}</table>
+    <h2>Recent Shifts</h2>
+    <table class="report-table"><tr><th>Name</th><th>Position</th><th>In</th><th>Out</th><th>Hours</th></tr>${db.shifts.slice(-10).reverse().map(s=>`<tr><td>${s.name}</td><td>${s.pos||''}</td><td>${new Date(s.in).toLocaleString()}</td><td>${s.out?new Date(s.out).toLocaleString():'&mdash;'}</td><td>${(Number(s.hours)||0).toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="5">No shifts recorded yet.</td></tr>'}</table>
+    <div class="row section"><button class="primary" onclick="exportReportCSV()">Export Sales CSV</button><button class="primary" onclick="exportItemSalesCSV()">Export Item Sales CSV</button></div>
+  </section>`;
+}
+window.exportReportCSV=()=>{
+  let rows=[['Order ID','Type','Customer','Total','Status','Paid At']];
+  db.orders.filter(o=>o.paid&&inReportRange(o.paidAt)).forEach(o=>rows.push([o.id,o.type,o.customer,total(o).toFixed(2),o.status,o.paidAt||'']));
+  downloadCSV('guthrie-rms-sales.csv',rows);
+};
+window.exportItemSalesCSV=()=>{
+  let {label}=reportRange(), orders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
+  let rows=[['Range','Item','Category','Qty Sold','Sales','Modifiers']];
+  itemSalesBreakdown(orders).forEach(r=>rows.push([label,r.name,r.category,r.qty,r.sales.toFixed(2),Object.entries(r.mods).map(([k,v])=>`${k} x${v}`).join('; ')]));
+  downloadCSV(`guthrie-rms-item-sales-${label.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,rows);
+};
+
+// ---- Invoices ----
+function invoiceCenter(){
+  let extra=state.addingInvoice?invoiceForm():'';
+  return `<section class="card"><h1>Invoices</h1>
+    <div class="row"><button class="primary success" onclick="state.addingInvoice=true;render()">New Invoice</button></div>
+    ${extra}
+    <table class="report-table"><tr><th>Invoice #</th><th>Billed To</th><th>Amount</th><th>Status</th><th>Due</th><th>Actions</th></tr>
+    ${(db.invoices||[]).map(inv=>`<tr><td>${inv.number}</td><td>${inv.billTo}</td><td>${money(inv.amount)}</td><td>${inv.status}</td><td>${inv.dueDate||''}</td><td><div class="row">${inv.status!=='Paid'?`<button class="small-btn success" onclick="markInvoicePaid(${inv.id})">Mark Paid</button>`:''}<button class="small-btn danger" onclick="deleteInvoice(${inv.id})">Delete</button></div></td></tr>`).join('')||'<tr><td colspan="6">No invoices yet.</td></tr>'}
+    </table>
+  </section>`;
+}
+function invoiceForm(){
+  return `<div class="section panel"><h3>New Invoice</h3><div class="form-grid">
+    <label>Billed To<input id="invBillTo" class="input" placeholder="Department / Organization"></label>
+    <label>Amount<input id="invAmount" class="input" type="number" step="0.01"></label>
+    <label>Due Date<input id="invDue" class="input" type="date"></label>
+  </div><label>Notes<textarea id="invNotes" class="input"></textarea></label>
+  <div class="row"><button class="primary success" onclick="saveInvoice()">Create Invoice</button><button class="small-btn" onclick="state.addingInvoice=false;render()">Cancel</button></div></div>`;
+}
+window.saveInvoice=()=>{
+  let billTo=$('#invBillTo')?.value.trim();let amount=Number($('#invAmount')?.value)||0;
+  if(!billTo||amount<=0){alert('Billed To and a positive amount are required.');return;}
+  db.invoices=db.invoices||[];
+  let number='INV-'+String(db.invoices.length+1).padStart(4,'0');
+  db.invoices.push({id:Date.now(),number,billTo,amount,dueDate:$('#invDue')?.value||'',notes:$('#invNotes')?.value||'',status:'Open',createdBy:state.user.name,createdAt:now()});
+  state.addingInvoice=false;save();render();toast('Invoice created.');
+};
+window.markInvoicePaid=(id)=>{let inv=db.invoices.find(x=>x.id===id);if(!inv)return;inv.status='Paid';inv.paidAt=now();save();render();toast('Invoice marked paid.');};
+window.deleteInvoice=(id)=>{if(!confirm('Delete this invoice?'))return;db.invoices=db.invoices.filter(x=>x.id!==id);save();render();};
+
+// ---- Student Development ----
+function development(){
+  if(state.user.role==='manager') return developmentManager();
+  if(state.user.role==='teacher') return developmentTeacher();
+  return developmentStudent();
+}
+function developmentStudent(){
+  let myShifts=db.shifts.filter(s=>s.userId===state.user.id && s.out);
+  let totalHours=myShifts.reduce((a,s)=>a+(Number(s.hours)||0),0);
+  let myEvals=(db.evaluations||[]).filter(e=>e.studentId===state.user.id);
+  return `<section class="card"><h1>My Development</h1>
+    <div class="stats"><div><b>${myShifts.length}</b><span>Completed Shifts</span></div><div><b>${totalHours.toFixed(2)}</b><span>Total Hours</span></div><div><b>${myEvals.length}</b><span>Evaluations</span></div></div>
+    <h3>Shift History</h3>${myShifts.length?`<table class="report-table"><tr><th>Date</th><th>Position</th><th>Hours</th></tr>${myShifts.slice().reverse().map(s=>`<tr><td>${new Date(s.in).toLocaleDateString()}</td><td>${s.pos||''}</td><td>${(Number(s.hours)||0).toFixed(2)}</td></tr>`).join('')}</table>`:'<p>No completed shifts yet.</p>'}
+    <h3>Evaluations</h3>${myEvals.length?myEvals.map(e=>`<div class="ticket"><b>${new Date(e.date).toLocaleDateString()}</b> &bull; ${e.rating||''}/5<p>${e.notes||''}</p><p class="small">By ${e.by||''}</p></div>`).join(''):'<p>No evaluations recorded yet.</p>'}
+  </section>`;
+}
+function developmentTeacher(){
+  let myStudents=db.users.filter(u=>u.role==='student'&&u.teacherId===state.user.id);
+  let extra = state.addingStudent? studentForm(null) : (state.editingStudent? studentForm(state.editingStudent):'');
+  return `<section class="card"><h1>Student Development</h1><p class="notice">Students assigned to you: ${myStudents.length}</p>
+    <div class="row"><button class="primary success" onclick="state.addingStudent=true;state.editingStudent=null;render()">Add Student</button></div>
+    ${extra}
+    <table class="report-table"><tr><th>Name</th><th>Student ID</th><th>Position</th><th>Active</th><th>Actions</th></tr>
+    ${myStudents.map(u=>`<tr><td>${u.name}</td><td>${u.studentId||''}</td><td>${u.pos||''}</td><td>${u.active?'Yes':'No'}</td><td><div class="row"><button class="small-btn" onclick="state.editingStudent=${u.id};state.addingStudent=false;render()">Edit</button><button class="small-btn" onclick="state.evalStudent=${u.id};render()">Evaluate</button><button class="small-btn danger" onclick="deleteStudent(${u.id})">Delete</button></div></td></tr>`).join('')||'<tr><td colspan="5">No students assigned yet.</td></tr>'}
+    </table>
+    ${state.evalStudent?evalForm(state.evalStudent):''}
+  </section>`;
+}
+function developmentManager(){
+  let students=db.users.filter(u=>u.role==='student');
+  let teachers=db.users.filter(u=>u.role==='teacher');
+  return `<section class="card"><h1>Student Development Overview</h1>
+    <div class="stats"><div><b>${students.length}</b><span>Students</span></div><div><b>${teachers.length}</b><span>Teachers</span></div><div><b>${(db.evaluations||[]).length}</b><span>Evaluations</span></div></div>
+    <table class="report-table"><tr><th>Student</th><th>Teacher</th><th>Position</th><th>Active</th></tr>
+    ${students.map(s=>{let t=teachers.find(t=>t.id===s.teacherId);return `<tr><td>${s.name}</td><td>${t?t.name:'Unassigned'}</td><td>${s.pos||''}</td><td>${s.active?'Yes':'No'}</td></tr>`;}).join('')||'<tr><td colspan="4">No students yet.</td></tr>'}
+    </table>
+  </section>`;
+}
+function studentForm(id){
+  let u=id?db.users.find(x=>x.id===id):null;
+  return `<div class="section panel"><h3>${u?'Edit Student':'Add Student'}</h3>
+    <div class="form-grid">
+      <label>Name<input id="stuName" class="input" value="${u?u.name:''}"></label>
+      <label>Student ID / PIN<input id="stuId" class="input" value="${u?u.studentId||'':''}"></label>
+      <label>Position<select id="stuPos" class="input">${db.positions.map(p=>`<option ${u&&u.pos===p?'selected':''}>${p}</option>`).join('')}</select></label>
+      <label>Active<select id="stuActive" class="input"><option value="true" ${!u||u.active!==false?'selected':''}>Active</option><option value="false" ${u&&u.active===false?'selected':''}>Inactive</option></select></label>
+    </div>
+    <div class="row"><button class="primary success" onclick="saveStudent(${id||'null'})">Save</button><button class="small-btn" onclick="state.addingStudent=false;state.editingStudent=null;render()">Cancel</button></div>
+  </div>`;
+}
+window.saveStudent=(id)=>{
+  let name=$('#stuName')?.value.trim();let studentId=$('#stuId')?.value.trim();let pos=$('#stuPos')?.value;let active=$('#stuActive')?.value==='true';
+  if(!name||!studentId){alert('Name and Student ID are required.');return;}
+  if(db.users.some(u=>u.pin===studentId&&u.id!==id)){alert('That Student ID/PIN is already in use.');return;}
+  if(id){let u=db.users.find(x=>x.id===id);if(!u)return;u.name=name;u.studentId=studentId;u.pin=studentId;u.pos=pos;u.active=active;}
+  else{db.users.push({id:Date.now(),name,studentId,pin:studentId,role:'student',pos,active,teacherId:state.user.id,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'});}
+  state.addingStudent=false;state.editingStudent=null;save();render();toast('Student saved.');
+};
+window.deleteStudent=(id)=>{let u=db.users.find(x=>x.id===id);if(!u)return;if(!confirm(`Delete ${u.name}? Historical shift and evaluation records are preserved.`))return;db.scheduledShifts.forEach(s=>{s.assignments=(s.assignments||[]).filter(a=>a.userId!==id)});db.users=db.users.filter(x=>x.id!==id);save();render();toast('Student removed.');};
+function evalForm(studentId){
+  let u=db.users.find(x=>x.id===studentId);
+  return `<div class="section panel"><h3>Evaluate ${u?u.name:''}</h3>
+    <div class="form-grid"><label>Rating (1-5)<input id="evalRating" type="number" min="1" max="5" class="input" value="5"></label></div>
+    <label>Notes<textarea id="evalNotes" class="input" placeholder="Feedback notes"></textarea></label>
+    <div class="row"><button class="primary success" onclick="saveEvaluation(${studentId})">Save Evaluation</button><button class="small-btn" onclick="state.evalStudent=null;render()">Cancel</button></div>
+  </div>`;
+}
+window.saveEvaluation=(studentId)=>{let rating=Number($('#evalRating')?.value)||0;let notes=$('#evalNotes')?.value||'';db.evaluations=db.evaluations||[];db.evaluations.push({id:Date.now(),studentId,rating,notes,by:state.user.name,date:now()});state.evalStudent=null;save();render();toast('Evaluation saved.');};
+
+// ---- Scheduling ----
+function scheduleCenter(){
+  if(state.user.role==='student') return scheduleStudentView();
+  if(state.user.role==='teacher') return scheduleTeacherView();
+  return scheduleManagerView();
+}
+function scheduleStudentView(){
+  let mine=scheduledForStudent(state.user.id).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  return `<section class="card"><h1>My Schedule</h1>
+    ${mine.length?`<table class="report-table"><tr><th>Date</th><th>Operation</th><th>Time</th><th>Location</th><th>Position</th><th>Status</th></tr>${mine.map(s=>{let mySlot=(s.assignments||[]).find(a=>a.userId===state.user.id);return `<tr><td>${s.date}</td><td>${s.operation}</td><td>${s.startTime}&ndash;${s.endTime}</td><td>${s.location||''}</td><td>${mySlot?mySlot.position||'':''}</td><td>${s.status}</td></tr>`}).join('')}</table>`:'<p>No shifts scheduled yet.</p>'}
+  </section>`;
+}
+function scheduleTeacherView(){
+  let mine=scheduledForTeacher(state.user.id).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  return `<section class="card"><h1>Student Schedule</h1>
+    ${mine.length?mine.map(s=>{let names=(s.assignments||[]).filter(a=>{let u=db.users.find(x=>x.id===a.userId);return u&&u.teacherId===state.user.id}).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} (${a.position||''})`;}).join(', ');return `<div class="ticket"><b>${s.date}</b> &bull; ${s.operation} &bull; ${s.startTime}&ndash;${s.endTime} &bull; ${s.status}<p>${names}</p></div>`;}).join(''):'<p>No shifts scheduled yet.</p>'}
+  </section>`;
+}
+function scheduleManagerView(){
+  let extra=(state.editingShiftId!==undefined&&state.editingShiftId!==null)?shiftForm(state.editingShiftId):'';
+  let search=(state.scheduleSearch||'').trim().toLowerCase();
+  let list=(db.scheduledShifts||[]).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  if(search){
+    list=list.filter(s=>{
+      let names=(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:''} ${a.position||''}`;}).join(' ');
+      let hay=[s.date,s.operation,s.location,s.status,s.notes,names].join(' ').toLowerCase();
+      return hay.includes(search);
+    });
+  }
+  return `<section class="card"><h1>Manager Shift Scheduler</h1>
+    <div class="row"><button class="primary success" onclick="state.editingShiftId='new';render()">New Scheduled Shift</button><button class="small-btn" onclick="exportScheduleCSV()">Export Schedule CSV</button></div>
+    <div class="row">
+      <label>Search<input id="scheduleSearchInput" class="input" placeholder="Search by date, operation, location, student, position, status, or notes" value="${search?state.scheduleSearch:''}" oninput="filterScheduleByText(this.value)"></label>
+      ${search?`<button class="small-btn" onclick="state.scheduleSearch='';render()">Clear Search</button>`:''}
+    </div>
+    ${extra}
+    ${list.map(s=>`<div class="ticket"><div class="row"><div><b>${s.date}</b> &bull; ${s.operation} &bull; ${s.startTime}&ndash;${s.endTime} &bull; ${s.location||''}</div><span class="spacer"></span><span class="pill">${s.status}</span></div>
+      <p>${(s.assignments||[]).map(a=>{let u=db.users.find(x=>x.id===a.userId);return `${u?u.name:'Unassigned'} (${a.position||''})`;}).join(', ')||'No students assigned.'}</p>
+      <p class="small">${s.notes||''}</p>
+      <div class="row"><button class="small-btn" onclick="state.editingShiftId=${s.id};render()">Edit</button><button class="small-btn" onclick="duplicateShift(${s.id})">Duplicate</button><button class="small-btn success" onclick="toggleShiftPublish(${s.id})">${s.status==='Published'?'Unpublish':'Publish'}</button><button class="small-btn danger" onclick="deleteShift(${s.id})">Delete</button></div>
+    </div>`).join('')||(search?'<p>No shifts match your search.</p>':'<p>No shifts scheduled yet.</p>')}
+  </section>`;
+}
+window.filterScheduleByText=(val)=>{
+  state.scheduleSearch=val;render();
+  let el=$('#scheduleSearchInput');
+  if(el){el.focus();let pos=val.length;el.setSelectionRange(pos,pos);}
+};
+function shiftForm(id){
+  let s=(id&&id!=='new')?db.scheduledShifts.find(x=>x.id===id):null;
+  let students=db.users.filter(u=>u.role==='student'&&u.active);
+  let assigned=(s&&s.assignments)||[];
+  return `<div class="section panel"><h3>${s?'Edit Shift':'New Shift'}</h3>
+    <div class="form-grid">
+      <label>Operation<select id="shiftOp" class="input">${(db.settings.operations||[]).map(o=>`<option ${s&&s.operation===o?'selected':''}>${o}</option>`).join('')}</select></label>
+      <label>Date<input id="shiftDate" type="date" class="input" value="${s?s.date:''}"></label>
+      <label>Start Time<input id="shiftStart" type="time" class="input" value="${s?s.startTime:''}"></label>
+      <label>End Time<input id="shiftEnd" type="time" class="input" value="${s?s.endTime:''}"></label>
+      <label>Location<input id="shiftLoc" class="input" value="${s?s.location||'':''}"></label>
+      <label>Status<select id="shiftStatus" class="input"><option ${!s||s.status==='Draft'?'selected':''}>Draft</option><option ${s&&s.status==='Published'?'selected':''}>Published</option></select></label>
+    </div>
+    <label>Notes<textarea id="shiftNotes" class="input">${s?s.notes||'':''}</textarea></label>
+    <h4>Assign Students</h4>
+    <div class="schedule-assign-grid">${students.map(st=>{let a=assigned.find(x=>x.userId===st.id);return `<div class="schedule-assignment ${a?'assigned':''}"><label><input type="checkbox" class="assignChk" value="${st.id}" ${a?'checked':''}> ${st.name}</label><input class="input assignPos" data-user="${st.id}" placeholder="Position" value="${a?a.position||'':st.pos||''}"></div>`}).join('')||'<p class="small">No active students yet.</p>'}</div>
+    <div class="row section"><button class="primary success" onclick="saveShift(${id==='new'?"'new'":id})">Save Shift</button><button class="small-btn" onclick="state.editingShiftId=null;render()">Cancel</button></div>
+  </div>`;
+}
+window.saveShift=(id)=>{
+  let operation=$('#shiftOp')?.value,date=$('#shiftDate')?.value,startTime=$('#shiftStart')?.value,endTime=$('#shiftEnd')?.value;
+  if(!date||!startTime||!endTime){alert('Date, start time, and end time are required.');return;}
+  let assignments=[...document.querySelectorAll('.assignChk:checked')].map(chk=>{let uid=Number(chk.value);let posInput=document.querySelector(`.assignPos[data-user="${uid}"]`);return {userId:uid,position:posInput?posInput.value:''};});
+  let data={operation,date,startTime,endTime,location:$('#shiftLoc')?.value||'',status:$('#shiftStatus')?.value||'Draft',notes:$('#shiftNotes')?.value||'',assignments};
+  db.scheduledShifts=db.scheduledShifts||[];
+  if(id&&id!=='new'){let s=db.scheduledShifts.find(x=>x.id===id);Object.assign(s,data);}else{db.scheduledShifts.push({id:Date.now(),...data});}
+  state.editingShiftId=null;save();render();toast('Shift saved.');
+};
+window.duplicateShift=(id)=>{let s=db.scheduledShifts.find(x=>x.id===id);if(!s)return;db.scheduledShifts.push(Object.assign(JSON.parse(JSON.stringify(s)),{id:Date.now(),status:'Draft'}));save();render();toast('Shift duplicated.');};
+window.toggleShiftPublish=(id)=>{let s=db.scheduledShifts.find(x=>x.id===id);if(!s)return;s.status=s.status==='Published'?'Draft':'Published';save();render();};
+window.deleteShift=(id)=>{if(!confirm('Delete this scheduled shift?'))return;db.scheduledShifts=db.scheduledShifts.filter(x=>x.id!==id);save();render();};
+window.exportScheduleCSV=()=>{
+  let rows=[['Position','Date','Operation','Start','End','Location','Status','Student','Notes']];
+  let shifts=(db.scheduledShifts||[]).slice().sort((a,b)=>shiftDateTime(a)-shiftDateTime(b));
+  let byPosition={};
+  shifts.forEach(s=>{
+    let assignments=(s.assignments&&s.assignments.length)?s.assignments:[{userId:null,position:''}];
+    assignments.forEach(a=>{
+      let pos=a.position||'Unassigned';
+      let u=db.users.find(x=>x.id===a.userId);
+      (byPosition[pos]=byPosition[pos]||[]).push({shift:s,studentName:u?u.name:''});
+    });
+  });
+  Object.keys(byPosition).sort().forEach(pos=>{
+    rows.push([`== ${pos} ==`]);
+    byPosition[pos].forEach(({shift:s,studentName})=>rows.push([pos,s.date,s.operation,s.startTime,s.endTime,s.location||'',s.status,studentName,s.notes||'']));
+    rows.push([]);
+  });
+  downloadCSV('guthrie-rms-schedule.csv',rows);
+};
+
+// ---- End of Day Closeout ----
+function closeout(){
+  let today=new Date().toISOString().slice(0,10);
+  let todaysOrders=db.orders.filter(o=>o.paid&&(o.paidAt||'').slice(0,10)===today);
+  let sales=todaysOrders.reduce((a,o)=>a+total(o),0);
+  let byPayment={};todaysOrders.forEach(o=>{let t=(o.payment&&o.payment.type)||'Unknown';byPayment[t]=(byPayment[t]||0)+total(o);});
+  let alreadyClosed=(db.dailyCloseouts||[]).find(c=>c.date===today);
+  return `<section class="card"><h1>End of Day Closeout</h1>
+    <div class="stats"><div><b>${money(sales)}</b><span>Today's Sales</span></div><div><b>${todaysOrders.length}</b><span>Orders</span></div></div>
+    <table class="report-table"><tr><th>Payment Type</th><th>Total</th></tr>${Object.entries(byPayment).map(([t,v])=>`<tr><td>${t}</td><td>${money(v)}</td></tr>`).join('')||'<tr><td colspan="2">No paid orders yet today.</td></tr>'}</table>
+    ${alreadyClosed?`<div class="notice">Closed out today at ${new Date(alreadyClosed.closedAt).toLocaleTimeString()} by ${alreadyClosed.closedBy}.</div>`:`<label>Counted Cash Drawer<input id="closeoutCash" type="number" step="0.01" class="input"></label><label>Notes<textarea id="closeoutNotes" class="input"></textarea></label><button class="primary success" onclick="submitCloseout()">Submit Closeout</button>`}
+    <h2>Recent Closeouts</h2>
+    <table class="report-table"><tr><th>Date</th><th>Sales</th><th>Counted Cash</th><th>By</th></tr>${(db.dailyCloseouts||[]).slice(-10).reverse().map(c=>`<tr><td>${c.date}</td><td>${money(c.sales)}</td><td>${money(c.countedCash)}</td><td>${c.closedBy}</td></tr>`).join('')||'<tr><td colspan="4">No closeouts recorded yet.</td></tr>'}</table>
+  </section>`;
+}
+window.submitCloseout=()=>{
+  let today=new Date().toISOString().slice(0,10);
+  let todaysOrders=db.orders.filter(o=>o.paid&&(o.paidAt||'').slice(0,10)===today);
+  let sales=todaysOrders.reduce((a,o)=>a+total(o),0);
+  let countedCash=Number($('#closeoutCash')?.value)||0;
+  db.dailyCloseouts=db.dailyCloseouts||[];
+  db.dailyCloseouts.push({id:Date.now(),date:today,sales,countedCash,notes:$('#closeoutNotes')?.value||'',closedBy:state.user.name,closedAt:now()});
+  save();render();toast('Day closed out.');
+};
+
+// ---- Settings ----
+function setup(){
+  const tabs=[
+    ['business','Business','Name, subtitle, and demo mode'],
+    ['theme','Theme &amp; Appearance','Colors, fonts, and layout'],
+    ['users','Users','Managers, teachers, and students'],
+    ['positions','Positions','Job titles used across the RMS'],
+    ['vendors','Vendors','Delivery and ordering vendors'],
+    ['locations','Storage Locations','Inventory storage locations'],
+    ['operations','Operations','Scheduling operation types'],
+    ['kms','KMS Stations','Kitchen station routing'],
+    ['data','Data','Reset local demo data']
+  ];
+  state.settingsTab = state.settingsTab || 'business';
+  return `<section class="settings-shell">
+    <aside class="settings-sidebar">
+      <div class="settings-sidebar-head"><h2>Settings</h2><p>Manager configuration center</p></div>
+      ${tabs.map(([key,label,desc])=>`<button class="settings-nav ${state.settingsTab===key?'active':''}" onclick="state.settingsTab='${key}';render()"><strong>${label}</strong><span>${desc}</span></button>`).join('')}
+    </aside>
+    <div class="settings-content">${settingsPage(state.settingsTab)}</div>
+  </section>`;
+}
+function settingsPage(tab){
+  if(tab==='business') return settingsBusiness();
+  if(tab==='theme') return settingsTheme();
+  if(tab==='users') return settingsUsers();
+  if(tab==='positions') return settingsPositions();
+  if(tab==='vendors') return settingsListEditor('vendors','Vendors','Vendor');
+  if(tab==='locations') return settingsListEditor('inventoryLocations','Storage Locations','Location');
+  if(tab==='operations') return settingsListEditor('operations','Operations','Operation');
+  if(tab==='kms') return settingsListEditor('kmsStations','KMS Stations','Station');
+  if(tab==='data') return settingsData();
+  return '';
+}
+function settingsBusiness(){
+  let s=db.settings;
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>Business</h1><p>Name and mode shown across the RMS.</p></div>
+    <div class="settings-card">
+      <div class="setting-row"><div><b>Business Name</b><p>Shown on login and the top navigation.</p></div><input class="input" value="${s.businessName||''}" onchange="db.settings.businessName=this.value;save();render()"></div>
+      <div class="setting-row"><div><b>Subtitle</b><p>Shown under the business name on login.</p></div><input class="input" value="${s.businessSubtitle||''}" onchange="db.settings.businessSubtitle=this.value;save();render()"></div>
+      <div class="setting-row"><div><b>Low Stock Threshold</b><p>Used for inventory alerts.</p></div><input class="input" type="number" value="${s.lowStockThreshold||0}" onchange="db.settings.lowStockThreshold=Number(this.value)||0;save();render()"></div>
+      <button class="toggle-button ${s.demoMode?'on':''}" onclick="db.settings.demoMode=!db.settings.demoMode;save();render()"><span></span>${s.demoMode?'Demo Mode ON':'Live Mode ON'}</button>
+      <div class="mode-banner ${s.demoMode?'demo':'live'}">${s.demoMode?'DEMO MODE - PIN HINTS SHOWN ON LOGIN':'LIVE MODE - PIN HINTS HIDDEN'}</div>
+    </div>
+  </div>`;
+}
+function settingsTheme(){
+  let t=db.settings.theme;
+  const colorField=(key,label)=>`<label>${label}<input type="color" class="theme-color" value="${t[key]}" onchange="db.settings.theme['${key}']=this.value;save();render()"></label>`;
+  let fontOptions=["Arial, Helvetica, sans-serif","Georgia, serif","'Trebuchet MS', sans-serif","'Segoe UI', sans-serif","'Times New Roman', serif"];
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>Theme &amp; Appearance</h1><p>Customize colors, fonts, and layout without editing code.</p></div>
+    <div class="settings-card">
+      <div class="theme-control-grid">
+        ${colorField('primary','Primary')}
+        ${colorField('accent','Accent')}
+        ${colorField('success','Success')}
+        ${colorField('danger','Danger')}
+        ${colorField('headerBackground','Header Background')}
+        ${colorField('pageBackground','Page Background')}
+        ${colorField('surface','Card / Surface')}
+        ${colorField('text','Text')}
+        <label>Font Family<select class="input" onchange="db.settings.theme.font=this.value;save();render()">${fontOptions.map(f=>`<option value="${f}" ${t.font===f?'selected':''}>${f.split(',')[0].replace(/'/g,'')}</option>`).join('')}</select></label>
+        <label>Card Radius<input class="input" type="range" min="0" max="30" value="${t.cardRadius}" onchange="db.settings.theme.cardRadius=Number(this.value);save();render()"></label>
+        <label>Button Radius<input class="input" type="range" min="0" max="30" value="${t.buttonRadius}" onchange="db.settings.theme.buttonRadius=Number(this.value);save();render()"></label>
+        <label>Background Style<select class="input" onchange="db.settings.theme.backgroundStyle=this.value;save();render()"><option value="solid" ${t.backgroundStyle==='solid'?'selected':''}>Solid</option><option value="soft" ${t.backgroundStyle==='soft'?'selected':''}>Soft Gradient</option><option value="subtle" ${t.backgroundStyle==='subtle'?'selected':''}>Subtle Dotted</option></select></label>
+      </div>
+      <button class="small-btn danger" onclick="db.settings.theme=Object.assign({},themeDefaults);save();render();toast('Theme reset to Guthrie default.')">Reset to Guthrie Default</button>
+      <div class="theme-preview section">
+        <div class="theme-preview-header">${db.settings.businessName||'Guthrie RMS'}</div>
+        <div class="theme-preview-body"><div class="theme-preview-card"><b>Live Preview</b><p>This is how cards will look with your selected theme.</p><button class="primary">Sample Button</button></div></div>
+      </div>
+    </div>
+  </div>`;
+}
+window.filterUsersByName=(val)=>{
+  state.userSearch=val;render();
+  let el=$('#userSearchInput');
+  if(el){el.focus();let pos=val.length;el.setSelectionRange(pos,pos);}
+};
+function settingsUsers(){
+  let extra = state.userEditId? userEditForm(state.userEditId) : (state.addingUser? userAddForm() : '');
+  let search=(state.userSearch||'').trim().toLowerCase();
+  let blockFilter=state.userBlockFilter||'';
+  let blocks=[...new Set(db.users.map(u=>u.block).filter(Boolean))].sort();
+  let filtered=db.users.filter(u=>{
+    if(search&&!u.name.toLowerCase().includes(search))return false;
+    if(blockFilter&&u.block!==blockFilter)return false;
+    return true;
+  });
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>Users</h1><p>Managers, teachers, and students who can log in with a PIN.</p></div>
+    <div class="settings-card">
+      <div class="row"><button class="primary success" onclick="state.addingUser=true;state.userEditId=null;render()">Add User</button></div>
+      <div class="row">
+        <label>Search by name<input id="userSearchInput" class="input" placeholder="Type a student or staff name" value="${search?state.userSearch:''}" oninput="filterUsersByName(this.value)"></label>
+        <label>Block<select id="userBlockFilter" class="input" onchange="state.userBlockFilter=this.value;render()"><option value="">All Blocks</option>${blocks.map(b=>`<option value="${b}" ${blockFilter===b?'selected':''}>Block ${b}</option>`).join('')}</select></label>
+        ${(search||blockFilter)?`<button class="small-btn" onclick="state.userSearch='';state.userBlockFilter='';render()">Clear Filters</button>`:''}
+      </div>
+      ${extra}
+      <table class="report-table"><tr><th>Name</th><th>Role</th><th>Position</th><th>Block</th><th>Teacher</th><th>PIN</th><th>Active</th><th>Actions</th></tr>
+      ${filtered.map(u=>{let teacherName=u.role==='student'?(db.users.find(t=>t.id===u.teacherId)?.name||'Unassigned'):'';return `<tr><td>${u.name}</td><td>${u.role}</td><td>${u.pos||''}</td><td>${u.block||''}</td><td>${teacherName}</td><td>${u.pin}</td><td>${u.active?'Yes':'No'}</td><td><div class="row"><button class="small-btn" onclick="state.userEditId=${u.id};state.addingUser=false;render()">Edit</button><button class="small-btn danger" onclick="deleteUser(${u.id})">Delete</button></div></td></tr>`;}).join('')}
+      </table>
+      ${filtered.length===0?'<p>No users match your search.</p>':''}
+    </div>
+  </div>`;
+}
+function teacherOptionsHtml(selectedId){
+  let teachers=db.users.filter(u=>u.role==='teacher');
+  return `<option value="">Unassigned</option>${teachers.map(t=>`<option value="${t.id}" ${String(selectedId)===String(t.id)?'selected':''}>${t.name}</option>`).join('')}`;
+}
+window.toggleNewUserTeacherField=()=>{
+  let role=$('#newUserRole')?.value;
+  let box=$('#newUserTeacherField');
+  if(!box)return;
+  box.innerHTML=role==='student'?`<label>Teacher<select id="newUserTeacher" class="input">${teacherOptionsHtml('')}</select></label><label>Block<input id="newUserBlock" class="input" placeholder="A, B, C..."></label>`:'';
+};
+function userAddForm(){
+  return `<div class="section panel"><h3>Add User</h3><div class="form-grid">
+    <label>Name<input id="newUserName" class="input"></label>
+    <label>Role<select id="newUserRole" class="input" onchange="toggleNewUserTeacherField()"><option value="manager">Manager</option><option value="teacher">Teacher</option><option value="student">Student</option></select></label>
+    <label>Position<select id="newUserPos" class="input">${db.positions.map(p=>`<option>${p}</option>`).join('')}</select></label>
+    <label>PIN<input id="newUserPin" class="input" inputmode="numeric"></label>
+    <div id="newUserTeacherField"></div>
+  </div>
+  <div class="row"><button class="primary success" onclick="saveNewUser()">Add User</button><button class="small-btn" onclick="state.addingUser=false;render()">Cancel</button></div></div>`;
+}
+window.saveNewUser=()=>{
+  let name=$('#newUserName')?.value.trim();let role=$('#newUserRole')?.value;let pos=$('#newUserPos')?.value;let pin=$('#newUserPin')?.value.trim();
+  if(!name||!pin){alert('Name and PIN are required.');return;}
+  if(db.users.some(u=>u.pin===pin)){alert('That PIN is already in use.');return;}
+  let u={id:Date.now(),name,pin,role,pos,active:true};
+  if(role==='student'){u.studentId=pin;u.teacherId=Number($('#newUserTeacher')?.value)||'';u.block=$('#newUserBlock')?.value.trim()||'';u.inventoryScope='assigned';}
+  else if(role==='teacher'){u.inventoryScope='culinary';}
+  else{u.inventoryScope='all';}
+  normalizeAccessForUser(u);
+  db.users.push(u);
+  state.addingUser=false;save();render();toast('User added.');
+};
+function userEditForm(id){
+  let u=db.users.find(x=>x.id===id);if(!u)return'';
+  return `<div class="section panel"><h3>Edit User</h3><div class="form-grid">
+    <label>Name<input id="editUserName" class="input" value="${u.name}"></label>
+    <label>Position<select id="editUserPos" class="input">${db.positions.map(p=>`<option ${u.pos===p?'selected':''}>${p}</option>`).join('')}</select></label>
+    <label>PIN<input id="editUserPin" class="input" value="${u.pin}"></label>
+    <label>Active<select id="editUserActive" class="input"><option value="true" ${u.active!==false?'selected':''}>Active</option><option value="false" ${u.active===false?'selected':''}>Inactive</option></select></label>
+    ${u.role==='student'?`<label>Teacher<select id="editUserTeacher" class="input">${teacherOptionsHtml(u.teacherId)}</select></label><label>Block<input id="editUserBlock" class="input" value="${u.block||''}" placeholder="A, B, C..."></label>`:''}
+  </div>
+  <div class="row"><button class="primary success" onclick="saveUserEdit(${id})">Save</button><button class="small-btn danger" onclick="deleteUser(${id})">Delete</button><button class="small-btn" onclick="state.userEditId=null;render()">Cancel</button></div></div>`;
+}
+window.saveUserEdit=(id)=>{
+  let u=db.users.find(x=>x.id===id);if(!u)return;
+  let pin=$('#editUserPin')?.value.trim();
+  if(db.users.some(x=>x.pin===pin&&x.id!==id)){alert('That PIN is already in use.');return;}
+  u.name=$('#editUserName')?.value.trim()||u.name;u.pos=$('#editUserPos')?.value||u.pos;u.pin=pin||u.pin;u.active=$('#editUserActive')?.value==='true';
+  if(u.role==='student'){u.studentId=u.pin;u.teacherId=Number($('#editUserTeacher')?.value)||'';u.block=$('#editUserBlock')?.value.trim()||'';}
+  state.userEditId=null;save();render();toast('User saved.');
+};
+window.deleteUser=(id)=>{let u=db.users.find(x=>x.id===id);if(!u)return;if(u.id===state.user.id){alert('You cannot delete the account you are logged in as.');return;}if(!confirm(`Delete ${u.name}?`))return;
+  if(u.role==='teacher'){db.users.forEach(x=>{if(x.teacherId===id)x.teacherId='';});}
+  db.users=db.users.filter(x=>x.id!==id);save();render();toast('User removed.');
+};
+function settingsPositions(){
+  return `<div class="settings-page"><div class="settings-page-head"><h1>Positions</h1><p>Job titles used for staffing and scheduling.</p></div>
+    <div class="settings-card"><div class="row"><input class="input" id="newPosition" placeholder="Add position"><button class="primary success" onclick="addPosition()">Add</button></div>
+    <div class="settings-list">${db.positions.map((p,i)=>`<div class="settings-list-row"><span>${p}</span><button class="small-btn danger" onclick="removePosition(${i})">Remove</button></div>`).join('')}</div></div></div>`;
+}
+window.addPosition=()=>{let v=$('#newPosition')?.value.trim();if(!v)return;if(db.positions.includes(v)){alert('That position already exists.');return;}db.positions.push(v);save();render();};
+window.removePosition=(i)=>{if(!confirm('Remove this position?'))return;db.positions.splice(i,1);save();render();};
+function settingsListEditor(field,title,singular){
+  let list=db.settings[field]||[];
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>${title}</h1><p>Used throughout the RMS wherever a ${singular.toLowerCase()} is selected.</p></div>
+    <div class="settings-card">
+      <div class="row"><input class="input" id="newListItem" placeholder="Add ${singular}"><button class="primary success" onclick="addSettingsListItem('${field}')">Add</button></div>
+      <div class="settings-list">${list.map((x,i)=>`<div class="settings-list-row"><span>${x}</span><button class="small-btn danger" onclick="removeSettingsListItem('${field}',${i})">Remove</button></div>`).join('')||'<div class="settings-list-row"><span class="small">None added yet.</span></div>'}</div>
+    </div>
+  </div>`;
+}
+window.addSettingsListItem=(field)=>{let v=$('#newListItem')?.value.trim();if(!v)return;db.settings[field]=db.settings[field]||[];if(db.settings[field].includes(v)){alert('That already exists.');return;}db.settings[field].push(v);save();render();toast('Added.');};
+window.removeSettingsListItem=(field,i)=>{if(!confirm('Remove this item?'))return;db.settings[field].splice(i,1);save();render();toast('Removed.');};
+function settingsData(){
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>Data</h1><p>Local demo data stored in this browser only.</p></div>
+    <div class="settings-card">
+      <p>This resets the RMS 2.0 test copy in this browser (the live RMS is not touched) (orders, inventory changes, users, schedule, etc.) back to the built-in demo seed.</p>
+      <button class="primary danger" onclick="if(confirm('Reset all local demo data? This cannot be undone.')){localStorage.removeItem(RMS2_KEY);location.reload();}">Reset Local App Data</button>
+    </div>
+  </div>`;
+}
+
+window.addEventListener('error',function(e){
+  const root=document.getElementById('app');
+  if(root && !root.innerHTML.trim()){
+    root.innerHTML='<div style="font-family:Arial;padding:32px;max-width:700px;margin:auto"><h1 style="color:#003DA5">Guthrie RMS</h1><h2>We could not load the RMS.</h2><p>Please refresh the page. If the issue continues, use the Reset Local App Data button below. This resets only this browser\'s locally saved RMS prototype data.</p><button style="padding:12px 18px;background:#003DA5;color:white;border:0;border-radius:10px" onclick="localStorage.removeItem(\'guthrieRMS2\');location.reload()">Reset Local App Data</button></div>';
+  }
+});
+
+// ---- RMS 2.0: BriskTable POS test ----
+// Exports this copy's menu, inventory, tables, staff and catering packages in files that can be
+// imported or entered into BriskTable, and opens the BriskTable POS beside the RMS.
+// Staff exports never include PINs or student IDs (student IDs are login PINs).
+const BRISKTABLE_DEFAULT_URL='https://www.brisktable.com/apps/pos?id=2tqcnby00k';
+const btEsc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+const btMenuName=m=>({cafe:'Café',bistro:'Bistro',exemption:'Exemption Day'})[m]||m||'';
+function btUrl(){return (db.brisktable&&db.brisktable.url)||BRISKTABLE_DEFAULT_URL;}
+function btMods(m){return (m.mods||[]).map(md=>{let up=Number(m.modPrices?.[md])||0;return up?`${md} (+${money(up)})`:md;});}
+function btMenuItems(includeInactive){return (db.menu||[]).filter(m=>includeInactive||m.active!==false);}
+function btData(){
+  return {
+    exportedAt:now(),
+    source:'Guthrie RMS 2.0',
+    menu:btMenuItems(false).map(m=>({id:m.id,name:m.name,price:Number(m.price)||0,category:m.category||'',menu:btMenuName(m.menu),services:m.services||['table','counter','togo'],modifiers:(m.mods||[]).map(md=>({name:md,price:Number(m.modPrices?.[md])||0}))})),
+    inventory:(db.inventory||[]).map(i=>({name:i.name,division:i.division||'',vendor:i.vendor||'',location:i.location||'',unit:i.unit||'',onHand:Number(i.onHand)||0,par:Number(i.par)||0,barcode:i.barcode||''})),
+    tables:(db.tables||[]).map(t=>({table:t.id,seats:Number(t.seats)||0})),
+    staff:(db.users||[]).filter(u=>u.active!==false).map(u=>({name:u.name,role:u.role,position:u.pos||''})),
+    cateringPackages:(db.cateringMenus||[]).map(c=>({name:c.name,price:Number(c.price)||0,description:c.description||'',items:c.items||[]}))
+  };
+}
+window.btExport=kind=>{
+  let d=btData(), day=new Date().toISOString().slice(0,10);
+  if(kind==='json'){
+    let blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}), url=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=url;a.download=`guthrie-rms-brisktable-${day}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);return;
+  }
+  if(kind==='menu')downloadCSV(`brisktable-menu-${day}.csv`,[['Item Name','Category','Menu','Price','Modifiers','Services'],...d.menu.map(m=>[m.name,m.category,m.menu,m.price.toFixed(2),m.modifiers.map(x=>x.price?`${x.name} (+${money(x.price)})`:x.name).join('; '),m.services.join('; ')])]);
+  if(kind==='modifiers')downloadCSV(`brisktable-modifiers-${day}.csv`,[['Item Name','Modifier','Extra Price'],...d.menu.flatMap(m=>m.modifiers.map(x=>[m.name,x.name,x.price.toFixed(2)]))]);
+  if(kind==='inventory')downloadCSV(`brisktable-inventory-${day}.csv`,[['Item','Division','Vendor','Location','Unit','On Hand','Par','Barcode'],...d.inventory.map(i=>[i.name,i.division,i.vendor,i.location,i.unit,i.onHand,i.par,i.barcode])]);
+  if(kind==='tables')downloadCSV(`brisktable-tables-${day}.csv`,[['Table','Seats'],...d.tables.map(t=>[t.table,t.seats])]);
+  if(kind==='staff')downloadCSV(`brisktable-staff-${day}.csv`,[['Name','Role','Position'],...d.staff.map(s=>[s.name,s.role,s.position])]);
+  if(kind==='catering')downloadCSV(`brisktable-catering-${day}.csv`,[['Package','Price','Description','Items'],...d.cateringPackages.map(c=>[c.name,c.price.toFixed(2),c.description,c.items.join('; ')])]);
+  toast('Export downloaded.');
+};
+window.btCopyMenu=()=>{
+  let text=btMenuItems(false).map(m=>`${m.name}\t${btMenuName(m.menu)}\t${m.category||''}\t${(Number(m.price)||0).toFixed(2)}\t${btMods(m).join('; ')}`).join('\n');
+  let done=()=>toast('Menu copied. Paste it into BriskTable or a spreadsheet.');
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done,()=>alert('Copy was blocked by the browser. Use Menu CSV instead.'));
+  else alert('Copy is not available in this browser. Use Menu CSV instead.');
+};
+window.btSaveUrl=()=>{
+  let v=(document.getElementById('bt-url')?.value||'').trim();
+  if(v&&!/^https:\/\//i.test(v)){alert('Enter a link that starts with https://');return;}
+  db.brisktable=db.brisktable||{}; db.brisktable.url=v||BRISKTABLE_DEFAULT_URL; save(); render(); toast('BriskTable link saved.');
+};
+window.btToggleEmbed=()=>{state.btEmbed=!state.btEmbed;render();};
+// Loader for BriskTable: BriskTable has no file import, and its add-category / add-product calls only
+// work in a browser signed in to BriskTable. This builds a script (with the current menu inside it)
+// to paste into the browser console on the signed-in BriskTable POS page. It uses the same calls as
+// BriskTable's own Add Category / Add Product forms, and skips anything already there (matched by
+// the RMS code, e.g. RMS-205, or by name for items added in BriskTable by hand) so it is safe to run again.
+// Section shown by the iPad POS add-on (stored as the BriskTable item Description).
+const BT_SECTIONS={'Breakfast Tacos (All Day)':'Breakfast','Handhelds':'Entrées','Greens & Bowls':'Entrées','Weekly Chef Special':'Entrées','Entree':'Entrées','Lunch Entrées (B, C & D Block)':'Entrées','Sides':'Sides','Bake Shop':'Bakery & Desserts','Dessert':'Bakery & Desserts','Fresh Baked Cinnamon Rolls':'Bakery & Desserts','Beverage':'Drinks','Beverages':'Drinks','Coffee & Espresso':'Drinks','Other Beverages':'Drinks','Holiday Latte Collection':'Drinks','Holiday Specials':'Drinks','Catering':'Catering'};
+function btSection(m){return BT_SECTIONS[m.category]||'';}
+function btLoaderData(){
+  let items=btMenuItems(false).map(m=>({code:'RMS-'+m.id,name:m.name,category:btMenuName(m.menu)||'Menu',price:Number(m.price)||0,description:btSection(m)}));
+  let seen={}, mods=[];
+  btMenuItems(false).forEach(m=>(m.mods||[]).forEach(md=>{let price=Number(m.modPrices?.[md])||0, k=md+'|'+price; if(seen[k])return; seen[k]=1; mods.push({code:'RMS-MOD-'+(mods.length+1),name:price?`${md} (+${money(price)})`:md,category:'RMS Modifiers',price,description:''});}));
+  return {items,mods};
+}
+function btLoaderScript(){
+  let d=btLoaderData();
+  let rid=(btUrl().match(/[?&]id=([^&#]+)/)||[])[1]||'';
+  return `/* Guthrie RMS 2.0 -> BriskTable menu loader. Paste on your signed-in BriskTable POS page. */
+(async()=>{
+const DATA=${JSON.stringify(d)};
+const RID=(new URLSearchParams(location.search).get('id'))||${JSON.stringify(rid)};
+if(!/(^|\\.)brisktable\\.com$/.test(location.hostname)&&!window.__BT_TEST){alert('Run this on your BriskTable POS page (www.brisktable.com), signed in.');return;}
+const call=async(url,body,form)=>{const h={'X-AJAX':'true'};if(!form)h['Content-type']='application/x-www-form-urlencoded';const r=await fetch(url,{method:'POST',credentials:'same-origin',headers:h,body});if(r.status===401)throw new Error('Not signed in to BriskTable. Sign in, open the POS, and run this again.');const t=await r.text();let j;try{j=JSON.parse(t)}catch(e){throw new Error('BriskTable sent an unexpected reply for '+url)}if(j&&j.errorcode>=300&&j.errorcode!==200)throw new Error((j.errormsg||'BriskTable error')+' ('+url+')');return j;};
+const q=o=>Object.entries(o).map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
+const addMods=DATA.mods.length&&confirm('Add '+DATA.items.length+' menu items to BriskTable restaurant '+RID+'.\\n\\nAlso add the '+DATA.mods.length+' RMS modifiers as BriskTable modifiers? (OK = yes, Cancel = items only)');
+const list=DATA.items.concat(addMods?DATA.mods.map(m=>({...m,isMod:1})):[]);
+const cats=((await call('/api/category/fetch','')).data||[]);
+const catId={};cats.forEach(c=>catId[String(c.name).trim().toLowerCase()]=c.id);
+const taxes=await call('/api/pos/taxesfetch?restaurant_id='+encodeURIComponent(RID),'');
+const taxId=(taxes&&taxes.default_tax_id)||'';
+const have=new Set();
+for(const mod of [0,1]){const r=await call('/api/product/fetch?restaurant_id='+encodeURIComponent(RID)+'&pagesize=10000&page=1&modifiers='+mod,'');(r.rproducts||[]).forEach(p=>{const c=String(p.code||'');if(/^RMS-/i.test(c))have.add('c:'+c.toLowerCase());else have.add('n:'+String(p.name).trim().toLowerCase());});}
+let added=0,skipped=0,newCats=0;const failed=[];
+for(const it of list){
+  if(have.has('c:'+it.code.toLowerCase())||have.has('n:'+it.name.trim().toLowerCase())){skipped++;continue;}
+  try{
+    const ck=it.category.trim().toLowerCase();
+    if(!catId[ck]){const r=await call('/api/category/add',JSON.stringify({name:it.category,description:''}));let id=r&&(r.key||r.id);if(!id){const f=((await call('/api/category/fetch','')).data||[]).find(c=>String(c.name).trim().toLowerCase()===ck);id=f&&f.id;}if(!id)throw new Error('Category '+it.category+' was not created');catId[ck]=id;newCats++;}
+    const p={name:it.name,code:it.code,description:it.description,price:String(Math.round(it.price*100)),tax_id:taxId,is_modifier:it.isMod?1:0,is_visible:1,data:JSON.stringify({rcategories:[String(catId[ck])]}),restaurant_id:RID};
+    const r=await call('/api/product/add?'+q(p),new FormData(),true);
+    if(r.errorcode!==200)throw new Error(r.errormsg||'not added');
+    added++;have.add('c:'+it.code.toLowerCase());
+  }catch(e){failed.push(it.name+': '+e.message);if(/Not signed in/.test(e.message))break;}
+}
+['POSCategoryList'].concat(Object.keys(localStorage).filter(k=>k.includes('POSProductList')||k==='POSModifierList')).forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
+const msg='BriskTable load finished.\\nAdded: '+added+' items, '+newCats+' new categories\\nAlready there (skipped): '+skipped+(failed.length?'\\nNot added: '+failed.length+'\\n - '+failed.slice(0,15).join('\\n - '):'')+'\\n\\nReload the page to see them.';
+console.log(msg);if(failed.length)console.log(failed);alert(msg);
+})().catch(e=>{console.error(e);alert('BriskTable load stopped: '+e.message);});`;
+}
+window.btCopyLoader=()=>{
+  let text=btLoaderScript();
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(()=>toast('Loader copied. Paste it on your BriskTable page (see steps).'),()=>btDownloadLoader());
+  else btDownloadLoader();
+};
+window.btDownloadLoader=()=>{
+  let blob=new Blob([btLoaderScript()],{type:'text/javascript'}), url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url;a.download='brisktable-loader.js';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('Loader downloaded. Open it, copy everything, and paste it on your BriskTable page.');
+};
+views.brisktable=()=>{
+  let items=btMenuItems(false), groups={};
+  items.forEach(m=>{let k=btMenuName(m.menu)||'Other';(groups[k]=groups[k]||[]).push(m);});
+  let url=btUrl();
+  return `<section class="card bt-screen">
+    <h1>BriskTable POS Test</h1>
+    <p class="notice">This is the RMS 2.0 test copy. It started from the live RMS data, but nothing done here changes the live Guthrie RMS.</p>
+    <h3>BriskTable link</h3>
+    <div class="row"><input class="input" id="bt-url" value="${btEsc(url)}" style="flex:1;min-width:240px"><button class="small-btn" onclick="btSaveUrl()">Save Link</button></div>
+    <div class="row section"><a class="primary" style="text-decoration:none;display:inline-block" href="${btEsc(url)}" target="_blank" rel="noopener">Open BriskTable POS ↗</a><button class="small-btn" onclick="btToggleEmbed()">${state.btEmbed?'Hide':'Show'} BriskTable here</button></div>
+    ${state.btEmbed?`<p class="small">If this box stays blank, BriskTable doesn't allow being shown inside other sites. Use Open BriskTable POS instead.</p><iframe src="${btEsc(url)}" title="BriskTable POS" style="width:100%;height:70vh;border:1px solid #ccc;border-radius:10px;background:#fff"></iframe>`:''}
+    <h3>Load the menu into BriskTable</h3>
+    <p class="small">BriskTable has no file import, so this loader adds the items for you while you're signed in. It puts each item in its menu's category (Exemption Day, Bistro or Café), gives each item an RMS code (RMS-205), and skips anything already there, so it is safe to run again.</p>
+    <ol class="small">
+      <li>On a computer (Chrome or Edge), sign in to BriskTable and open your POS page.</li>
+      <li>Here, click <b>Copy BriskTable Loader</b>.</li>
+      <li>On the BriskTable page press <b>F12</b> (Mac: <b>Cmd+Option+J</b>) and choose <b>Console</b>.</li>
+      <li>Paste and press Enter. If Chrome asks, type <code>allow pasting</code>, press Enter, then paste again.</li>
+      <li>A message lists what was added. Reload BriskTable to see the menu.</li>
+    </ol>
+    <div class="row"><button class="primary" onclick="btCopyLoader()">Copy BriskTable Loader (${items.length} items)</button><button class="small-btn" onclick="btDownloadLoader()">Download Loader</button></div>
+    <p class="small">Modifiers: the loader asks whether to add the RMS modifiers as BriskTable modifiers. Attaching them to specific items is done in BriskTable (edit item, Rules tab).</p>
+    <h3>iPad POS add-on</h3>
+    <p class="small">Adds a Guest name box and groups items into sections (Entrées, Drinks, Bakery &amp; Desserts…) on the BriskTable POS screen.</p>
+    <div class="row"><a class="primary" style="text-decoration:none;display:inline-block" href="brisktable/" target="_blank" rel="noopener">iPad setup steps ↗</a></div>
+    <h3>Other downloads</h3>
+    <p class="small">Download what BriskTable needs and use its import or menu setup screens. CSV files open in Excel or Google Sheets.</p>
+    <div class="row">
+      <button class="primary" onclick="btExport('menu')">Menu CSV (${items.length} items)</button>
+      <button class="small-btn" onclick="btExport('modifiers')">Modifiers CSV</button>
+      <button class="small-btn" onclick="btCopyMenu()">Copy Menu</button>
+      <button class="small-btn" onclick="btExport('inventory')">Inventory CSV (${(db.inventory||[]).length})</button>
+      <button class="small-btn" onclick="btExport('tables')">Tables CSV (${(db.tables||[]).length})</button>
+      <button class="small-btn" onclick="btExport('staff')">Staff CSV</button>
+      <button class="small-btn" onclick="btExport('catering')">Catering CSV</button>
+      <button class="small-btn" onclick="btExport('json')">Everything (JSON)</button>
+    </div>
+    <p class="small">Staff exports list names, roles and positions only. PINs and student IDs are never exported.</p>
+    <h3>Menu being sent</h3>
+    ${Object.entries(groups).map(([g,list])=>`<h4>${btEsc(g)} (${list.length})</h4><div style="overflow-x:auto"><table class="report-table"><thead><tr><th>Item</th><th>Category</th><th>Price</th><th>Modifiers</th></tr></thead><tbody>${list.map(m=>`<tr><td>${btEsc(m.name)}</td><td>${btEsc(m.category||'')}</td><td>${money(m.price)}</td><td class="small">${btEsc(btMods(m).join(', '))}</td></tr>`).join('')}</tbody></table></div>`).join('')}
+  </section>`;
+};
+
+let _guthrieRMSStarted=false;
+window.startGuthrieRMS=function(){
+  if(_guthrieRMSStarted)return;
+  _guthrieRMSStarted=true;
+  normalizeOrders();
+  render();
+};
+setTimeout(()=>{
+  if(!_guthrieRMSStarted){
+    console.warn('Guthrie RMS: cloud sync script did not respond, starting in local-only mode.');
+    window.startGuthrieRMS();
+  }
+},7000);
