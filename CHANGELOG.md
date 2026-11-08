@@ -1,5 +1,12 @@
 # Guthrie RMS Changelog
 
+## Checkout Redesign, Veteran Discount, Holiday Latte Buttons
+- Tapping Checkout on an order now opens a payment screen for that order at the top of the page: the ticket on the left and Payment on the right (stacked on narrow screens), with a big Total Due and a "Mark Paid • $total" button. "All Orders" returns to the list and "Back to Order (Edit Items)" reopens the order to change it.
+- Before, the payment panel sat beside (or below) the order list and Find an Order results, so with many orders it was pushed off screen. The order list is now compact tiles (name, total, item count, sent or not, how long it has been open) in a scrolling box, with a count on each tab (Tables / Counter / To-Go / Catering). Find an Order and refunds are below the list.
+- Opening a screen or an order now always starts at the top of the page.
+- Veteran Free Entrée shows on the checkout ticket as a discount: the entrée at full price, then "Discount: Veteran Free Entrée −$8.00", with Subtotal, Discounts and Total. The discount amount is saved with the payment.
+- Each holiday latte has its own button on the Exemption Day tab (Peppermint Mocha, Winter Wonderland, Pumpkin Spice Latte, Chocolate Hazelnut Truffle, Caramel Pumpkin Cheesecake, Gingerbread Cookie Latte, S'mores Mocha, Brown Sugar Cinnamon Latte). The pop-up then asks Hot or Iced, plus whipped cream, drizzle and ice.
+
 ## Exemption Day Entrées: Black Beans and Simpler Options
 - Black beans are a protein choice on the lunch entrées. Tacos and Nachos: Beef, Chicken, Black Beans Only, Beef + Black Beans or Chicken + Black Beans. Rice Bowls already include black beans, so they offer Beef, Chicken or Black Beans Only.
 - Shorter option screen (about 20 buttons instead of 34) for students:
