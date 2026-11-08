@@ -1,0 +1,5 @@
+"Handle","SKU","Name","Category","Description","Sold by weight","Option 1 name","Option 1 value","Option 2 name","Option 2 value","Option 3 name","Option 3 value","Default price","Cost","Barcode","Included in composite","Use production","Supplier","Purchase cost","Track stock"
+"catering-1-executive-lunch-package","910001","Executive Lunch Package","Catering Packages","Entree salad or sandwich, dessert, and beverage. Includes: Box Lunch; Peach Tea; Cookie","N","","","","","","","12.00","","","N","N","","","N"
+"catering-2-bistro-box-lunch","910002","Bistro Box Lunch","Catering Packages","Box lunch package for staff or district events. Includes: Box Lunch; Cookie","N","","","","","","","10.00","","","N","N","","","N"
+"catering-3-dessert-tray-package","910003","Dessert Tray Package","Catering Packages","Assorted dessert tray priced per tray. Includes: Catering Dessert Tray","N","","","","","","","35.00","","","N","N","","","N"
+"catering-4-custom-catering-menu","910004","Custom Catering Menu","Catering Packages","Build a custom order using culinary menu items","N","","","","","","","","","","N","N","","","N"

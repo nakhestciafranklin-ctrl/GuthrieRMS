@@ -1,5 +1,11 @@
 # Guthrie RMS Changelog
 
+## RMS 2.0: Loyverse POS Test
+- RMS 2.0 (the POS test copy in rms-2.0/) has a Loyverse tab for managers, next to BriskTable, to try all the RMS data in Loyverse. The live RMS is not changed.
+- Items + Modifiers CSV in Loyverse's item import format, with categories like "Bistro: Handhelds" and SKUs 900000 + the RMS item number so re-importing updates the same items.
+- Modifiers Sheet CSV (30 modifiers, one per option-group name) to enter in Loyverse first, since Loyverse can't import modifiers. Veteran Free Entrée is listed as a Loyverse discount.
+- Inventory as stock items (needs the Loyverse store name), Tables, Staff (no PINs or student IDs), Catering and JSON downloads.
+
 ## Holiday Specials on the Café Menu; Iced Drinks
 - The Café Menu tab has a Holiday Specials section at the top with the 8 holiday lattes ($3 each). Each asks Hot or Iced, then whipped cream, drizzle and ice. They are separate from the Exemption Day lattes, so each menu keeps its own daily pars.
 - Horchata no longer asks Hot or Iced; like Peach Tea and Hibiscus Lime Agua Fresca it comes iced and can be added with no choices (ice and garnish options are still there).
