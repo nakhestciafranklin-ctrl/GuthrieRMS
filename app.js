@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026110808;
+window.GUTHRIE_RMS_VERSION=2026110809;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -1102,7 +1102,7 @@ window.toggleModOption=btn=>{
   btn.classList.toggle('selected');
   if(g)g.classList.remove('missing');
 };
-function modifierModal(menuId,seat){let m=db.menu.find(x=>x.id===menuId); if(!m||isMenu86(m)){alert('This item is currently 86\'d or unavailable.');return;} app.insertAdjacentHTML('beforeend',`<div class="modal" id="mod"><div class="card"><h2>${m.name} &bull; ${money(m.price)}</h2><p class="small">Remaining today: ${productionRemaining(m.id)}</p>${modGroupsHtml(m)}<h3>Custom Note</h3><input class="input" id="note" placeholder="Optional"><h3>Quantity</h3><div class="row qty-picker"><button class="small-btn" onclick="stepQty(-1)">&minus;</button><input class="input" id="qty" type="number" min="1" step="1" inputmode="numeric" value="1"><button class="small-btn" onclick="stepQty(1)">+</button></div><div class="row section"><button class="primary" onclick="addItem(${menuId},${seat})">Add Item</button><button class="primary danger" onclick="document.getElementById('mod').remove()">Cancel</button></div></div></div>`)}
+function modifierModal(menuId,seat){let m=db.menu.find(x=>x.id===menuId); if(!m||isMenu86(m)){alert('This item is currently 86\'d or unavailable.');return;} app.insertAdjacentHTML('beforeend',`<div class="modal" id="mod"><div class="card"><div class="mod-head">${menuThumb(m,'mod-thumb')}<h2>${m.name} &bull; ${money(m.price)}</h2></div><p class="small">Remaining today: ${productionRemaining(m.id)}</p>${modGroupsHtml(m)}<h3>Custom Note</h3><input class="input" id="note" placeholder="Optional"><h3>Quantity</h3><div class="row qty-picker"><button class="small-btn" onclick="stepQty(-1)">&minus;</button><input class="input" id="qty" type="number" min="1" step="1" inputmode="numeric" value="1"><button class="small-btn" onclick="stepQty(1)">+</button></div><div class="row section"><button class="primary" onclick="addItem(${menuId},${seat})">Add Item</button><button class="primary danger" onclick="document.getElementById('mod').remove()">Cancel</button></div></div></div>`)}
 window.modifierModal=modifierModal; window.addItem=(menuId,seat)=>{let o=db.orders.find(x=>x.id===state.activeOrder), m=db.menu.find(x=>x.id===menuId); if(!o||!m)return;
   let missing=[...document.querySelectorAll('#mod .mod-group[data-required="1"]')].filter(g=>!g.querySelector('.modifier-list .selected'));
   if(missing.length){missing.forEach(g=>g.classList.add('missing'));missing[0].scrollIntoView({block:'center'});alert('Please choose: '+missing.map(g=>g.dataset.name).join(', '));return;}
@@ -1692,6 +1692,23 @@ function menuTabFor(o){return o.type==='table'?'bistro':(state.menuTab||'cafe');
 function menuOf(m){return m.menu||'bistro';}
 // Items with a sortOrder (the Exemption Day menu) list in menu order; others keep their order.
 function menuSorted(items){let key=([m,i])=>m.sortOrder!=null?1e6+Number(m.sortOrder):i;return items.map((m,i)=>[m,i]).sort((a,b)=>key(a)-key(b)).map(x=>x[0]);}
+// ---- Menu pictures ----
+// Photos (assets/menu, cropped from the Exemption Day menus) by menu item id; every other item
+// gets a food icon picked from its name, so each button has a picture for students.
+const menuPhotoIds={
+ 'breakfast-taco':[301,302,303],'cinnamon-roll-classic':[304],'cinnamon-roll-pumpkin':[310],'tacos':[311],'nachos':[312],'rice-bowl':[313],
+ 'peppermint-mocha':[321,115],'winter-wonderland':[322,116],'pumpkin-spice-latte':[323,117],'chocolate-hazelnut-truffle':[324,118],
+ 'caramel-pumpkin-cheesecake':[325,119],'gingerbread-cookie-latte':[326,120],'smores-mocha':[327,121],'brown-sugar-cinnamon-latte':[328,122],
+ 'latte':[305,113,223],'cappuccino':[319],'americano':[306,114,224],'horchata':[320],'agua-fresca':[308],'peach-tea':[307,212],
+ 'cookie':[101,216],'brownie':[219]
+};
+const menuPhotos=Object.fromEntries(Object.entries(menuPhotoIds).flatMap(([f,ids])=>ids.map(id=>[id,`assets/menu/${f}.jpg`])));
+const menuIcons=[[/cookie/,'🍪'],[/muffin/,'🧁'],[/brownie|blondie/,'🍫'],[/cobbler|pie/,'🥧'],[/cinnamon roll/,'🥐'],[/wrap|burrito/,'🌯'],[/taco/,'🌮'],[/nacho/,'🌮'],
+ [/quesadilla|grilled cheese|mac & cheese/,'🧀'],[/burger/,'🍔'],[/club|sandwich/,'🥪'],[/salad/,'🥗'],[/bowl/,'🥗'],[/soup|gumbo/,'🍲'],[/chicken/,'🍗'],
+ [/broccolini/,'🥦'],[/frites|fries/,'🍟'],[/latte|coffee|mocha|cappuccino|americano|espresso/,'☕'],[/tea|lemonade|refresher|soda|agua|horchata|juice|water/,'🥤'],
+ [/box lunch|tray|catering/,'🍱'],[/feature|special/,'⭐']];
+function menuIcon(m){let n=(m?.name||'').toLowerCase();return (menuIcons.find(([re])=>re.test(n))||[0,'🍽️'])[1];}
+function menuThumb(m,cls='menu-thumb'){let src=menuPhotos[m?.id];return `<span class="${cls}">${src?`<img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${menuIcon(m)}'))">`:menuIcon(m)}</span>`;}
 function renderBistroMenuButtons(orderType,menu){
   menu=menu||(orderType==='table'?'bistro':'cafe');
   let items=menuSorted(db.menu.filter(m=>m.active!==false&&menuOf(m)===menu&&(menu==='bistro'||!Array.isArray(m.services)||m.services.includes(orderType))));
@@ -1700,7 +1717,7 @@ function renderBistroMenuButtons(orderType,menu){
   let categories=[...new Set(items.map(m=>m.category||'Other'))].sort((a,b)=>((b==='Holiday Specials')-(a==='Holiday Specials'))||((a==='Catering')-(b==='Catering')));
   return categories.map(c=>`<h4 class="menu-category">${c}</h4><div class="menu-grid">${items.filter(m=>(m.category||'Other')===c).map(m=>{
     let d86=isMenu86(m);
-    return `<button class="menu-item ${d86?'disabled86':''}" onclick="modifierModal(${m.id},state.seat)">${m.name}<br><span class="small">${money(m.price)}${d86?' &bull; Sold Out':''}</span></button>`;
+    return `<button class="menu-item ${d86?'disabled86':''}" onclick="modifierModal(${m.id},state.seat)">${menuThumb(m)}<span class="menu-name">${m.name}</span><span class="small">${money(m.price)}${d86?' &bull; Sold Out':''}</span></button>`;
   }).join('')}</div>`).join('');
 }
 
