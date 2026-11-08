@@ -2425,6 +2425,62 @@ window.btSaveUrl=()=>{
   db.brisktable=db.brisktable||{}; db.brisktable.url=v||BRISKTABLE_DEFAULT_URL; save(); render(); toast('BriskTable link saved.');
 };
 window.btToggleEmbed=()=>{state.btEmbed=!state.btEmbed;render();};
+// Loader for BriskTable: BriskTable has no file import, and its add-category / add-product calls only
+// work in a browser signed in to BriskTable. This builds a script (with the current menu inside it)
+// to paste into the browser console on the signed-in BriskTable POS page. It uses the same calls as
+// BriskTable's own Add Category / Add Product forms, and skips anything already there (matched by
+// the RMS code, e.g. RMS-205, or by name for items added in BriskTable by hand) so it is safe to run again.
+function btLoaderData(){
+  let items=btMenuItems(false).map(m=>({code:'RMS-'+m.id,name:m.name,category:`${btMenuName(m.menu)||'Menu'}: ${m.category||'Other'}`,price:Number(m.price)||0,description:''}));
+  let seen={}, mods=[];
+  btMenuItems(false).forEach(m=>(m.mods||[]).forEach(md=>{let price=Number(m.modPrices?.[md])||0, k=md+'|'+price; if(seen[k])return; seen[k]=1; mods.push({code:'RMS-MOD-'+(mods.length+1),name:price?`${md} (+${money(price)})`:md,category:'RMS Modifiers',price,description:''});}));
+  return {items,mods};
+}
+function btLoaderScript(){
+  let d=btLoaderData();
+  let rid=(btUrl().match(/[?&]id=([^&#]+)/)||[])[1]||'';
+  return `/* Guthrie RMS 2.0 -> BriskTable menu loader. Paste on your signed-in BriskTable POS page. */
+(async()=>{
+const DATA=${JSON.stringify(d)};
+const RID=(new URLSearchParams(location.search).get('id'))||${JSON.stringify(rid)};
+if(!/(^|\\.)brisktable\\.com$/.test(location.hostname)&&!window.__BT_TEST){alert('Run this on your BriskTable POS page (www.brisktable.com), signed in.');return;}
+const call=async(url,body,form)=>{const h={'X-AJAX':'true'};if(!form)h['Content-type']='application/x-www-form-urlencoded';const r=await fetch(url,{method:'POST',credentials:'same-origin',headers:h,body});if(r.status===401)throw new Error('Not signed in to BriskTable. Sign in, open the POS, and run this again.');const t=await r.text();let j;try{j=JSON.parse(t)}catch(e){throw new Error('BriskTable sent an unexpected reply for '+url)}if(j&&j.errorcode>=300&&j.errorcode!==200)throw new Error((j.errormsg||'BriskTable error')+' ('+url+')');return j;};
+const q=o=>Object.entries(o).map(([k,v])=>encodeURIComponent(k)+'='+encodeURIComponent(v)).join('&');
+const addMods=DATA.mods.length&&confirm('Add '+DATA.items.length+' menu items to BriskTable restaurant '+RID+'.\\n\\nAlso add the '+DATA.mods.length+' RMS modifiers as BriskTable modifiers? (OK = yes, Cancel = items only)');
+const list=DATA.items.concat(addMods?DATA.mods.map(m=>({...m,isMod:1})):[]);
+const cats=((await call('/api/category/fetch','')).data||[]);
+const catId={};cats.forEach(c=>catId[String(c.name).trim().toLowerCase()]=c.id);
+const taxes=await call('/api/pos/taxesfetch?restaurant_id='+encodeURIComponent(RID),'');
+const taxId=(taxes&&taxes.default_tax_id)||'';
+const have=new Set();
+for(const mod of [0,1]){const r=await call('/api/product/fetch?restaurant_id='+encodeURIComponent(RID)+'&pagesize=10000&page=1&modifiers='+mod,'');(r.rproducts||[]).forEach(p=>{const c=String(p.code||'');if(/^RMS-/i.test(c))have.add('c:'+c.toLowerCase());else have.add('n:'+String(p.name).trim().toLowerCase());});}
+let added=0,skipped=0,newCats=0;const failed=[];
+for(const it of list){
+  if(have.has('c:'+it.code.toLowerCase())||have.has('n:'+it.name.trim().toLowerCase())){skipped++;continue;}
+  try{
+    const ck=it.category.trim().toLowerCase();
+    if(!catId[ck]){const r=await call('/api/category/add',JSON.stringify({name:it.category,description:''}));if(!r||!r.key)throw new Error('Category '+it.category+' was not created');catId[ck]=r.key;newCats++;}
+    const p={name:it.name,code:it.code,description:it.description,price:String(Math.round(it.price*100)),tax_id:taxId,is_modifier:it.isMod?1:0,is_visible:1,data:JSON.stringify({rcategories:[String(catId[ck])]}),restaurant_id:RID};
+    const r=await call('/api/product/add?'+q(p),new FormData(),true);
+    if(r.errorcode!==200)throw new Error(r.errormsg||'not added');
+    added++;have.add('c:'+it.code.toLowerCase());
+  }catch(e){failed.push(it.name+': '+e.message);if(/Not signed in/.test(e.message))break;}
+}
+['POSCategoryList'].concat(Object.keys(localStorage).filter(k=>k.includes('POSProductList')||k==='POSModifierList')).forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});
+const msg='BriskTable load finished.\\nAdded: '+added+' items, '+newCats+' new categories\\nAlready there (skipped): '+skipped+(failed.length?'\\nNot added: '+failed.length+'\\n - '+failed.slice(0,15).join('\\n - '):'')+'\\n\\nReload the page to see them.';
+console.log(msg);if(failed.length)console.log(failed);alert(msg);
+})().catch(e=>{console.error(e);alert('BriskTable load stopped: '+e.message);});`;
+}
+window.btCopyLoader=()=>{
+  let text=btLoaderScript();
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(()=>toast('Loader copied. Paste it on your BriskTable page (see steps).'),()=>btDownloadLoader());
+  else btDownloadLoader();
+};
+window.btDownloadLoader=()=>{
+  let blob=new Blob([btLoaderScript()],{type:'text/javascript'}), url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url;a.download='brisktable-loader.js';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('Loader downloaded. Open it, copy everything, and paste it on your BriskTable page.');
+};
 views.brisktable=()=>{
   let items=btMenuItems(false), groups={};
   items.forEach(m=>{let k=btMenuName(m.menu)||'Other';(groups[k]=groups[k]||[]).push(m);});
@@ -2436,7 +2492,18 @@ views.brisktable=()=>{
     <div class="row"><input class="input" id="bt-url" value="${btEsc(url)}" style="flex:1;min-width:240px"><button class="small-btn" onclick="btSaveUrl()">Save Link</button></div>
     <div class="row section"><a class="primary" style="text-decoration:none;display:inline-block" href="${btEsc(url)}" target="_blank" rel="noopener">Open BriskTable POS ↗</a><button class="small-btn" onclick="btToggleEmbed()">${state.btEmbed?'Hide':'Show'} BriskTable here</button></div>
     ${state.btEmbed?`<p class="small">If this box stays blank, BriskTable doesn't allow being shown inside other sites. Use Open BriskTable POS instead.</p><iframe src="${btEsc(url)}" title="BriskTable POS" style="width:100%;height:70vh;border:1px solid #ccc;border-radius:10px;background:#fff"></iframe>`:''}
-    <h3>Send RMS data to BriskTable</h3>
+    <h3>Load the menu into BriskTable</h3>
+    <p class="small">BriskTable has no file import, so this loader adds the items for you while you're signed in. It creates categories like "Bistro: Handhelds" and "Café: Bake Shop", gives each item an RMS code (RMS-205), and skips anything already there, so it is safe to run again.</p>
+    <ol class="small">
+      <li>On a computer (Chrome or Edge), sign in to BriskTable and open your POS page.</li>
+      <li>Here, click <b>Copy BriskTable Loader</b>.</li>
+      <li>On the BriskTable page press <b>F12</b> (Mac: <b>Cmd+Option+J</b>) and choose <b>Console</b>.</li>
+      <li>Paste and press Enter. If Chrome asks, type <code>allow pasting</code>, press Enter, then paste again.</li>
+      <li>A message lists what was added. Reload BriskTable to see the menu.</li>
+    </ol>
+    <div class="row"><button class="primary" onclick="btCopyLoader()">Copy BriskTable Loader (${items.length} items)</button><button class="small-btn" onclick="btDownloadLoader()">Download Loader</button></div>
+    <p class="small">Modifiers: the loader asks whether to add the RMS modifiers as BriskTable modifiers. Attaching them to specific items is done in BriskTable (edit item, Rules tab).</p>
+    <h3>Other downloads</h3>
     <p class="small">Download what BriskTable needs and use its import or menu setup screens. CSV files open in Excel or Google Sheets.</p>
     <div class="row">
       <button class="primary" onclick="btExport('menu')">Menu CSV (${items.length} items)</button>
