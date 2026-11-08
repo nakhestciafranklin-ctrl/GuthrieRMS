@@ -2433,8 +2433,17 @@ window.btToggleEmbed=()=>{state.btEmbed=!state.btEmbed;render();};
 // Section shown by the iPad POS add-on (stored as the BriskTable item Description).
 const BT_SECTIONS={'Breakfast Tacos (All Day)':'Breakfast','Handhelds':'Entrées','Greens & Bowls':'Entrées','Weekly Chef Special':'Entrées','Entree':'Entrées','Lunch Entrées (B, C & D Block)':'Entrées','Sides':'Sides','Bake Shop':'Bakery & Desserts','Dessert':'Bakery & Desserts','Fresh Baked Cinnamon Rolls':'Bakery & Desserts','Beverage':'Drinks','Beverages':'Drinks','Coffee & Espresso':'Drinks','Other Beverages':'Drinks','Holiday Latte Collection':'Drinks','Holiday Specials':'Drinks','Catering':'Catering'};
 function btSection(m){return BT_SECTIONS[m.category]||'';}
+// BriskTable category = menu + section, split so each category feeds one kitchen station
+// (BriskTable kitchen screens filter by category), e.g. "Bistro – Salads" goes to the Salad kitchen.
+function btCategory(m){
+  let menu=btMenuName(m.menu)||'Menu',sec=btSection(m)||m.category||'Other',st=itemStation({name:m.name,menuId:m.id},{type:'counter'});
+  if(menu==='Exemption Day'&&sec==='Bakery & Desserts')sec='Cinnamon Rolls';
+  else if(menu==='Bistro'&&sec==='Entrées'&&st==='salad')sec='Salads';
+  else if(menu==='Bistro'&&sec==='Sides'&&st==='fry')sec='Fries';
+  return menu+' – '+sec;
+}
 function btLoaderData(){
-  let items=btMenuItems(false).map(m=>({code:'RMS-'+m.id,name:m.name,category:btMenuName(m.menu)||'Menu',price:Number(m.price)||0,description:btSection(m)}));
+  let items=btMenuItems(false).map(m=>({code:'RMS-'+m.id,name:m.name,category:btCategory(m),price:Number(m.price)||0,description:btSection(m)}));
   let seen={}, mods=[];
   btMenuItems(false).forEach(m=>(m.mods||[]).forEach(md=>{let price=Number(m.modPrices?.[md])||0, k=md+'|'+price; if(seen[k])return; seen[k]=1; mods.push({code:'RMS-MOD-'+(mods.length+1),name:price?`${md} (+${money(price)})`:md,category:'RMS Modifiers',price,description:''});}));
   return {items,mods};
@@ -2496,7 +2505,7 @@ views.brisktable=()=>{
     <div class="row section"><a class="primary" style="text-decoration:none;display:inline-block" href="${btEsc(url)}" target="_blank" rel="noopener">Open BriskTable POS ↗</a><button class="small-btn" onclick="btToggleEmbed()">${state.btEmbed?'Hide':'Show'} BriskTable here</button></div>
     ${state.btEmbed?`<p class="small">If this box stays blank, BriskTable doesn't allow being shown inside other sites. Use Open BriskTable POS instead.</p><iframe src="${btEsc(url)}" title="BriskTable POS" style="width:100%;height:70vh;border:1px solid #ccc;border-radius:10px;background:#fff"></iframe>`:''}
     <h3>Load the menu into BriskTable</h3>
-    <p class="small">BriskTable has no file import, so this loader adds the items for you while you're signed in. It puts each item in its menu's category (Exemption Day, Bistro or Café), gives each item an RMS code (RMS-205), and skips anything already there, so it is safe to run again.</p>
+    <p class="small">BriskTable has no file import, so this loader adds the items for you while you're signed in. It puts each item in its menu + section category (e.g. "Bistro – Entrées"), gives each item an RMS code (RMS-205), and skips anything already there, so it is safe to run again.</p>
     <ol class="small">
       <li>On a computer (Chrome or Edge), sign in to BriskTable and open your POS page.</li>
       <li>Here, click <b>Copy BriskTable Loader</b>.</li>
@@ -2507,7 +2516,7 @@ views.brisktable=()=>{
     <div class="row"><button class="primary" onclick="btCopyLoader()">Copy BriskTable Loader (${items.length} items)</button><button class="small-btn" onclick="btDownloadLoader()">Download Loader</button></div>
     <p class="small">Modifiers: the loader asks whether to add the RMS modifiers as BriskTable modifiers. Attaching them to specific items is done in BriskTable (edit item, Rules tab).</p>
     <h3>iPad POS add-on</h3>
-    <p class="small">Groups items into sections (Entrées, Drinks, Bakery &amp; Desserts…) on the BriskTable POS screen and shrinks item photos so BriskTable accepts them.</p>
+    <p class="small">Optional: adds section bars to the POS "All" view and shrinks item photos so BriskTable accepts them.</p>
     <div class="row"><a class="primary" style="text-decoration:none;display:inline-block" href="brisktable/" target="_blank" rel="noopener">iPad setup steps ↗</a></div>
     <h3>Other downloads</h3>
     <p class="small">Download what BriskTable needs and use its import or menu setup screens. CSV files open in Excel or Google Sheets.</p>

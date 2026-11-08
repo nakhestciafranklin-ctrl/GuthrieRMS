@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Guthrie RMS - BriskTable POS add-on
 // @description  Groups item tiles on the BriskTable POS into sections (Entrées, Drinks, ...) and shrinks item photos to fit BriskTable's 500 KB limit.
-// @version      1.3
+// @version      1.4
 // @match        https://www.brisktable.com/apps/pos/terminal*
 // @match        https://www.brisktable.com/apps/pos?*
 // @updateURL    https://nakhestciafranklin-ctrl.github.io/GuthrieRMS/rms-2.0/brisktable/pos-addon.user.js
@@ -11,7 +11,8 @@
 // @grant        none
 // ==/UserScript==
 //
-// Sections: BriskTable lists a category's items alphabetically. The add-on regroups the tiles under
+// Sections: BriskTable's categories are already one per menu section (e.g. "Bistro – Entrées"), so this only
+// matters in the "All" view, which lists every item alphabetically. The add-on regroups those tiles under
 // section bars taken from each item's BriskTable Description (Breakfast, Entrées, Sides, Bakery & Desserts,
 // Drinks, Catering). Change an item's Description in BriskTable to move it to another section.
 //
@@ -43,7 +44,7 @@
     var byId={};s.products.forEach(function(p){byId[p.id]=p;});
     var rows=tiles.map(function(t,i){var sec=sectionOf(byId[t.getAttribute('data-item-id')]);return {t:t,i:i,sec:sec,r:rank(sec)};});
     var secs={};rows.forEach(function(x){secs[x.sec]=1;});
-    if(Object.keys(secs).length<2&&secs.Other)return;   // no sections set up: leave BriskTable's order
+    if(Object.keys(secs).length<2)return;   // one section on screen (e.g. a "Bistro – Drinks" category): nothing to group
     rows.sort(function(a,b){return a.r-b.r||(a.sec<b.sec?-1:a.sec>b.sec?1:0)||a.i-b.i;});
     [].slice.call(grid.querySelectorAll('.rms-section-head')).forEach(function(h){h.remove();});
     var anchor=tiles[0].previousSibling;var frag=document.createDocumentFragment();var cur=null;
