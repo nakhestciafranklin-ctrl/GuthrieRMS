@@ -1,5 +1,11 @@
 # Guthrie RMS Changelog
 
+## Pictures on Menu Buttons
+- Every menu button on the order screen (Café, Bistro and Exemption Day) now has a picture above the name, and the add-item pop-up shows it next to the item name.
+- Exemption Day items and the holiday lattes use photos from the Exemption Day menus (assets/menu). The same photos are used for matching café and Bistro items (lattes, hot coffee, peach tea, chocolate chip / chunk cookie, brownie).
+- Other items show a food icon picked from the name (burger, sandwich, salad, soup, fries, cookie, drink...). Sold-out items show the picture greyed out.
+- To give an item a real photo, add a .jpg to assets/menu and list the item's id in menuPhotoIds in app.js.
+
 ## Holiday Specials on the Café Menu; Iced Drinks
 - The Café Menu tab has a Holiday Specials section at the top with the 8 holiday lattes ($3 each). Each asks Hot or Iced, then whipped cream, drizzle and ice. They are separate from the Exemption Day lattes, so each menu keeps its own daily pars.
 - Horchata no longer asks Hot or Iced; like Peach Tea and Hibiscus Lime Agua Fresca it comes iced and can be added with no choices (ice and garnish options are still there).
