@@ -2507,7 +2507,7 @@ views.brisktable=()=>{
     <div class="row"><button class="primary" onclick="btCopyLoader()">Copy BriskTable Loader (${items.length} items)</button><button class="small-btn" onclick="btDownloadLoader()">Download Loader</button></div>
     <p class="small">Modifiers: the loader asks whether to add the RMS modifiers as BriskTable modifiers. Attaching them to specific items is done in BriskTable (edit item, Rules tab).</p>
     <h3>iPad POS add-on</h3>
-    <p class="small">Adds a Guest name box and groups items into sections (Entrées, Drinks, Bakery &amp; Desserts…) on the BriskTable POS screen.</p>
+    <p class="small">Groups items into sections (Entrées, Drinks, Bakery &amp; Desserts…) on the BriskTable POS screen and shrinks item photos so BriskTable accepts them.</p>
     <div class="row"><a class="primary" style="text-decoration:none;display:inline-block" href="brisktable/" target="_blank" rel="noopener">iPad setup steps ↗</a></div>
     <h3>Other downloads</h3>
     <p class="small">Download what BriskTable needs and use its import or menu setup screens. CSV files open in Excel or Google Sheets.</p>
