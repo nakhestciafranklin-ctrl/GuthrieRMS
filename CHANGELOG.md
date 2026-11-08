@@ -1,5 +1,12 @@
 # Guthrie RMS Changelog
 
+## Culinary Offerings Board: Photos and Missing Café Items
+- 19 more menu photos from the Guthrie Culinary Offerings board: Bistro burger, club, tomato basil soup, grilled cheese, Cobb salad, pommes frites, mac & cheese, broccolini and sprinkle sugar cookie; Café refreshers, hot honey wrap, quesadilla and street corn bowl.
+- New Café items that were on the board but not in the app:
+  - Cookie Butter Latte ($3) in Holiday Specials (Hot or Iced, whipped cream, drizzle, ice).
+  - Cappuccino ($3, Beverage): optional Vanilla / Mocha / Caramel / Pumpkin, Hot or Iced required.
+  - Double Chocolate Cookie and Sugar Cookie ($1 each, Dessert, Warm Cookie option).
+
 ## Pictures on Menu Buttons
 - Every menu button on the order screen (Café, Bistro and Exemption Day) now has a picture above the name, and the add-item pop-up shows it next to the item name.
 - Exemption Day items and the holiday lattes use photos from the Exemption Day menus (assets/menu). The same photos are used for matching café and Bistro items (lattes, hot coffee, peach tea, chocolate chip / chunk cookie, brownie).
