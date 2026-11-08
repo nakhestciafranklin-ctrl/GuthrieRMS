@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026110806;
+window.GUTHRIE_RMS_VERSION=2026110807;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -838,10 +838,11 @@ const exemptionMenuData=[
   exProtein,exLeaveOff(['Chile con Queso']),exToppings(['Chile con Queso']),exEntreeOther]},
  {id:313,name:'Rice Bowl',price:8,category:'Lunch Entrées (B, C & D Block)',station:'grill',modPrices:exEntreePrices,modGroups:[
   exBowlProtein,exLeaveOff(['Rice','Black Beans','Roasted Corn']),exToppings(),exEntreeOther]},
- {id:318,name:'Holiday Latte',price:3,category:'Holiday Latte Collection',station:'beverage',modGroups:[
-  {name:'Holiday Flavor',options:exHolidayFlavors,pick:'one',required:true},exHotIced,
+ // Each holiday latte has its own button; the pop-up then asks hot or iced and garnish.
+ ...[[321,'Peppermint Mocha'],[322,'Winter Wonderland'],[323,'Pumpkin Spice Latte'],[324,'Chocolate Hazelnut Truffle'],[325,'Caramel Pumpkin Cheesecake'],[326,'Gingerbread Cookie Latte'],[327,'S\'mores Mocha'],[328,'Brown Sugar Cinnamon Latte']].map(([id,name])=>({id,name,price:3,category:'Holiday Latte Collection',station:'beverage',modGroups:[
+  exHotIced,
   {name:'Whipped Cream',options:['No Whipped Cream','Extra Whipped Cream'],pick:'one'},
-  {name:'Drizzle / Topping',options:['No Drizzle','Extra Drizzle'],pick:'one'},exIce,exAllergy]},
+  {name:'Drizzle / Topping',options:['No Drizzle','Extra Drizzle'],pick:'one'},exIce,exAllergy]})),
  {id:305,name:'Latte',price:3,category:'Coffee & Espresso',station:'beverage',modGroups:[
   {name:'Flavor',options:exBaseFlavors,pick:'one',required:true},exHotIced,
   {name:'Garnish',options:['Add Whipped Cream','Add Drizzle'],pick:'many'},exIce,exAllergy]},
@@ -859,8 +860,8 @@ const exemptionMenuData=[
   {name:'Ice',options:['Light Ice','Extra Ice','No Ice'],pick:'one'},{name:'Garnish',options:['No Peach Garnish','Extra Peach'],pick:'one'},exAllergy]}
 ].map((item,i)=>({...item,mods:item.modGroups.flatMap(g=>g.options),sortOrder:i}));
 // Items from earlier Exemption Day drafts that are not on the final menu (desserts aren't being run).
-const retiredExemptionIds=[309,314,315,316,317];
-const exemptionMenuVersion=8;
+const retiredExemptionIds=[309,314,315,316,317,318];
+const exemptionMenuVersion=9;
 function importExemptionMenu(){
   let changed=false;
   if(!Array.isArray(db.menu))db.menu=[];
@@ -1008,6 +1009,11 @@ function render(){
   const dashboardShortcut = state.view==='dashboard' ? '' : `<div class="dashboard-shortcut"><button class="primary" data-view="dashboard">🏠 Dashboard</button><span>Dashboard &gt; ${state.viewLabel||state.view}</span></div>`;
   app.innerHTML=topbar()+`<main class="wrap">${dashboardShortcut}${views[state.view]()}</main>`;
   bindCommon();
+  // Opening a different screen (or a different order at checkout) starts at the top, so the
+  // payment panel isn't left below the old scroll position.
+  let place=state.view+'|'+(state.view==='checkout'?state.selectedOrder||'':'');
+  if(state.lastPlace!==undefined&&state.lastPlace!==place)window.scrollTo(0,0);
+  state.lastPlace=place;
 }
 function cloudStatusLine(){
   const s=window.__guthrieRMSCloudStatus;
@@ -1116,18 +1122,27 @@ window.sendKitchen=(orderId)=>{
   render();
 };
 
+// Checkout has two views. Order list: a tab per order type (with counts) and compact order
+// tiles. Picking an order (or tapping Checkout on an order screen) opens the payment view at
+// the top of the page: the ticket on the left, payment on the right (stacked on small screens),
+// with All Orders and Back to Order buttons.
+function checkoutOpenOrders(type){return (db.orders||[]).filter(o=>!o.paid&&o.type===type&&validItems(o).length>0);}
 function checkout(){
   normalizeOrders();
-  let types=['table','counter','togo','catering'];
+  let types=[['table','Tables'],['counter','Counter'],['togo','To-Go'],['catering','Catering']];
   let type=state.checkoutType||'table';
-  let list=(db.orders||[]).filter(o=>!o.paid&&o.type===type&&validItems(o).length>0);
-  let selected=list.find(o=>o.id===state.selectedOrder);
+  let list=checkoutOpenOrders(type).sort((x,y)=>x.id-y.id);
+  let selected=state.selectedOrder?(db.orders||[]).find(o=>o.id===state.selectedOrder&&!o.paid&&validItems(o).length):null;
   if(!selected) state.selectedOrder=null;
+  if(selected) return `<section class="card checkout-pay"><div class="row checkout-nav"><button class="small-btn" onclick="state.selectedOrder=null;render()">&larr; All Orders</button><button class="primary" onclick="checkoutBackToOrder(${selected.id})">&larr; Back to Order (Edit Items)</button></div>
+    <h1>Checkout: ${selected.customer}</h1><p class="small">${orderTypeLabel(selected)} &bull; Order #${selected.id} &bull; started ${new Date(Number(selected.id)).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</p>
+    ${payPanel(selected)}</section>`;
+  let age=o=>{let m=Math.max(0,Math.round((Date.now()-Number(o.id))/60000));return m<60?m+' min':Math.floor(m/60)+' hr '+(m%60)+' min';};
   return `<section class="card"><h1>Checkout Center</h1>
+    <div class="tabs">${types.map(([t,l])=>`<button class="${type===t?'active':''}" onclick="state.checkoutType='${t}';state.selectedOrder=null;render()">${l} (${checkoutOpenOrders(t).length})</button>`).join('')}</div>
+    <div class="checkout-list">${list.map(o=>`<button class="checkout-tile" onclick="state.selectedOrder=${o.id};render()"><b>${o.customer}</b><span class="checkout-total">${money(total(o))}</span><span class="small">${validItems(o).length} item(s) &bull; ${o.sent?'sent':'not sent'} &bull; ${age(o)}</span></button>`).join('')||'<p>No open orders with items.</p>'}</div>
+    <div class="row section"><button class="small-btn danger" onclick="clearEmptyCheckoutOrders()">Clear Empty/Stuck Orders</button></div>
     ${orderSearchPanel()}
-    <div class="row"><button class="small-btn danger" onclick="clearEmptyCheckoutOrders()">Clear Empty/Stuck Orders</button></div>
-    <div class="tabs">${types.map(t=>`<button class="${type===t?'active':''}" onclick="state.checkoutType='${t}';state.selectedOrder=null;render()">${t.toUpperCase()}</button>`).join('')}</div>
-    <div class="grid"><div>${list.map(o=>`<div class="order-card ${state.selectedOrder===o.id?'selected':''}" onclick="state.selectedOrder=${o.id};render()"><b>${o.customer}</b><p>${money(total(o))} • ${o.status}</p></div>`).join('')||'<p>No open orders with items.</p>'}</div><div>${state.selectedOrder&&selected?payPanel(selected): '<p>Select an order to checkout.</p>'}</div></div>
     ${refundCenter()}
     </section>`;
 }
@@ -1188,13 +1203,26 @@ window.refreshOrderSearch=(typing)=>{
 // menu tab in use, e.g. Exemption Day) so items can be changed before payment.
 window.checkoutBackToOrder=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; state.activeOrder=id; state.seat=1; if(o.type==='catering'){state.cateringOrderId=id;state.view='catering';} else state.view='order'; render(); window.scrollTo(0,0);};
 window.orderSearchEdit=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; state.activeOrder=id; state.seat=1; if(o.type==='catering'){state.cateringOrderId=id;state.view='catering';} else {if(o.type!=='table')state.menuTab='cafe';state.view='order';} render();};
-window.orderSearchRefund=id=>{state.refundOrder=id;state.view='checkout';render();setTimeout(()=>document.getElementById('refundAmount')?.scrollIntoView({block:'center'}),50);};
+window.orderSearchRefund=id=>{state.refundOrder=id;state.selectedOrder=null;state.view='checkout';render();setTimeout(()=>document.getElementById('refundAmount')?.scrollIntoView({block:'center'}),50);};
 
+// Discount options (negative-priced modifiers, e.g. Veteran Free Entrée -$8) are already taken
+// off the line price. Checkout shows the item at full price with the discount as its own line.
+function lineDiscount(i){
+  let m=i?.menuId!=null?db.menu.find(x=>x.id===i.menuId):null; if(!m?.modPrices)return null;
+  let disc=(i.mods||[]).filter(md=>Number(m.modPrices[md])<0); if(!disc.length)return null;
+  let add=(i.mods||[]).reduce((a,md)=>a+Math.max(0,Number(m.modPrices[md])||0),0);
+  let gross=Math.round(((Number(i.basePrice??m.price)||0)+add)*100)/100, amount=Math.round((gross-(Number(i.price)||0))*100)/100;
+  return amount>0?{label:disc.join(', '),gross,amount}:null;
+}
+function orderDiscountTotal(o){return validItems(o).reduce((a,i)=>a+(lineDiscount(i)?.amount||0),0);}
 function checkoutTicketItems(o){
   let items=validItems(o);
-  return items.length?`<table class="report-table"><tr><th>Seat</th><th>Item</th><th>Mods</th><th>Price</th><th>Remove</th></tr>${items.map((i,idx)=>`<tr><td>${i.seat||'-'}</td><td>${i.name}</td><td>${[...(i.mods||[]),i.note].filter(Boolean).join(', ')}</td><td>${money(i.price)}</td><td><button class="small-btn danger" onclick="removeCheckoutLine(${o.id},'${i.lineId||''}',${idx})">Remove</button></td></tr>`).join('')}<tr><td colspan="3"><b>Total</b></td><td colspan="2"><b>${money(total(o))}</b></td></tr></table><div class="row section"><button class="small-btn danger" onclick="clearCheckoutOrder(${o.id})">Clear All Items</button></div>`:'<p>No items left on this order.</p>'
+  let disc=orderDiscountTotal(o), table=o.type==='table';
+  let rows=items.map((i,idx)=>{let d=lineDiscount(i), mods=(i.mods||[]).filter(md=>!d||!d.label.split(', ').includes(md));
+    return `<tr><td><b>${i.name}</b>${table?` <span class="small">Seat ${i.seat||'-'}</span>`:''}${mods.length||i.note?`<div class="small">${[...mods,i.note].filter(Boolean).join(', ')}</div>`:''}</td><td class="num">${money(d?d.gross:i.price)}</td><td><button class="small-btn danger" onclick="removeCheckoutLine(${o.id},'${i.lineId||''}',${idx})">Remove</button></td></tr>${d?`<tr class="discount-row"><td>Discount: ${d.label}</td><td class="num">&minus;${money(d.amount)}</td><td></td></tr>`:''}`;}).join('');
+  return items.length?`<div class="checkout-ticket"><table class="report-table"><tr><th>Item</th><th class="num">Price</th><th></th></tr>${rows}${disc?`<tr><td>Subtotal</td><td class="num">${money(total(o)+disc)}</td><td></td></tr><tr class="discount-row"><td>Discounts</td><td class="num">&minus;${money(disc)}</td><td></td></tr>`:''}<tr class="total-row"><td><b>Total</b></td><td class="num"><b>${money(total(o))}</b></td><td></td></tr></table></div><div class="row section"><button class="small-btn danger" onclick="clearCheckoutOrder(${o.id})">Clear All Items</button></div>`:'<p>No items left on this order.</p>'
 }
-function payPanel(o){if(!o||!validItems(o).length){return '<div class="card"><p>This order has no items and was removed from checkout.</p></div>';}return `<div class="card"><div class="row"><button class="primary" onclick="checkoutBackToOrder(${o.id})">&larr; Back to Order</button><span class="small">Add, remove or change items, then come back to Checkout.</span></div><h2>${o.customer}</h2><p class="notice">Review the order before payment. Remove any incorrect items here, then mark paid when the ticket is correct.</p>${checkoutTicketItems(o)}<label>Payment Type</label><select class="input" id="paytype" onchange="renderPaymentFields()"><option>Cash</option><option>Card</option><option>Check</option><option>District Account</option><option>Donation</option></select><div id="paymentFields" data-total="${total(o).toFixed(2)}">${paymentFieldsHtml('Cash',total(o))}</div><button class="primary success" onclick="pay(${o.id})">Mark Paid</button></div>`}
+function payPanel(o){if(!o||!validItems(o).length){return '<div class="card"><p>This order has no items and was removed from checkout.</p></div>';}return `<div class="checkout-columns"><div><h2>Ticket</h2>${checkoutTicketItems(o)}</div><div class="checkout-payment"><h2>Payment</h2><div class="checkout-due"><span>Total Due</span><b>${money(total(o))}</b></div><label>Payment Type</label><select class="input" id="paytype" onchange="renderPaymentFields()"><option>Cash</option><option>Card</option><option>Check</option><option>District Account</option><option>Donation</option></select><div id="paymentFields" data-total="${total(o).toFixed(2)}">${paymentFieldsHtml('Cash',total(o))}</div><button class="primary success pay-btn" onclick="pay(${o.id})">Mark Paid &bull; ${money(total(o))}</button></div></div>`}
 // Cash: amount due, quick-tender buttons, and a live change / short-by readout.
 function cashFieldsHtml(due){
  due=Math.round((Number(due)||0)*100)/100;
@@ -1236,7 +1264,7 @@ window.clearEmptyCheckoutOrders=()=>{
 
 window.removeCheckoutLine=(orderId,lineId,idx)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; o.items=validItems(o); let itemIndex=o.items.findIndex(i=>String(i.lineId)===String(lineId)); if(itemIndex<0 && Number.isInteger(idx)) itemIndex=idx; if(itemIndex<0 || !o.items[itemIndex]){alert('This item is already gone. Refreshing checkout.'); normalizeOrders(); render(); return;} let item=o.items[itemIndex]; if(!confirm(`Remove ${item.name} from this order?`))return; restoreProduction(item.menuId,1); o.items.splice(itemIndex,1); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`Item removed at checkout: ${item.name}`,time:now(),by:state.user.name}); if(!o.items.length){ if(o.type==='table'&&o.tableId){let t=db.tables.find(t=>t.id===o.tableId); if(t&&t.orderId===o.id){t.orderId=null;t.status='open';}} db.orders=db.orders.filter(x=>x.id!==orderId); state.selectedOrder=null; save(); render(); toast('Last item removed; empty order cleared.'); return;} save(); render(); toast('Item removed from checkout.');};
 window.clearCheckoutOrder=(orderId)=>{let o=db.orders.find(x=>x.id===orderId); if(!o)return; if(!o.items.length){db.orders=db.orders.filter(x=>x.id!==orderId);state.selectedOrder=null;save();render();toast('Empty order removed.'); return;} if(!confirm('Clear all items from this order and remove it from checkout?'))return; let count=o.items.length; o.items.forEach(it=>restoreProduction(it.menuId,1)); o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:`All checkout items cleared and order removed (${count})`,time:now(),by:state.user.name}); if(o.type==='table'&&o.tableId){let t=db.tables.find(t=>t.id===o.tableId); if(t&&t.orderId===o.id){t.orderId=null;t.status='open';}} db.orders=db.orders.filter(x=>x.id!==orderId); state.selectedOrder=null; save(); render(); toast('Order cleared and removed from checkout.');};
-window.pay=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let paymentType=$('#paytype')?.value||'Cash'; let payment={type:paymentType,amount:total(o),processedBy:state.user.name,processedAt:now()};
+window.pay=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; let paymentType=$('#paytype')?.value||'Cash'; let payment={type:paymentType,amount:total(o),processedBy:state.user.name,processedAt:now()}; let disc=Math.round(orderDiscountTotal(o)*100)/100; if(disc>0)payment.discount=disc;
  if(paymentType==='Check'){
    let checkNumber=String($('#checkNumber')?.value||'').trim();
    if(!checkNumber){alert('Check number required before completing payment.');return;}
