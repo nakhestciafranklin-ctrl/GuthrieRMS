@@ -2431,7 +2431,7 @@ window.btToggleEmbed=()=>{state.btEmbed=!state.btEmbed;render();};
 // BriskTable's own Add Category / Add Product forms, and skips anything already there (matched by
 // the RMS code, e.g. RMS-205, or by name for items added in BriskTable by hand) so it is safe to run again.
 function btLoaderData(){
-  let items=btMenuItems(false).map(m=>({code:'RMS-'+m.id,name:m.name,category:`${btMenuName(m.menu)||'Menu'}: ${m.category||'Other'}`,price:Number(m.price)||0,description:''}));
+  let items=btMenuItems(false).map(m=>({code:'RMS-'+m.id,name:m.name,category:btMenuName(m.menu)||'Menu',price:Number(m.price)||0,description:''}));
   let seen={}, mods=[];
   btMenuItems(false).forEach(m=>(m.mods||[]).forEach(md=>{let price=Number(m.modPrices?.[md])||0, k=md+'|'+price; if(seen[k])return; seen[k]=1; mods.push({code:'RMS-MOD-'+(mods.length+1),name:price?`${md} (+${money(price)})`:md,category:'RMS Modifiers',price,description:''});}));
   return {items,mods};
@@ -2493,7 +2493,7 @@ views.brisktable=()=>{
     <div class="row section"><a class="primary" style="text-decoration:none;display:inline-block" href="${btEsc(url)}" target="_blank" rel="noopener">Open BriskTable POS ↗</a><button class="small-btn" onclick="btToggleEmbed()">${state.btEmbed?'Hide':'Show'} BriskTable here</button></div>
     ${state.btEmbed?`<p class="small">If this box stays blank, BriskTable doesn't allow being shown inside other sites. Use Open BriskTable POS instead.</p><iframe src="${btEsc(url)}" title="BriskTable POS" style="width:100%;height:70vh;border:1px solid #ccc;border-radius:10px;background:#fff"></iframe>`:''}
     <h3>Load the menu into BriskTable</h3>
-    <p class="small">BriskTable has no file import, so this loader adds the items for you while you're signed in. It creates categories like "Bistro: Handhelds" and "Café: Bake Shop", gives each item an RMS code (RMS-205), and skips anything already there, so it is safe to run again.</p>
+    <p class="small">BriskTable has no file import, so this loader adds the items for you while you're signed in. It puts each item in its menu's category (Exemption Day, Bistro or Café), gives each item an RMS code (RMS-205), and skips anything already there, so it is safe to run again.</p>
     <ol class="small">
       <li>On a computer (Chrome or Edge), sign in to BriskTable and open your POS page.</li>
       <li>Here, click <b>Copy BriskTable Loader</b>.</li>
