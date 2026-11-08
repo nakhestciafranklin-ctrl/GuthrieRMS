@@ -1,5 +1,22 @@
 # Guthrie RMS Changelog
 
+## Exemption Day Menu (Final, Wednesday Nov 11)
+- The Exemption Day tab now matches the printed food and coffee menus, in menu order:
+  - Breakfast Tacos (All Day) $2: Pork Sausage or Turkey Sausage. Tortilla is required (Flour / Corn); salsa (red, green, on the side or none); No Eggs / No Potatoes / No Cheese / Extra Cheese.
+  - Fresh Baked Cinnamon Rolls $3: Classic and Pumpkin (Fry station), with No / Extra / On Side icing and Warm.
+  - Lunch Entrées (B, C & D Block) $8: Tacos, Nachos, Rice Bowl. Protein is required (Seasoned Shredded Beef / Shredded Chicken); Tacos also require Flour or Corn Tortilla.
+    - Garnish: each standard topping (Pico de Gallo, Shredded Lettuce, Mexican Cheese Blend; plus Chile con Queso on Nachos and Seasoned Rice / Black Beans / Roasted Corn on Rice Bowls) can be No, Light, Extra or On Side.
+    - Additional Toppings (any number): Corn Salsa, Diced Tomatoes, Diced Onions, Lime Wedges, Jalapeño Lime Crema, Chile con Queso, Red Salsa, Green Salsa, and Guacamole (+$1).
+    - Veteran Free Entrée takes $8 off (guacamole is still charged).
+  - Culinary Desserts: Tres Leches, Arroz con Leche, Cookie, Brownie (set at $3; the menu shows no price).
+  - Holiday Latte $3: choose 1 of 8 holiday flavors and Hot or Iced; whipped cream, drizzle and ice options.
+  - Latte $3 (Vanilla / Caramel / Mocha / Hazelnut) and Cappuccino $3 (any of the 12 flavors or none), Hot or Iced.
+  - Americano $2; any syrup flavor is +$1.
+  - Horchata (Hot or Iced), Hibiscus Lime Agua Fresca and Peach Tea, $3, with ice and garnish options.
+- The Bacon Breakfast Taco and Guthrie Bistro Burger are no longer on the Exemption Day tab (old orders still show them).
+- The add-item pop-up shows options in labeled groups. "Choose 1" groups switch when another option is tapped, and the item can't be added until required groups (tortilla, protein, flavor, hot/iced) have a choice; the missing group is highlighted.
+- Chosen options print on the ticket and KMS and count in reports like any other modifier.
+
 ## Find an Order
 - New "Find an Order" search on Checkout and Counter + To-Go. Searches customer/table name, order number, items, modifiers and notes, and payment type (e.g. "maria", "green salsa", "card", "table 4"). Several words narrow it down.
 - Filters: All / Open / Paid, and Today / All Dates. Shows the newest 50 matches.
