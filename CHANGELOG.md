@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Exemption Day Toppings: Black Beans and Roasted Corn
+- Add Toppings on Tacos, Nachos and Rice Bowls now includes Add Black Beans and Add Roasted Corn (no charge), listed before Add Guacamole (+$1). Rice Bowls already come with black beans and roasted corn, so on a bowl these mean an extra scoop.
+
 ## Holiday Specials on the Café Menu; Iced Drinks
 - The Café Menu tab has a Holiday Specials section at the top with the 8 holiday lattes ($3 each). Each asks Hot or Iced, then whipped cream, drizzle and ice. They are separate from the Exemption Day lattes, so each menu keeps its own daily pars.
 - Horchata no longer asks Hot or Iced; like Peach Tea and Hibiscus Lime Agua Fresca it comes iced and can be added with no choices (ice and garnish options are still there).
