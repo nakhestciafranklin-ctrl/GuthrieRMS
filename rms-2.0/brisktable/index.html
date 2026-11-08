@@ -24,7 +24,8 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px}
 <body>
 <main>
 <h1>BriskTable POS add-on for iPads</h1>
-<p class="muted">Adds a <b>Guest name</b> box under the Takeout/Table dropdown and groups items into sections (Breakfast, Entrées, Sides, Bakery &amp; Desserts, Drinks, Catering) on the BriskTable POS screen. It changes nothing in BriskTable's own settings.</p>
+<p class="muted">Adds a <b>Guest name</b> box under the Takeout/Table dropdown, groups items under section bars (Breakfast, Entrées, Sides, Bakery &amp; Desserts, Drinks, Catering) on the BriskTable POS screen, and shrinks item photos so BriskTable accepts them. It changes nothing in BriskTable's own settings.</p>
+<p class="muted"><b>Without the add-on, BriskTable lists items alphabetically with no sections.</b> Set it up on every iPad that takes orders.</p>
 
 <div class="card">
 <h2>Option 1 (recommended): Userscripts app — works automatically</h2>
@@ -35,6 +36,7 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px}
 <li>In Safari, open this page and tap <b>Install add-on</b> below. Tap the <b>puzzle-piece / AA</b> icon in the address bar, choose <b>Userscripts</b>, and tap <b>Install</b>.</li>
 <li>Open the BriskTable POS. The Guest name box and sections appear on their own every time.</li>
 </ol>
+<p class="muted">Already installed? Userscripts picks up new versions on its own; to update right away, tap <b>Install add-on</b> again.</p>
 <p><a class="btn" href="pos-addon.user.js">Install add-on</a></p>
 </div>
 
@@ -56,6 +58,7 @@ code{background:var(--bg);padding:1px 5px;border-radius:4px}
 <ol>
 <li>Tap the items, type the guest's name in <b>Guest name</b>, pick Takeout / Counter / To-Go / a table.</li>
 <li>Tap <b>Submit order</b> or <b>Checkout</b>. The name shows as <b>Customer</b> on the order and receipt.</li>
+<li><b>Item photos:</b> in BriskTable go to <b>POS Setup → Products</b>, tap an item, tap <b>+Add an image</b> and take or choose a photo, then <b>Save</b>. With the add-on, any photo is shrunk to fit automatically (BriskTable alone refuses photos over 500 KB). The photo shows on the item's tile in the POS.</li>
 <li>To move an item to another section, edit its <b>Description</b> in BriskTable (Point of Sale → Products) to one of: <code>Breakfast</code>, <code>Entrées</code>, <code>Sides</code>, <code>Bakery &amp; Desserts</code>, <code>Drinks</code>, <code>Catering</code>.</li>
 </ol>
 </div>

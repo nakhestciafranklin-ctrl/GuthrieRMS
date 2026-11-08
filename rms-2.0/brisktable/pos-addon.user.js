@@ -1,8 +1,11 @@
 // ==UserScript==
 // @name         Guthrie RMS - BriskTable POS add-on
-// @description  Guest name box under the Takeout/Table dropdown, and item tiles grouped into sections (Entrées, Drinks, ...).
-// @version      1.1
+// @description  Guest name box under the Takeout/Table dropdown, item tiles grouped into sections (Entrées, Drinks, ...), and item photos shrunk to fit BriskTable's 500 KB limit.
+// @version      1.2
 // @match        https://www.brisktable.com/apps/pos/terminal*
+// @match        https://www.brisktable.com/apps/pos?*
+// @updateURL    https://nakhestciafranklin-ctrl.github.io/GuthrieRMS/rms-2.0/brisktable/pos-addon.user.js
+// @downloadURL  https://nakhestciafranklin-ctrl.github.io/GuthrieRMS/rms-2.0/brisktable/pos-addon.user.js
 // @run-at       document-end
 // @inject-into  page
 // @grant        none
@@ -15,6 +18,10 @@
 // Sections: BriskTable lists a category's items alphabetically. The add-on regroups the tiles under
 // headings taken from each item's BriskTable Description (Breakfast, Entrées, Sides, Bakery & Desserts,
 // Drinks, Catering). Change an item's Description in BriskTable to move it to another section.
+//
+// Photos: BriskTable refuses item images over 500 KB (iPad photos are several MB). On BriskTable's
+// item editor (Point of Sale > Products), a picked photo is shrunk to about 1000 px before BriskTable
+// checks it, so photos can be added straight from the iPad camera or photo library.
 // Also works as a bookmarklet (see rms-2.0/brisktable/README.md). Safe to run more than once.
 (function(){
   if(window.__rmsGuestName)return;window.__rmsGuestName=true;
@@ -107,7 +114,7 @@
     var anchor=tiles[0].previousSibling;var frag=document.createDocumentFragment();var cur=null;
     rows.forEach(function(x){
       if(x.sec!==cur){cur=x.sec;var h=document.createElement('div');h.className='rms-section-head';h.textContent=cur;
-        h.style.cssText='display:block;pointer-events:none;margin:0.9em 0.5em 0.1em;padding-bottom:0.2em;border-bottom:2px solid #41577E;color:#41577E;font-weight:700;font-size:1.05em;text-align:left';
+        h.style.cssText='display:block;pointer-events:none;margin:1.1em 0.5em 0.4em;padding:0.45em 0.8em;background:#41577E;color:#fff;border-radius:6px;font-weight:700;font-size:1.1em;letter-spacing:0.03em;text-transform:uppercase;text-align:left';
         frag.appendChild(h);}
       frag.appendChild(x.t);
     });
@@ -120,6 +127,40 @@
     gridObserver=new MutationObserver(function(){gridObserver.disconnect();try{lastLayout='';organize();}finally{gridObserver.observe(grid,{childList:true});}});
     gridObserver.observe(grid,{childList:true});organize();
   }
+
+  // ---- Item photos: shrink to fit BriskTable's 500 KB limit ----
+  var MAX_BYTES=450000,MAX_SIDE=1000;
+  function shrink(file){
+    return new Promise(function(resolve,reject){
+      var url=URL.createObjectURL(file),img=new Image();
+      img.onload=function(){
+        URL.revokeObjectURL(url);
+        var scale=Math.min(1,MAX_SIDE/Math.max(img.naturalWidth,img.naturalHeight));
+        var w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
+        var c=document.createElement('canvas');c.width=w;c.height=h;var g=c.getContext('2d');
+        g.fillStyle='#fff';g.fillRect(0,0,w,h);g.drawImage(img,0,0,w,h);
+        var q=0.85;
+        (function next(){c.toBlob(function(b){
+          if(!b){reject(new Error('Could not read this photo.'));return;}
+          if(b.size>MAX_BYTES&&q>0.4){q-=0.1;next();return;}
+          if(b.size>MAX_BYTES&&c.width>400){var c2=document.createElement('canvas');c2.width=Math.round(c.width*0.75);c2.height=Math.round(c.height*0.75);c2.getContext('2d').drawImage(c,0,0,c2.width,c2.height);c=c2;q=0.8;next();return;}
+          resolve(new File([b],(file.name||'photo').replace(/\.[^.]*$/,'')+'.jpg',{type:'image/jpeg'}));
+        },'image/jpeg',q);})();
+      };
+      img.onerror=function(){URL.revokeObjectURL(url);reject(new Error('Could not read this photo.'));};
+      img.src=url;
+    });
+  }
+  document.addEventListener('change',function(e){
+    var input=e.target;
+    if(!input||!input.classList||!input.classList.contains('modal__product__image-input')||input.__rmsShrunk)return;
+    var f=input.files&&input.files[0];if(!f||f.size<=MAX_BYTES||!/^image\//.test(f.type||'image/'))return;
+    e.stopImmediatePropagation();e.preventDefault();
+    shrink(f).then(function(small){
+      var dt=new DataTransfer();dt.items.add(small);input.files=dt.files;
+      input.__rmsShrunk=true;try{input.dispatchEvent(new Event('change',{bubbles:true}));}finally{input.__rmsShrunk=false;}
+    }).catch(function(err){alert(err.message+' Try a different photo.');input.value='';});
+  },true);
 
   // Keep the box in step with the order on screen (new order = empty box; opening an order shows its name).
   setInterval(function(){
