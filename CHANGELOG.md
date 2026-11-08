@@ -1,5 +1,13 @@
 # Guthrie RMS Changelog
 
+## Exemption Day Entrées: Black Beans and Simpler Options
+- Black beans are a protein choice on the lunch entrées. Tacos and Nachos: Beef, Chicken, Black Beans Only, Beef + Black Beans or Chicken + Black Beans. Rice Bowls already include black beans, so they offer Beef, Chicken or Black Beans Only.
+- Shorter option screen (about 20 buttons instead of 34) for students:
+  - Leave Off: No Pico de Gallo / No Lettuce / No Cheese (plus No Chile con Queso on Nachos and No Rice / No Black Beans / No Roasted Corn on Rice Bowls).
+  - Add Toppings: the 8 toppings plus Guacamole (+$1).
+  - Other: Veteran Free Entrée and Allergy Alert.
+  - The Light / Extra / On Side buttons were removed; type those in the custom note.
+
 ## KMS Recall, Clearing Inactive Tickets, and Back from Checkout
 - Recently Completed on the KMS now lists every completed ticket, not just the last 5. It shows 10 to start, with Show 10 More and Show All. Each ticket has a checkbox, so several can be recalled at once with Recall Selected (Select All Shown / Clear Selection help).
 - Expo and All Tickets show "Clear Inactive Tickets (1 hr+)" when any ticket has had no activity (sent, started, completed or recalled) for over an hour. Clearing takes them off the KMS and moves them to Recently Completed, where they can be recalled. Unpaid orders stay open for checkout.
