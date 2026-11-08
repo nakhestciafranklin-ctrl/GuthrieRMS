@@ -1,4 +1,4 @@
-// Guthrie RMS 2.0 (BriskTable test copy) cloud sync
+// Guthrie RMS 2.0 (POS test copy: BriskTable, Loyverse) cloud sync
 // This file connects the app to a shared Firebase Firestore database so every
 // device sees the same users, inventory, orders, and settings in real time.
 //
@@ -20,7 +20,7 @@ const firebaseConfig={
   appId:'1:515721873582:web:c4f7825c8d616b69e5853f'
 };
 
-// RMS 2.0 (BriskTable test copy) syncs to its own document so it never writes to the live RMS.
+// RMS 2.0 (POS test copy) syncs to its own document so it never writes to the live RMS.
 // The live document is only read, once, to start the 2.0 copy from the real RMS data.
 const SHARED_DOC_PATH=['guthrieRMS2','sharedState'];
 const LIVE_DOC_PATH=['guthrieRMS','sharedState'];

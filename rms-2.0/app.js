@@ -327,7 +327,7 @@ const bekOrderGuideImport=[
 {barcode:'888066',name:'Cleaner Quick Clean Griddle',unit:'40 / 1 EA',location:'Dry Storage'}
 ];
 seed.inventory=seed.inventory.concat(bekOrderGuideImport.filter(it=>!seed.inventory.some(x=>x.barcode===it.barcode)).map((it,i)=>({id:1000+i,division:'culinary',vendor:'Ben E. Keith',par:0,onHand:0,...it})));
-// RMS 2.0 (BriskTable test copy) saves only to RMS2_KEY. On first open it starts from a copy of
+// RMS 2.0 (POS test copy: BriskTable, Loyverse) saves only to RMS2_KEY. On first open it starts from a copy of
 // the live RMS data saved in this browser; the live keys are read, never written or removed.
 const RMS2_KEY='guthrieRMS2';
 window.GUTHRIE_RMS2=true;
@@ -1044,15 +1044,15 @@ function cloudStatusLine(){
   const icon=s.ok?'☁':'⚠';
   return `<p class="small" style="color:${color};margin-top:8px">${icon} ${s.message}</p>`;
 }
-function login(){applyTheme();app.innerHTML=`<div class="login"><div class="card login-card"><img class="logo" src="../assets/guthrie-center-logo.jpg"><h1 class="title">${db.settings?.businessName||'Guthrie RMS'}</h1><p>${db.settings?.businessSubtitle||'Restaurant Management System'}</p><p class="rms2-tag">RMS 2.0 &bull; BriskTable test copy</p><p>Enter Student or Manager PIN</p><div class="pin-display">${'*'.repeat(state.pin.length)}</div><div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-key="${n}">${n}</button>`).join('')}<button class="clear" data-clear>Clear</button><button data-key="0">0</button><button class="login-btn" data-login>Login</button></div><p class="error" id="err"></p>${db.settings?.demoMode?'<p class="small">Demo: Manager 9999 | Teacher 8888 | Student IDs/PINs: FOH 1001 | BOH 1002 | Cashier 1003 | Inventory 1004</p>':''}${cloudStatusLine()}</div></div>`; document.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>{state.pin+=b.dataset.key;login()}); $('[data-clear]').onclick=()=>{state.pin='';login()}; $('[data-login]').onclick=()=>{let u=db.users.find(x=>x.pin===state.pin&&x.active); if(u){state.user=u;state.pin='';state.view='dashboard';render()} else $('#err').textContent='PIN not found or inactive.'};}
+function login(){applyTheme();app.innerHTML=`<div class="login"><div class="card login-card"><img class="logo" src="../assets/guthrie-center-logo.jpg"><h1 class="title">${db.settings?.businessName||'Guthrie RMS'}</h1><p>${db.settings?.businessSubtitle||'Restaurant Management System'}</p><p class="rms2-tag">RMS 2.0 &bull; POS test copy (BriskTable, Loyverse)</p><p>Enter Student or Manager PIN</p><div class="pin-display">${'*'.repeat(state.pin.length)}</div><div class="keypad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-key="${n}">${n}</button>`).join('')}<button class="clear" data-clear>Clear</button><button data-key="0">0</button><button class="login-btn" data-login>Login</button></div><p class="error" id="err"></p>${db.settings?.demoMode?'<p class="small">Demo: Manager 9999 | Teacher 8888 | Student IDs/PINs: FOH 1001 | BOH 1002 | Cashier 1003 | Inventory 1004</p>':''}${cloudStatusLine()}</div></div>`; document.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>{state.pin+=b.dataset.key;login()}); $('[data-clear]').onclick=()=>{state.pin='';login()}; $('[data-login]').onclick=()=>{let u=db.users.find(x=>x.pin===state.pin&&x.active); if(u){state.user=u;state.pin='';state.view='dashboard';render()} else $('#err').textContent='PIN not found or inactive.'};}
 function allowedViews(){
   if(!state.user) return [];
   normalizeAccessForUser(state.user);
-  const order=['clock','dining','quick','pars','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','brisktable','setup'];
+  const order=['clock','dining','quick','pars','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','brisktable','loyverse','setup'];
   return order.filter(v=>(state.user.access||[]).includes(v) || state.user.role==='manager');
 }
 function canView(v){return allowedViews().includes(v)||state.user.role==='manager';}
-function topbar(){let labels={clock:'Clock In/Out',dining:'Dining Room',quick:'Counter + To-Go',pars:'Daily Pars',checkout:'Checkout',kms:'KMS',inventory:'Inventory',catering:'Catering',recipes:'Recipes/Labs',recipes:'Recipes/Labs',reports:'Reports',invoices:'Invoices',development:'Student Development',schedule:'Scheduling',brisktable:'BriskTable',setup:'Settings',closeout:'End of Day'}; let nav=allowedViews().filter(v=>labels[v]).map(v=>v+':'+labels[v]); return `<header class="topbar"><img src="../assets/guthrie-center-logo.jpg"><b>${db.settings?.businessName||'Guthrie RMS'}</b><span>${state.user.name} • ${state.user.pos}</span><span class="spacer"></span><nav class="nav"><button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">🏠 Dashboard</button>${nav.map(x=>{let [v,l]=x.split(':');return `<button data-view="${v}" class="${state.view===v?'active':''}">${l}</button>`}).join('')}<button data-logout>Log Out</button></nav></header>`}
+function topbar(){let labels={clock:'Clock In/Out',dining:'Dining Room',quick:'Counter + To-Go',pars:'Daily Pars',checkout:'Checkout',kms:'KMS',inventory:'Inventory',catering:'Catering',recipes:'Recipes/Labs',recipes:'Recipes/Labs',reports:'Reports',invoices:'Invoices',development:'Student Development',schedule:'Scheduling',brisktable:'BriskTable',loyverse:'Loyverse',setup:'Settings',closeout:'End of Day'}; let nav=allowedViews().filter(v=>labels[v]).map(v=>v+':'+labels[v]); return `<header class="topbar"><img src="../assets/guthrie-center-logo.jpg"><b>${db.settings?.businessName||'Guthrie RMS'}</b><span>${state.user.name} • ${state.user.pos}</span><span class="spacer"></span><nav class="nav"><button data-view="dashboard" class="${state.view==='dashboard'?'active':''}">🏠 Dashboard</button>${nav.map(x=>{let [v,l]=x.split(':');return `<button data-view="${v}" class="${state.view===v?'active':''}">${l}</button>`}).join('')}<button data-logout>Log Out</button></nav></header>`}
 function bindCommon(){
   document.querySelectorAll('[data-view]').forEach(b=>{
     b.onclick=(e)=>{e.preventDefault();let v=b.dataset.view;if(v==='dashboard'||canView(v)){state.view=v;render()}else alert('Access not assigned for this area.')}
@@ -1075,7 +1075,7 @@ function dashboardScheduleWidget(){
 }
 
 const activeShift=()=>db.shifts.find(s=>s.userId===state.user.id&&!s.out);
-function roleTiles(){let tiles=allowedViews(); return tiles.map(v=>`<button class="tile" data-view="${v}">${({clock:'Clock In / Out',dining:'Dining Room',quick:'Counter + To-Go',pars:'Daily Pars',checkout:'Checkout',kms:'KMS',inventory:'Inventory',catering:'Catering',recipes:'Recipes/Labs',recipes:'Recipes/Labs',reports:'Reports',invoices:'Invoices',development:'Student Development',schedule:'Scheduling',brisktable:'BriskTable POS',setup:'Settings',closeout:'End of Day Closeout'})[v]}</button>`).join('')}
+function roleTiles(){let tiles=allowedViews(); return tiles.map(v=>`<button class="tile" data-view="${v}">${({clock:'Clock In / Out',dining:'Dining Room',quick:'Counter + To-Go',pars:'Daily Pars',checkout:'Checkout',kms:'KMS',inventory:'Inventory',catering:'Catering',recipes:'Recipes/Labs',recipes:'Recipes/Labs',reports:'Reports',invoices:'Invoices',development:'Student Development',schedule:'Scheduling',brisktable:'BriskTable POS',loyverse:'Loyverse POS',setup:'Settings',closeout:'End of Day Closeout'})[v]}</button>`).join('')}
 const views={dashboard:()=>`<section class="card"><h1>Welcome, ${state.user.name}</h1><p>${activeShift()?'Clocked in: '+new Date(activeShift().in).toLocaleTimeString():'Not clocked in'}</p>${dashboardScheduleWidget()}<div class="grid">${roleTiles()}</div></section>`,
 clock:()=>`<section class="card"><h1>Clock In / Clock Out</h1><p>${activeShift()?`You clocked in at ${new Date(activeShift().in).toLocaleString()}`:'You are not clocked in.'}</p><button class="primary ${activeShift()?'danger':'success'}" onclick="toggleClock()">${activeShift()?'Clock Out':'Clock In'}</button></section>`,
 dining:()=>dining(), quick:()=>quick(), pars:()=>parsScreen(), order:()=>orderScreen(), checkout:()=>checkout(), kms:()=>kms(), inventory:()=>inventory(), catering:()=>catering(), recipes:()=>recipesLab(), reports:()=>reports(), invoices:()=>invoiceCenter(), development:()=>development(), schedule:()=>scheduleCenter(), closeout:()=>closeout(), setup:()=>setup()};
@@ -2518,6 +2518,119 @@ views.brisktable=()=>{
     <p class="small">Staff exports list names, roles and positions only. PINs and student IDs are never exported.</p>
     <h3>Menu being sent</h3>
     ${Object.entries(groups).map(([g,list])=>`<h4>${btEsc(g)} (${list.length})</h4><div style="overflow-x:auto"><table class="report-table"><thead><tr><th>Item</th><th>Category</th><th>Price</th><th>Modifiers</th></tr></thead><tbody>${list.map(m=>`<tr><td>${btEsc(m.name)}</td><td>${btEsc(m.category||'')}</td><td>${money(m.price)}</td><td class="small">${btEsc(btMods(m).join(', '))}</td></tr>`).join('')}</tbody></table></div>`).join('')}
+  </section>`;
+};
+
+// ---- RMS 2.0: Loyverse POS test ----
+// Loyverse has a real item import (Back Office > Items > Item list > Import), so this builds files in
+// Loyverse's own CSV format instead of a console loader. Loyverse modifiers can't be imported from a
+// file, so they come as a sheet to enter in Back Office > Items > Modifiers (one modifier per RMS
+// option group). Negative-priced RMS options (e.g. Veteran Free Entrée, -$8) become Loyverse discounts.
+// Staff exports never include PINs or student IDs (student IDs are login PINs).
+const LOYVERSE_BACKOFFICE_URL='https://r.loyverse.com/dashboard/';
+const LV_SKU_BASE=900000; // RMS item 205 -> SKU 900205, so Loyverse items can be traced back to the RMS
+function lvSettings(){return db.loyverse||{};}
+function lvStore(){return String(lvSettings().store||'').trim();}
+function lvCategory(m){return `${btMenuName(m.menu)||'Menu'}: ${m.category||'Other'}`;}
+function lvHandle(m){return ('rms-'+m.id+'-'+String(m.name).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')).slice(0,60);}
+// One Loyverse modifier per RMS option-group name, so there are few to enter by hand. Items whose
+// groups share a name (e.g. every Bistro Handhelds item, or "Ice") share one modifier holding all of
+// their options; on the Loyverse POS the cashier picks the ones that apply.
+function lvModifiers(){
+  let byName={}, list=[], links={}, discounts={}, conflicts=[];
+  btMenuItems(false).forEach(m=>{
+    let groups=(m.modGroups&&m.modGroups.length)?m.modGroups:((m.mods||[]).length?[{name:`${btMenuName(m.menu)||'Menu'} ${m.category||''} Options`.replace(/\s+/g,' ').trim(),options:m.mods}]:[]);
+    links[m.id]=[];
+    groups.forEach(g=>{
+      let opts=[];
+      (g.options||[]).forEach(o=>{let price=Number(m.modPrices?.[o])||0; if(price<0){discounts[o]=Math.max(discounts[o]||0,-price);return;} opts.push({name:o,price});});
+      if(!opts.length)return;
+      let mod=byName[g.name]; if(!mod){mod={name:g.name,options:[],items:[]};byName[g.name]=mod;list.push(mod);}
+      opts.forEach(o=>{let have=mod.options.find(x=>x.name===o.name); if(!have)mod.options.push(o); else if(have.price!==o.price){conflicts.push(`${mod.name}: ${o.name}`);have.price=Math.max(have.price,o.price);}});
+      if(!mod.items.includes(m.name))mod.items.push(m.name);
+      if(!links[m.id].includes(mod.name))links[m.id].push(mod.name);
+    });
+  });
+  return {list,links,conflicts,discounts:Object.entries(discounts).map(([name,amount])=>({name,amount}))};
+}
+const LV_ITEM_HEAD=['Handle','SKU','Name','Category','Description','Sold by weight','Option 1 name','Option 1 value','Option 2 name','Option 2 value','Option 3 name','Option 3 value','Default price','Cost','Barcode','Included in composite','Use production','Supplier','Purchase cost','Track stock'];
+function lvItemRows(withMods){
+  let store=lvStore(), mods=lvModifiers(), modNames=withMods?mods.list.map(x=>x.name):[];
+  let head=[...LV_ITEM_HEAD,...(store?[`Available for sale [${store}]`,`Price [${store}]`,`In stock [${store}]`,`Low stock [${store}]`]:[]),...modNames.map(n=>`Modifier - ${n}`)];
+  let rows=btMenuItems(false).map(m=>{let price=(Number(m.price)||0).toFixed(2);return [lvHandle(m),String(LV_SKU_BASE+Number(m.id)),m.name,lvCategory(m),'','N','','','','','','',price,'','','N','N','','','N',...(store?['Y',price,'','']:[]),...modNames.map(n=>(mods.links[m.id]||[]).includes(n)?'Y':'N')];});
+  return [head,...rows];
+}
+// Inventory as Loyverse stock items that are not for sale, so stock counts can be tried in Loyverse.
+// Needs the store name because stock and "available for sale" are per store in Loyverse.
+function lvInventoryRows(){
+  let store=lvStore();
+  let head=[...LV_ITEM_HEAD,`Available for sale [${store}]`,`Price [${store}]`,`In stock [${store}]`,`Low stock [${store}]`];
+  return [head,...(db.inventory||[]).map(i=>{let div=String(i.division||'').trim(); return [('inv-'+i.id+'-'+String(i.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')).slice(0,60),String(800000+Number(i.id)),i.name,'Inventory'+(div?': '+div.charAt(0).toUpperCase()+div.slice(1):''),[i.unit,i.location].filter(Boolean).join(' • '),'N','','','','','','','','',i.barcode||'','N','N',i.vendor||'','','Y','N','',Number(i.onHand)||0,Number(i.par)||0];})];
+}
+window.lvExport=kind=>{
+  let day=new Date().toISOString().slice(0,10), d=btData(), mods=lvModifiers();
+  if(kind==='inventory'&&!lvStore()){alert('Enter your Loyverse store name first (Settings > Stores in Loyverse Back Office). Stock is kept per store.');document.getElementById('lv-store')?.focus();return;}
+  if(kind==='items')downloadCSV(`loyverse-items-${day}.csv`,lvItemRows(false));
+  if(kind==='items-mods')downloadCSV(`loyverse-items-with-modifiers-${day}.csv`,lvItemRows(true));
+  if(kind==='modifiers')downloadCSV(`loyverse-modifiers-${day}.csv`,[['Modifier','Option','Price','Used On'],...mods.list.flatMap(x=>x.options.map((o,i)=>[x.name,o.name,o.price.toFixed(2),i===0?x.items.join('; '):'']))]);
+  if(kind==='discounts')downloadCSV(`loyverse-discounts-${day}.csv`,[['Discount','Type','Value'],...mods.discounts.map(x=>[x.name,'Amount',x.amount.toFixed(2)])]);
+  if(kind==='inventory')downloadCSV(`loyverse-inventory-items-${day}.csv`,lvInventoryRows());
+  if(kind==='tables')downloadCSV(`loyverse-tables-${day}.csv`,[['Predefined Ticket','Seats'],...d.tables.map(t=>[`Table ${t.table}`,t.seats])]);
+  if(kind==='staff')downloadCSV(`loyverse-staff-${day}.csv`,[['Name','Role','Position'],...d.staff.map(s=>[s.name,s.role,s.position])]);
+  if(kind==='catering')downloadCSV(`loyverse-catering-${day}.csv`,[['Package','Price','Description','Items'],...d.cateringPackages.map(c=>[c.name,c.price.toFixed(2),c.description,c.items.join('; ')])]);
+  if(kind==='json'){
+    let blob=new Blob([JSON.stringify({...d,source:'Guthrie RMS 2.0 (Loyverse)',loyverse:{store:lvStore(),modifiers:mods.list,discounts:mods.discounts,itemModifiers:mods.links}},null,2)],{type:'application/json'}), url=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=url;a.download=`guthrie-rms-loyverse-${day}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);return;
+  }
+  toast('Export downloaded.');
+};
+window.lvSaveStore=()=>{
+  let v=(document.getElementById('lv-store')?.value||'').trim();
+  if(/[\[\]]/.test(v)){alert('The store name cannot contain [ or ].');return;}
+  db.loyverse=db.loyverse||{}; db.loyverse.store=v; save(); render(); toast(v?'Loyverse store saved.':'Loyverse store cleared.');
+};
+views.loyverse=()=>{
+  let items=btMenuItems(false), mods=lvModifiers(), store=lvStore(), groups={};
+  items.forEach(m=>{let k=btMenuName(m.menu)||'Other';(groups[k]=groups[k]||[]).push(m);});
+  return `<section class="card bt-screen">
+    <h1>Loyverse POS Test</h1>
+    <p class="notice">This is the RMS 2.0 test copy. It started from the live RMS data, but nothing done here changes the live Guthrie RMS.</p>
+    <p class="small">Loyverse runs as the <b>Loyverse POS</b> app (iPad / Android) with the free <b>Loyverse KDS</b> app for the kitchen. The menu, modifiers and stock are set up on a computer in <b>Loyverse Back Office</b>.</p>
+    <div class="row section"><a class="primary" style="text-decoration:none;display:inline-block" href="${LOYVERSE_BACKOFFICE_URL}" target="_blank" rel="noopener">Open Loyverse Back Office ↗</a></div>
+    <h3>Loyverse store name (optional)</h3>
+    <p class="small">Only needed for the Inventory file and per-store prices. Use the name exactly as it shows in Back Office &gt; Settings &gt; Stores.</p>
+    <div class="row"><input class="input" id="lv-store" value="${btEsc(store)}" placeholder="e.g. Guthrie Bistro" style="flex:1;min-width:220px"><button class="small-btn" onclick="lvSaveStore()">Save Store</button></div>
+    <h3>Step 1: Modifiers (enter these first)</h3>
+    <p class="small">Loyverse can't import modifiers from a file. In Back Office go to <b>Items &gt; Modifiers &gt; Add modifier</b> and enter each one below (name, options and prices). Use the names exactly as shown so step 2 can attach them. ${mods.list.length} modifiers.</p>
+    <div class="row"><button class="small-btn" onclick="lvExport('modifiers')">Modifiers Sheet CSV</button>${mods.discounts.length?`<button class="small-btn" onclick="lvExport('discounts')">Discounts CSV (${mods.discounts.length})</button>`:''}</div>
+    ${mods.discounts.length?`<p class="small">Loyverse modifier prices can't be negative, so these are set up as discounts instead (Back Office &gt; Items &gt; Discounts): ${mods.discounts.map(x=>`${btEsc(x.name)} (${money(x.amount)} off)`).join(', ')}.</p>`:''}
+    ${mods.conflicts.length?`<p class="small">Same option, different prices on different items (the higher price is used): ${btEsc(mods.conflicts.join(', '))}.</p>`:''}
+    <details><summary class="small">Show the modifiers</summary><div style="overflow-x:auto"><table class="report-table"><thead><tr><th>Modifier</th><th>Options</th><th>Used on</th></tr></thead><tbody>${mods.list.map(x=>`<tr><td><b>${btEsc(x.name)}</b></td><td class="small">${x.options.map(o=>btEsc(o.name)+(o.price?` (+${money(o.price)})`:'')).join(', ')}</td><td class="small">${btEsc(x.items.join(', '))}</td></tr>`).join('')}</tbody></table></div></details>
+    <h3>Step 2: Import the menu</h3>
+    <ol class="small">
+      <li>Download <b>Items + Modifiers CSV</b> (or <b>Items CSV</b> if you skipped step 1).</li>
+      <li>In Back Office go to <b>Items &gt; Item list &gt; Import</b> and choose the file.</li>
+      <li>Loyverse shows a preview of the changes. Check it, then confirm.</li>
+    </ol>
+    <p class="small">Items go into categories like "Bistro: Handhelds" and "Café: Bake Shop". Each item's SKU is 900000 + its RMS number (RMS item 205 = SKU 900205). The Handle and SKU stay the same every time, so importing again updates the same items instead of adding copies. If the import says a modifier column is unknown, that modifier isn't in Loyverse yet (or its name is different): add it, or use Items CSV.</p>
+    <div class="row"><button class="primary" onclick="lvExport('items-mods')">Items + Modifiers CSV (${items.length} items)</button><button class="small-btn" onclick="lvExport('items')">Items CSV (no modifiers)</button></div>
+    <h3>Other RMS data</h3>
+    <div class="row">
+      <button class="small-btn" onclick="lvExport('inventory')">Inventory as Stock Items CSV (${(db.inventory||[]).length})${store?'':' • needs store name'}</button>
+      <button class="small-btn" onclick="lvExport('tables')">Tables CSV (${(db.tables||[]).length})</button>
+      <button class="small-btn" onclick="lvExport('staff')">Staff CSV</button>
+      <button class="small-btn" onclick="lvExport('catering')">Catering CSV</button>
+      <button class="small-btn" onclick="lvExport('json')">Everything (JSON)</button>
+    </div>
+    <ul class="small">
+      <li><b>Inventory</b>: imports through Items &gt; Import like the menu. Each item is not for sale, has stock tracking on, In stock = on hand and Low stock = par, in categories like "Inventory: Bistro".</li>
+      <li><b>Tables</b>: in Loyverse, turn on Open tickets and Predefined tickets (Settings &gt; Features and Stores &gt; your store), then add the ticket names from this file.</li>
+      <li><b>Staff</b>: add each person in Employees &gt; Employee list; Loyverse gives them their own POS PIN. Names, roles and positions only. RMS PINs and student IDs are never exported.</li>
+      <li><b>Catering</b>: for reference. Packages can be added as items in Loyverse or kept in the RMS.</li>
+      <li><b>Kitchen (KMS)</b>: in Loyverse, add a Kitchen printer group or the Loyverse KDS app and pick which categories each station gets.</li>
+    </ul>
+    <h3>Menu being sent</h3>
+    ${Object.entries(groups).map(([g,list])=>`<h4>${btEsc(g)} (${list.length})</h4><div style="overflow-x:auto"><table class="report-table"><thead><tr><th>SKU</th><th>Item</th><th>Category</th><th>Price</th><th>Modifiers</th></tr></thead><tbody>${list.map(m=>`<tr><td class="small">${LV_SKU_BASE+Number(m.id)}</td><td>${btEsc(m.name)}</td><td>${btEsc(lvCategory(m))}</td><td>${money(m.price)}</td><td class="small">${btEsc((mods.links[m.id]||[]).join(', '))}</td></tr>`).join('')}</tbody></table></div>`).join('')}
   </section>`;
 };
 
