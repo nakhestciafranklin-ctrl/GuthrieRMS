@@ -2459,7 +2459,7 @@ for(const it of list){
   if(have.has('c:'+it.code.toLowerCase())||have.has('n:'+it.name.trim().toLowerCase())){skipped++;continue;}
   try{
     const ck=it.category.trim().toLowerCase();
-    if(!catId[ck]){const r=await call('/api/category/add',JSON.stringify({name:it.category,description:''}));if(!r||!r.key)throw new Error('Category '+it.category+' was not created');catId[ck]=r.key;newCats++;}
+    if(!catId[ck]){const r=await call('/api/category/add',JSON.stringify({name:it.category,description:''}));let id=r&&(r.key||r.id);if(!id){const f=((await call('/api/category/fetch','')).data||[]).find(c=>String(c.name).trim().toLowerCase()===ck);id=f&&f.id;}if(!id)throw new Error('Category '+it.category+' was not created');catId[ck]=id;newCats++;}
     const p={name:it.name,code:it.code,description:it.description,price:String(Math.round(it.price*100)),tax_id:taxId,is_modifier:it.isMod?1:0,is_visible:1,data:JSON.stringify({rcategories:[String(catId[ck])]}),restaurant_id:RID};
     const r=await call('/api/product/add?'+q(p),new FormData(),true);
     if(r.errorcode!==200)throw new Error(r.errormsg||'not added');
