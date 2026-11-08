@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Café Latte Hot or Iced
+- The Café's Iced Latte is now "Latte" ($3) and asks Hot or Iced; Vanilla / Mocha / Caramel / Pumpkin flavor is optional. The Bistro's Iced Latte is unchanged.
+
 ## Culinary Offerings Board: Photos and Missing Café Items
 - 19 more menu photos from the Guthrie Culinary Offerings board: Bistro burger, club, tomato basil soup, grilled cheese, Cobb salad, pommes frites, mac & cheese, broccolini and sprinkle sugar cookie; Café refreshers, hot honey wrap, quesadilla and street corn bowl.
 - New Café items that were on the board but not in the app:
