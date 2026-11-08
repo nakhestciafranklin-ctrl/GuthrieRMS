@@ -114,3 +114,5 @@ button,.primary,.secondary,.small-btn,.tile,.menu-item,.input,.tabs button,.seat
 .order-search .spacer{flex:1}
 .order-search #orderSearchResults{margin-top:10px;overflow-x:auto}
 .order-search .report-table td{vertical-align:top}
+.mod-group{border-top:1px solid #dbe3ef;padding:4px 0 10px}.mod-group h3{margin:10px 0 8px;font-size:16px}.mod-group h3 .small{font-weight:400;margin-left:6px}.mod-group.missing{background:#fdecea;border-radius:10px;padding:4px 10px 10px}.mod-group.missing h3{color:var(--red)}
+.kms-recent-actions{margin:8px 0}.kms-recall-label{display:flex;gap:8px;align-items:center;flex:1;cursor:pointer}.kms-recall-check{width:22px;height:22px}.kms-inactive{background:#fff7df;border:1px solid var(--gold);border-radius:12px;padding:10px;justify-content:space-between}

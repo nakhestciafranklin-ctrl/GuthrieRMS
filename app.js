@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026103002;
+window.GUTHRIE_RMS_VERSION=2026110805;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -791,42 +791,96 @@ function importBistroMenu(){
 }
 window.importBistroMenu=importBistroMenu;
 importBistroMenu();
-// Exemption Day menu: its own tab on Counter + To-Go orders. Tacos $2 (choice of red or
-// green salsa), cinnamon rolls $3, hot coffee $2 with flavor syrup +$1, iced latte $3,
-// peach tea and agua fresca $3. Cinnamon rolls are prepped at the Fry station.
-// Bump exemptionMenuVersion when prices or stations change.
-// The entrée is the Guthrie Bistro Burger at its Bistro price, with the same options and fries.
-const exemptionSyrupPrices={'Vanilla':1,'Mocha':1,'Caramel':1,'Pumpkin':1};
+// Exemption Day menu (Wednesday, November 11, 2026): its own tab on Counter + To-Go orders.
+// Items use modifier groups (modGroups): a group can be required (e.g. tortilla, protein,
+// hot or iced) and pick-one or pick-many. Every option is also listed in mods, and the
+// chosen options are saved on the order line as plain text, so the KMS, reports and search
+// read them like any other modifier. Bump exemptionMenuVersion when this menu changes:
+// existing devices then take the new names, prices, stations and options, and items no
+// longer on the menu (retired) are hidden but kept so old orders still read right.
+const exHolidayFlavors=['Peppermint Mocha','Winter Wonderland','Pumpkin Spice','Chocolate Hazelnut Truffle','Caramel Pumpkin Cheesecake','Gingerbread Cookie','S\'mores Mocha','Brown Sugar Cinnamon'];
+const exBaseFlavors=['Vanilla','Caramel','Mocha','Hazelnut'];
+const exTortilla={name:'Tortilla',options:['Flour Tortilla','Corn Tortilla'],pick:'one',required:true};
+const exProtein={name:'Protein',options:['Seasoned Shredded Beef','Shredded Chicken'],pick:'one',required:true};
+const exHotIced={name:'Hot or Iced',options:['Hot','Iced'],pick:'one',required:true};
+const exIce={name:'Ice (Iced Drinks)',options:['Light Ice','Extra Ice','No Ice'],pick:'one'};
+// Garnish edits for a standard topping: none, light, extra or on the side.
+const exGarnish=(name,label)=>({name:label||name,options:['No '+name,'Light '+name,'Extra '+name,name+' on Side'],pick:'one'});
+// Every lunch entrée comes with pico de gallo, shredded lettuce and Mexican cheese blend.
+const exStandardGarnish=[exGarnish('Pico de Gallo'),exGarnish('Shredded Lettuce'),exGarnish('Mexican Cheese Blend')];
+const exToppingNames=['Corn Salsa','Diced Tomatoes','Diced Onions','Lime Wedges','Jalapeño Lime Crema','Chile con Queso','Red Salsa','Green Salsa'];
+const exToppings=(skip=[])=>({name:'Additional Toppings',options:[...exToppingNames.filter(t=>!skip.includes(t)).map(t=>'Add '+t),'Add Guacamole'],pick:'many'});
+const exVeteran={name:'Veterans Day',options:['Veteran Free Entrée'],pick:'one'};
+const exEntreePrices={'Add Guacamole':1,'Veteran Free Entrée':-8};
+const exAllergy={name:'Allergy',options:['Allergy Alert'],pick:'many'};
+// Breakfast tacos are made on flour tortillas only (no tortilla choice).
+const exBreakfastTaco=(id,name)=>({id,name,price:2,category:'Breakfast Tacos (All Day)',station:'grill',modGroups:[
+ {name:'Salsa',options:['Red Salsa','Green Salsa','Red Salsa on Side','Green Salsa on Side','No Salsa'],pick:'one'},
+ {name:'Hold / Extra',options:['No Eggs','No Potatoes','No Cheese','Extra Cheese'],pick:'many'},
+ exAllergy]});
+const exCinnamonRoll=(id,name)=>({id,name,price:3,category:'Fresh Baked Cinnamon Rolls',station:'fry',modGroups:[
+ {name:'Icing',options:['No Icing','Extra Icing','Icing on Side'],pick:'one'},
+ {name:'Warm',options:['Warm'],pick:'many'},
+ exAllergy]});
 const exemptionMenuData=[
- {id:301,name:'Bacon Breakfast Taco',price:2,category:'Breakfast Tacos',station:'grill',mods:['Red Salsa','Green Salsa','Salsa on Side','No Salsa','Allergy Alert']},
- {id:302,name:'Sausage Breakfast Taco',price:2,category:'Breakfast Tacos',station:'grill',mods:['Red Salsa','Green Salsa','Salsa on Side','No Salsa','Allergy Alert']},
- {id:303,name:'Turkey Sausage Breakfast Taco',price:2,category:'Breakfast Tacos',station:'grill',mods:['Red Salsa','Green Salsa','Salsa on Side','No Salsa','Allergy Alert']},
- {id:304,name:'Cinnamon Roll',price:3,category:'Bake Shop',station:'fry',mods:['Warm','Allergy Alert']},
- {id:305,name:'Iced Latte',price:3,category:'Beverages',station:'beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice']},
- {id:306,name:'Hot Coffee',price:2,category:'Beverages',station:'beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream'],modPrices:exemptionSyrupPrices},
- {id:307,name:'Peach Tea',price:3,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice']},
- {id:308,name:'Hibiscus Lime Agua Fresca',price:3,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice']},
- {...bistroMenuData.find(m=>m.id===201),id:309,category:'Entrée'}
-];
-const exemptionMenuVersion=3;
+ exBreakfastTaco(301,'Bacon Breakfast Taco'),
+ exBreakfastTaco(302,'Pork Sausage Breakfast Taco'),
+ exBreakfastTaco(303,'Turkey Sausage Breakfast Taco'),
+ exCinnamonRoll(304,'Classic Cinnamon Roll'),
+ exCinnamonRoll(310,'Pumpkin Cinnamon Roll'),
+ {id:311,name:'Tacos',price:8,category:'Lunch Entrées (B, C & D Block)',station:'grill',modPrices:exEntreePrices,modGroups:[
+  exProtein,exTortilla,...exStandardGarnish,exToppings(),exVeteran,exAllergy]},
+ {id:312,name:'Nachos',price:8,category:'Lunch Entrées (B, C & D Block)',station:'grill',modPrices:exEntreePrices,modGroups:[
+  exProtein,exGarnish('Chile con Queso'),...exStandardGarnish,exToppings(['Chile con Queso']),exVeteran,exAllergy]},
+ {id:313,name:'Rice Bowl',price:8,category:'Lunch Entrées (B, C & D Block)',station:'grill',modPrices:exEntreePrices,modGroups:[
+  exProtein,exGarnish('Seasoned Rice'),exGarnish('Black Beans'),exGarnish('Roasted Corn'),...exStandardGarnish,exToppings(),exVeteran,exAllergy]},
+ {id:318,name:'Holiday Latte',price:3,category:'Holiday Latte Collection',station:'beverage',modGroups:[
+  {name:'Holiday Flavor',options:exHolidayFlavors,pick:'one',required:true},exHotIced,
+  {name:'Whipped Cream',options:['No Whipped Cream','Extra Whipped Cream'],pick:'one'},
+  {name:'Drizzle / Topping',options:['No Drizzle','Extra Drizzle'],pick:'one'},exIce,exAllergy]},
+ {id:305,name:'Latte',price:3,category:'Coffee & Espresso',station:'beverage',modGroups:[
+  {name:'Flavor',options:exBaseFlavors,pick:'one',required:true},exHotIced,
+  {name:'Garnish',options:['Add Whipped Cream','Add Drizzle'],pick:'many'},exIce,exAllergy]},
+ {id:319,name:'Cappuccino',price:3,category:'Coffee & Espresso',station:'beverage',modGroups:[
+  {name:'Flavor',options:[...exHolidayFlavors,...exBaseFlavors,'No Flavor'],pick:'one',required:true},exHotIced,
+  {name:'Foam / Garnish',options:['Extra Foam','Light Foam','No Cinnamon Dusting'],pick:'many'},exIce,exAllergy]},
+ {id:306,name:'Americano',price:2,category:'Coffee & Espresso',station:'beverage',modPrices:Object.fromEntries([...exBaseFlavors,...exHolidayFlavors].map(f=>[f+' Syrup',1])),modGroups:[
+  {name:'Syrup (+$1)',options:[...exBaseFlavors,...exHolidayFlavors].map(f=>f+' Syrup'),pick:'one'},
+  {name:'Extras',options:['Add Milk','Room for Cream'],pick:'many'},exAllergy]},
+ {id:320,name:'Horchata',price:3,category:'Other Beverages',station:'beverage',modGroups:[
+  exHotIced,{name:'Garnish',options:['No Cinnamon','Extra Cinnamon'],pick:'one'},exIce,exAllergy]},
+ {id:308,name:'Hibiscus Lime Agua Fresca',price:3,category:'Other Beverages',station:'beverage',modGroups:[
+  {name:'Ice',options:['Light Ice','Extra Ice','No Ice'],pick:'one'},{name:'Garnish',options:['No Lime Garnish','Extra Lime'],pick:'one'},exAllergy]},
+ {id:307,name:'Peach Tea',price:3,category:'Other Beverages',station:'beverage',modGroups:[
+  {name:'Ice',options:['Light Ice','Extra Ice','No Ice'],pick:'one'},{name:'Garnish',options:['No Peach Garnish','Extra Peach'],pick:'one'},exAllergy]}
+].map((item,i)=>({...item,mods:item.modGroups.flatMap(g=>g.options),sortOrder:i}));
+// Items from earlier Exemption Day drafts that are not on the final menu (desserts aren't being run).
+const retiredExemptionIds=[309,314,315,316,317];
+const exemptionMenuVersion=7;
 function importExemptionMenu(){
   let changed=false;
   if(!Array.isArray(db.menu))db.menu=[];
-  let repriceExisting=(Number(db.exemptionMenuVersion)||0)<exemptionMenuVersion;
+  let updateExisting=(Number(db.exemptionMenuVersion)||0)<exemptionMenuVersion;
   exemptionMenuData.forEach(item=>{
     let existing=db.menu.find(m=>m.id===item.id);
     if(existing){
-      if(repriceExisting){
-        if(existing.price!==item.price){existing.price=item.price;changed=true;}
-        if(existing.station!==item.station){existing.station=item.station;changed=true;}
-        if(JSON.stringify(existing.modPrices||null)!==JSON.stringify(item.modPrices||null)){if(item.modPrices)existing.modPrices={...item.modPrices};else delete existing.modPrices;changed=true;}
+      if(updateExisting){
+        let fresh=JSON.parse(JSON.stringify(item));
+        ['name','price','category','station','mods','modGroups','sortOrder'].forEach(k=>{if(JSON.stringify(existing[k])!==JSON.stringify(fresh[k])){existing[k]=fresh[k];changed=true;}});
+        if(JSON.stringify(existing.modPrices||null)!==JSON.stringify(fresh.modPrices||null)){if(fresh.modPrices)existing.modPrices=fresh.modPrices;else delete existing.modPrices;changed=true;}
+        if(existing.components){delete existing.components;changed=true;}
+        if(existing.menu!=='exemption'){existing.menu='exemption';changed=true;}
+        if(existing.active===false){existing.active=true;changed=true;}
       }
       return;
     }
     db.menu.push({...JSON.parse(JSON.stringify(item)),inv:'bistro',menu:'exemption',services:['counter','togo'],active:true,dailyPar:0});
     changed=true;
   });
-  if(repriceExisting){db.exemptionMenuVersion=exemptionMenuVersion;changed=true;}
+  if(updateExisting){
+    db.menu.forEach(m=>{if(retiredExemptionIds.includes(m.id)&&m.active!==false){m.active=false;changed=true;}});
+    db.exemptionMenuVersion=exemptionMenuVersion;changed=true;
+  }
   if(changed)save();
   return changed;
 }
@@ -1000,8 +1054,34 @@ function orderScreen(){let o=db.orders.find(x=>x.id===state.activeOrder); if(!o)
 function quick(){let list=db.orders.filter(o=>!o.paid&&(o.type==='counter'||o.type==='togo'));return `<section class="card"><h1>Counter + To-Go Order Entry</h1><p class="notice">Create, edit, send, and checkout counter or to-go orders from this page.</p><div class="row"><button class="primary success" onclick="createQuickOrder('counter')">New Counter Order</button><button class="primary success" onclick="createQuickOrder('togo')">New To-Go Order</button></div>${orderSearchPanel()}<h2>Open Counter + To-Go Orders</h2><div class="grid">${list.map(o=>`<div class="order-card"><h3>${o.type==='togo'?'To-Go':'Counter'}: ${o.customer}</h3><p>${validItems(o).length} item(s) • ${money(total(o))} • ${o.status}</p><div class="row"><button class="small-btn" onclick="openQuickOrder(${o.id})">Edit Order</button><button class="small-btn" onclick="sendKitchen(${o.id})">Send to KMS</button><button class="small-btn" onclick="state.checkoutType='${o.type}';state.selectedOrder=${o.id};state.view='checkout';render()">Checkout</button></div></div>`).join('')||'<p>No open counter or to-go orders.</p>'}</div></section>`}
 window.createQuickOrder=(type)=>{let label=type==='togo'?'To-Go':'Counter';let customer=prompt(`Enter customer/order name for ${label}:`, type==='togo'?'To-Go Customer':'Walk-In')||label+' Order';let o={id:Date.now(),type,customer,items:[],status:'open',created:now(),sent:null,paid:false};db.orders.push(o);state.activeOrder=o.id;state.seat=1;state.menuTab='cafe';state.view='order';save();render();};
 window.openQuickOrder=id=>{let o=db.orders.find(x=>x.id===id);if(!o)return;state.activeOrder=id;state.seat=1;state.view='order';render();};
-function modifierModal(menuId,seat){let m=db.menu.find(x=>x.id===menuId); if(!m||isMenu86(m)){alert('This item is currently 86\'d or unavailable.');return;} app.insertAdjacentHTML('beforeend',`<div class="modal" id="mod"><div class="card"><h2>${m.name} Modifiers</h2><p class="small">Remaining today: ${productionRemaining(m.id)}</p><div class="modifier-list">${(m.mods||[]).map(md=>{let up=Number(m.modPrices?.[md])||0;return `<button data-mod="${md}" onclick="this.classList.toggle('selected')">${md}${up?` <b>+${money(up)}</b>`:''}</button>`;}).join('')||'<p class="small">No modifiers set up yet.</p>'}</div><h3>Custom Note</h3><input class="input" id="note" placeholder="Optional"><h3>Quantity</h3><div class="row qty-picker"><button class="small-btn" onclick="stepQty(-1)">&minus;</button><input class="input" id="qty" type="number" min="1" step="1" inputmode="numeric" value="1"><button class="small-btn" onclick="stepQty(1)">+</button></div><div class="row section"><button class="primary" onclick="addItem(${menuId},${seat})">Add Item</button><button class="primary danger" onclick="document.getElementById('mod').remove()">Cancel</button></div></div></div>`)}
-window.modifierModal=modifierModal; window.addItem=(menuId,seat)=>{let o=db.orders.find(x=>x.id===state.activeOrder), m=db.menu.find(x=>x.id===menuId); if(!o||!m)return; let qty=Math.max(1,Math.floor(Number($('#qty')?.value)||1)); if(!deductProduction(menuId,qty)){let left=productionRemaining(menuId);alert(productionItem(menuId).manual86||left==='∞'||!left?'This item is 86\'d or no longer available.':`Only ${left} left today.`);return;} let mods=[...document.querySelectorAll('#mod .modifier-list .selected')].map(b=>b.dataset.mod||b.textContent);let note=$('#note').value; let upcharge=mods.reduce((a,md)=>a+(Number(m.modPrices?.[md])||0),0); /* One ticket line per item so KMS, pars and reports count each one. */ for(let n=0;n<qty;n++)o.items.push({id:Date.now()+n,addedAt:Date.now(),lineId:String(Date.now())+'-'+n+'-'+Math.random().toString(36).slice(2,7),menuId,name:m.name,price:Math.round((Number(m.price)+upcharge)*100)/100,basePrice:m.price,modCharge:upcharge,seat,mods:[...mods],note}); document.getElementById('mod').remove(); save();render(); if(qty>1)toast(`Added ${qty} × ${m.name}.`);};
+// Add-item pop-up. Items with modGroups show each group under its own heading: a pick-one
+// group acts like a radio (tapping the chosen option again clears it) and a required group
+// must have a choice before the item can be added. Options not in any group, and items
+// without groups, show as one list of toggles as before.
+const attr=s=>String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+function modButton(m,md){let up=Number(m.modPrices?.[md])||0;return `<button data-mod="${attr(md)}" onclick="toggleModOption(this)">${attr(md)}${up?` <b>${up>0?'+':'&minus;'}${money(Math.abs(up))}</b>`:''}</button>`;}
+function modGroupsHtml(m){
+  let groups=Array.isArray(m.modGroups)?m.modGroups:[];
+  let grouped=new Set(groups.flatMap(g=>g.options||[]));
+  let other=(m.mods||[]).filter(md=>!grouped.has(md));
+  if(!groups.length) return `<div class="modifier-list">${other.map(md=>modButton(m,md)).join('')||'<p class="small">No modifiers set up yet.</p>'}</div>`;
+  return groups.map((g,gi)=>`<div class="mod-group" data-group="${gi}" data-pick="${g.pick==='one'?'one':'many'}" data-required="${g.required?1:''}" data-name="${attr(g.name)}"><h3>${attr(g.name)} <span class="small">${g.required?'Required &bull; choose 1':g.pick==='one'?'Optional &bull; choose 1':'Optional &bull; choose any'}</span></h3><div class="modifier-list">${(g.options||[]).map(md=>modButton(m,md)).join('')}</div></div>`).join('')
+    +(other.length?`<div class="mod-group" data-pick="many"><h3>Other Options</h3><div class="modifier-list">${other.map(md=>modButton(m,md)).join('')}</div></div>`:'');
+}
+window.toggleModOption=btn=>{
+  let g=btn.closest('.mod-group');
+  if(g&&g.dataset.pick==='one'&&!btn.classList.contains('selected'))g.querySelectorAll('.modifier-list .selected').forEach(b=>b.classList.remove('selected'));
+  btn.classList.toggle('selected');
+  if(g)g.classList.remove('missing');
+};
+function modifierModal(menuId,seat){let m=db.menu.find(x=>x.id===menuId); if(!m||isMenu86(m)){alert('This item is currently 86\'d or unavailable.');return;} app.insertAdjacentHTML('beforeend',`<div class="modal" id="mod"><div class="card"><h2>${m.name} &bull; ${money(m.price)}</h2><p class="small">Remaining today: ${productionRemaining(m.id)}</p>${modGroupsHtml(m)}<h3>Custom Note</h3><input class="input" id="note" placeholder="Optional"><h3>Quantity</h3><div class="row qty-picker"><button class="small-btn" onclick="stepQty(-1)">&minus;</button><input class="input" id="qty" type="number" min="1" step="1" inputmode="numeric" value="1"><button class="small-btn" onclick="stepQty(1)">+</button></div><div class="row section"><button class="primary" onclick="addItem(${menuId},${seat})">Add Item</button><button class="primary danger" onclick="document.getElementById('mod').remove()">Cancel</button></div></div></div>`)}
+window.modifierModal=modifierModal; window.addItem=(menuId,seat)=>{let o=db.orders.find(x=>x.id===state.activeOrder), m=db.menu.find(x=>x.id===menuId); if(!o||!m)return;
+  let missing=[...document.querySelectorAll('#mod .mod-group[data-required="1"]')].filter(g=>!g.querySelector('.modifier-list .selected'));
+  if(missing.length){missing.forEach(g=>g.classList.add('missing'));missing[0].scrollIntoView({block:'center'});alert('Please choose: '+missing.map(g=>g.dataset.name).join(', '));return;}
+  let qty=Math.max(1,Math.floor(Number($('#qty')?.value)||1)); if(!deductProduction(menuId,qty)){let left=productionRemaining(menuId);alert(productionItem(menuId).manual86||left==='∞'||!left?'This item is 86\'d or no longer available.':`Only ${left} left today.`);return;} let mods=[...document.querySelectorAll('#mod .modifier-list .selected')].map(b=>b.dataset.mod||b.textContent);let note=$('#note').value; let upcharge=mods.reduce((a,md)=>a+(Number(m.modPrices?.[md])||0),0);
+  /* A discount option (e.g. Veteran Free Entrée, -$8) never takes a line below $0. */
+  let price=Math.max(0,Math.round((Number(m.price)+upcharge)*100)/100); upcharge=Math.round((price-Number(m.price))*100)/100;
+  /* One ticket line per item so KMS, pars and reports count each one. */ for(let n=0;n<qty;n++)o.items.push({id:Date.now()+n,addedAt:Date.now(),lineId:String(Date.now())+'-'+n+'-'+Math.random().toString(36).slice(2,7),menuId,name:m.name,price,basePrice:m.price,modCharge:upcharge,seat,mods:[...mods],note}); document.getElementById('mod').remove(); save();render(); if(qty>1)toast(`Added ${qty} × ${m.name}.`);};
 window.stepQty=(d)=>{let q=$('#qty'); if(q)q.value=Math.max(1,(Math.floor(Number(q.value))||1)+d);};
 function ticketItems(o){let items=validItems(o);return items.length?`<table class="report-table"><tr><th>Seat</th><th>Item</th><th>Mods</th><th>Price</th><th>Remove</th></tr>${items.map((i,idx)=>`<tr><td>${i.seat||'-'}</td><td>${i.name}</td><td>${[...(i.mods||[]),i.note].filter(Boolean).join(', ')}</td><td>${money(i.price)}</td><td><button class="small-btn danger" onclick="removeTicketLine(${o.id},'${i.lineId||''}',${idx})">Remove</button></td></tr>`).join('')}<tr><td colspan="3"><b>Total</b></td><td colspan="2"><b>${money(total(o))}</b></td></tr></table>`:'<p>No items yet.</p>'}
 // Remove a line while ringing up. Unlike checkout, an emptied order stays open so more items can be added.
@@ -1100,6 +1180,9 @@ window.refreshOrderSearch=(typing)=>{
   $('#orderSearchFilters').innerHTML=tmp.querySelector('#orderSearchFilters').innerHTML;
   $('#orderSearchResults').innerHTML=tmp.querySelector('#orderSearchResults').innerHTML;
 };
+// Checkout's Back to Order: reopen the order being rung up on its order screen (keeping the
+// menu tab in use, e.g. Exemption Day) so items can be changed before payment.
+window.checkoutBackToOrder=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; state.activeOrder=id; state.seat=1; if(o.type==='catering'){state.cateringOrderId=id;state.view='catering';} else state.view='order'; render(); window.scrollTo(0,0);};
 window.orderSearchEdit=id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; state.activeOrder=id; state.seat=1; if(o.type==='catering'){state.cateringOrderId=id;state.view='catering';} else {if(o.type!=='table')state.menuTab='cafe';state.view='order';} render();};
 window.orderSearchRefund=id=>{state.refundOrder=id;state.view='checkout';render();setTimeout(()=>document.getElementById('refundAmount')?.scrollIntoView({block:'center'}),50);};
 
@@ -1107,7 +1190,7 @@ function checkoutTicketItems(o){
   let items=validItems(o);
   return items.length?`<table class="report-table"><tr><th>Seat</th><th>Item</th><th>Mods</th><th>Price</th><th>Remove</th></tr>${items.map((i,idx)=>`<tr><td>${i.seat||'-'}</td><td>${i.name}</td><td>${[...(i.mods||[]),i.note].filter(Boolean).join(', ')}</td><td>${money(i.price)}</td><td><button class="small-btn danger" onclick="removeCheckoutLine(${o.id},'${i.lineId||''}',${idx})">Remove</button></td></tr>`).join('')}<tr><td colspan="3"><b>Total</b></td><td colspan="2"><b>${money(total(o))}</b></td></tr></table><div class="row section"><button class="small-btn danger" onclick="clearCheckoutOrder(${o.id})">Clear All Items</button></div>`:'<p>No items left on this order.</p>'
 }
-function payPanel(o){if(!o||!validItems(o).length){return '<div class="card"><p>This order has no items and was removed from checkout.</p></div>';}return `<div class="card"><h2>${o.customer}</h2><p class="notice">Review the order before payment. Remove any incorrect items here, then mark paid when the ticket is correct.</p>${checkoutTicketItems(o)}<label>Payment Type</label><select class="input" id="paytype" onchange="renderPaymentFields()"><option>Cash</option><option>Card</option><option>Check</option><option>District Account</option><option>Donation</option></select><div id="paymentFields" data-total="${total(o).toFixed(2)}">${paymentFieldsHtml('Cash',total(o))}</div><button class="primary success" onclick="pay(${o.id})">Mark Paid</button></div>`}
+function payPanel(o){if(!o||!validItems(o).length){return '<div class="card"><p>This order has no items and was removed from checkout.</p></div>';}return `<div class="card"><div class="row"><button class="primary" onclick="checkoutBackToOrder(${o.id})">&larr; Back to Order</button><span class="small">Add, remove or change items, then come back to Checkout.</span></div><h2>${o.customer}</h2><p class="notice">Review the order before payment. Remove any incorrect items here, then mark paid when the ticket is correct.</p>${checkoutTicketItems(o)}<label>Payment Type</label><select class="input" id="paytype" onchange="renderPaymentFields()"><option>Cash</option><option>Card</option><option>Check</option><option>District Account</option><option>Donation</option></select><div id="paymentFields" data-total="${total(o).toFixed(2)}">${paymentFieldsHtml('Cash',total(o))}</div><button class="primary success" onclick="pay(${o.id})">Mark Paid</button></div>`}
 // Cash: amount due, quick-tender buttons, and a live change / short-by readout.
 function cashFieldsHtml(due){
  due=Math.round((Number(due)||0)*100)/100;
@@ -1231,9 +1314,34 @@ function kms(){
  let perStation=!['all','expo'].includes(station);
  let open=perStation?list.filter(o=>!kmsStationDone(o,station)):list, done=perStation?list.filter(o=>kmsStationDone(o,station)):[];
  let counts=Object.fromEntries(kmsStationList.map(([key])=>[key,active.filter(o=>kmsVisibleItems(o,key).length&&(['all','expo'].includes(key)||!kmsStationDone(o,key))).length]));
- let recent=db.orders.filter(o=>o.kmsStage==='completed'&&o.sent).sort((a,b)=>kmsLastTime(b)-kmsLastTime(a)).slice(0,5);
- return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). Items with parts from another station (like a sandwich's fries) show that part on that station's screen too. This only marks your station's work; the ticket stays up for the other stations. Expo sees every item, part, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${recent.length?`<details class="section"><summary><b>Recently Completed</b> (${recent.length})</summary>${recent.map(o=>`<div class="row kms-recent"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • completed ${new Date(kmsLastTime(o)).toLocaleTimeString()}</span><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}</details>`:''}</section>`;
+ let allRecent=db.orders.filter(o=>o.kmsStage==='completed'&&o.sent).sort((a,b)=>kmsLastTime(b)-kmsLastTime(a));
+ let recentLimit=Number(state.kmsRecentLimit)||10, recent=allRecent.slice(0,recentLimit);
+ let inactive=['all','expo'].includes(station)?active.filter(kmsInactive):[];
+ return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). Items with parts from another station (like a sandwich's fries) show that part on that station's screen too. This only marks your station's work; the ticket stays up for the other stations. Expo sees every item, part, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${inactive.length?`<div class="row section kms-inactive"><span><b>${inactive.length}</b> ticket(s) with no activity for over an hour.</span><button class="small-btn danger" onclick="clearInactiveKmsTickets()">Clear Inactive Tickets (1 hr+)</button></div>`:''}${allRecent.length?`<details class="section" ${state.kmsRecentOpen?'open':''} ontoggle="state.kmsRecentOpen=this.open"><summary><b>Recently Completed</b> (${allRecent.length})</summary><div class="row kms-recent-actions"><button class="small-btn" onclick="recallSelectedKmsTickets()">Recall Selected</button><button class="small-btn" onclick="document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=true);kmsRecallPick()">Select All Shown</button><button class="small-btn" onclick="state.kmsRecallSel=[];document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=false)">Clear Selection</button></div>${recent.map(o=>`<div class="row kms-recent"><label class="kms-recall-label"><input type="checkbox" class="kms-recall-check" value="${o.id}" ${(state.kmsRecallSel||[]).includes(o.id)?'checked':''} onchange="kmsRecallPick()"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • ${(o.kmsLog||[]).slice(-1)[0]?.stage==='Cleared (Inactive)'?'cleared':'completed'} ${new Date(kmsLastTime(o)).toLocaleString([], {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></label><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}<div class="row">${allRecent.length>recent.length?`<button class="small-btn" onclick="state.kmsRecentLimit=${recentLimit+10};state.kmsRecentOpen=true;render()">Show 10 More</button><button class="small-btn" onclick="state.kmsRecentLimit=${allRecent.length};state.kmsRecentOpen=true;render()">Show All (${allRecent.length})</button>`:''}<span class="small">Showing ${recent.length} of ${allRecent.length}</span></div></details>`:''}</section>`;
 }
+// Last time anything happened on a ticket: sent, a log entry (start, recall...) or any item/part
+// started or completed. Tickets idle for over an hour can be cleared from Expo / All Tickets.
+const KMS_INACTIVE_MS=60*60*1000;
+function kmsLastActivity(o){
+ let times=[o.sent,...(o.kmsLog||[]).map(l=>l.time)];
+ validItems(o).forEach(i=>[i,...Object.values(i.kmsParts||{})].forEach(st=>times.push(st?.kmsStartedAt,st?.kmsDoneAt)));
+ if(o.updatedAt)times.push(o.updatedAt);
+ return Math.max(0,...times.map(t=>new Date(t||0).getTime()).filter(n=>!isNaN(n)));
+}
+function kmsInactive(o){return Date.now()-kmsLastActivity(o)>KMS_INACTIVE_MS;}
+window.clearInactiveKmsTickets=()=>{
+ let list=db.orders.filter(o=>kmsActive(o)&&kmsInactive(o)); if(!list.length){toast('No inactive tickets.');return;}
+ if(!confirm(`Clear ${list.length} ticket(s) with no activity for over an hour from the KMS? They move to Recently Completed and can be recalled. Unpaid orders stay open for checkout.`))return;
+ list.forEach(o=>{o.kmsStage='completed';o.kmsLog=o.kmsLog||[];o.kmsLog.push({stage:'Cleared (Inactive)',time:now(),by:state.user.name});});
+ save(); render(); toast(`Cleared ${list.length} inactive ticket(s).`);
+};
+// Checked tickets are kept in state so a screen refresh from another device doesn't clear them.
+window.kmsRecallPick=()=>{let shown=[...document.querySelectorAll('.kms-recall-check')];let keep=(state.kmsRecallSel||[]).filter(id=>!shown.some(c=>Number(c.value)===id));state.kmsRecallSel=[...keep,...shown.filter(c=>c.checked).map(c=>Number(c.value))];};
+window.recallSelectedKmsTickets=()=>{
+ kmsRecallPick(); let ids=(state.kmsRecallSel||[]).filter(id=>db.orders.some(o=>o.id===id&&o.kmsStage==='completed')); if(!ids.length){alert('Check the tickets to recall first.');return;}
+ ids.forEach(id=>{let o=db.orders.find(x=>x.id===id); if(!o)return; o.kmsStage='started'; if(!o.paid)o.status='sent'; o.kmsLog=o.kmsLog||[]; o.kmsLog.push({stage:'Recalled',time:now(),by:state.user.name});});
+ state.kmsRecallSel=[]; save(); render(); toast(`Recalled ${ids.length} ticket(s).`);
+};
 function kmsLastTime(o){let l=(o.kmsLog||[]).slice(-1)[0];return new Date(l?.time||o.sent||0).getTime();}
 function itemStation(item,order){
  let name=(item?.name||'').toLowerCase();
@@ -1532,9 +1640,11 @@ function restoreProduction(menuId,qty){}
 // with tabs to switch to Bistro or Exemption Day.
 function menuTabFor(o){return o.type==='table'?'bistro':(state.menuTab||'cafe');}
 function menuOf(m){return m.menu||'bistro';}
+// Items with a sortOrder (the Exemption Day menu) list in menu order; others keep their order.
+function menuSorted(items){let key=([m,i])=>m.sortOrder!=null?1e6+Number(m.sortOrder):i;return items.map((m,i)=>[m,i]).sort((a,b)=>key(a)-key(b)).map(x=>x[0]);}
 function renderBistroMenuButtons(orderType,menu){
   menu=menu||(orderType==='table'?'bistro':'cafe');
-  let items=db.menu.filter(m=>m.active!==false&&menuOf(m)===menu&&(menu==='bistro'||!Array.isArray(m.services)||m.services.includes(orderType)));
+  let items=menuSorted(db.menu.filter(m=>m.active!==false&&menuOf(m)===menu&&(menu==='bistro'||!Array.isArray(m.services)||m.services.includes(orderType))));
   if(!items.length) return '<p>No menu items configured.</p>';
   let categories=[...new Set(items.map(m=>m.category||'Other'))].sort((a,b)=>(a==='Catering')-(b==='Catering'));
   return categories.map(c=>`<h4 class="menu-category">${c}</h4><div class="menu-grid">${items.filter(m=>(m.category||'Other')===c).map(m=>{
@@ -1549,7 +1659,7 @@ function parsScreen(){
   let filter=state.parsFilter||'all';
   if(!['all','cafe','bistro','exemption'].includes(filter))filter='all';
   let filters=[['all','All Items'],['cafe','Café Menu'],['bistro','Bistro Menu'],['exemption','Exemption Day']];
-  let items=db.menu.filter(m=>m.active!==false&&(filter==='all'||menuOf(m)===filter));
+  let items=menuSorted(db.menu.filter(m=>m.active!==false&&(filter==='all'||menuOf(m)===filter)));
   let categories=[...new Set(items.map(m=>m.category||'Other'))];
   let withPar=items.filter(m=>productionItem(m.id).startingPar>0);
   let soldOut=items.filter(m=>isMenu86(m));
