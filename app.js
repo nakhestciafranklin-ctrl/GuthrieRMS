@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026110807;
+window.GUTHRIE_RMS_VERSION=2026110808;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -818,6 +818,12 @@ const exAllergy={name:'Allergy',options:['Allergy Alert'],pick:'many'};
 const exEntreeOther={name:'Other',options:['Veteran Free Entrée','Allergy Alert'],pick:'many'};
 const exEntreePrices={'Add Guacamole':1,'Veteran Free Entrée':-8};
 // Breakfast tacos are made on flour tortillas only (no tortilla choice).
+// Holiday lattes: one item per flavor, $3, hot or iced. Used on the Exemption Day tab and in
+// Holiday Specials on the Café menu (separate items so each menu keeps its own pars).
+const exHolidayLattes=(list,category)=>list.map(([id,name])=>({id,name,price:3,category,station:'beverage',modGroups:[
+  exHotIced,
+  {name:'Whipped Cream',options:['No Whipped Cream','Extra Whipped Cream'],pick:'one'},
+  {name:'Drizzle / Topping',options:['No Drizzle','Extra Drizzle'],pick:'one'},exIce,exAllergy]}));
 const exBreakfastTaco=(id,name)=>({id,name,price:2,category:'Breakfast Tacos (All Day)',station:'grill',modGroups:[
  {name:'Salsa',options:['Red Salsa','Green Salsa','Red Salsa on Side','Green Salsa on Side','No Salsa'],pick:'one'},
  {name:'Hold / Extra',options:['No Eggs','No Potatoes','No Cheese','Extra Cheese'],pick:'many'},
@@ -839,10 +845,7 @@ const exemptionMenuData=[
  {id:313,name:'Rice Bowl',price:8,category:'Lunch Entrées (B, C & D Block)',station:'grill',modPrices:exEntreePrices,modGroups:[
   exBowlProtein,exLeaveOff(['Rice','Black Beans','Roasted Corn']),exToppings(),exEntreeOther]},
  // Each holiday latte has its own button; the pop-up then asks hot or iced and garnish.
- ...[[321,'Peppermint Mocha'],[322,'Winter Wonderland'],[323,'Pumpkin Spice Latte'],[324,'Chocolate Hazelnut Truffle'],[325,'Caramel Pumpkin Cheesecake'],[326,'Gingerbread Cookie Latte'],[327,'S\'mores Mocha'],[328,'Brown Sugar Cinnamon Latte']].map(([id,name])=>({id,name,price:3,category:'Holiday Latte Collection',station:'beverage',modGroups:[
-  exHotIced,
-  {name:'Whipped Cream',options:['No Whipped Cream','Extra Whipped Cream'],pick:'one'},
-  {name:'Drizzle / Topping',options:['No Drizzle','Extra Drizzle'],pick:'one'},exIce,exAllergy]})),
+ ...exHolidayLattes([[321,'Peppermint Mocha'],[322,'Winter Wonderland'],[323,'Pumpkin Spice Latte'],[324,'Chocolate Hazelnut Truffle'],[325,'Caramel Pumpkin Cheesecake'],[326,'Gingerbread Cookie Latte'],[327,'S\'mores Mocha'],[328,'Brown Sugar Cinnamon Latte']],'Holiday Latte Collection'),
  {id:305,name:'Latte',price:3,category:'Coffee & Espresso',station:'beverage',modGroups:[
   {name:'Flavor',options:exBaseFlavors,pick:'one',required:true},exHotIced,
   {name:'Garnish',options:['Add Whipped Cream','Add Drizzle'],pick:'many'},exIce,exAllergy]},
@@ -853,7 +856,7 @@ const exemptionMenuData=[
   {name:'Syrup (+$1)',options:[...exBaseFlavors,...exHolidayFlavors].map(f=>f+' Syrup'),pick:'one'},
   {name:'Extras',options:['Add Milk','Room for Cream'],pick:'many'},exAllergy]},
  {id:320,name:'Horchata',price:3,category:'Other Beverages',station:'beverage',modGroups:[
-  exHotIced,{name:'Garnish',options:['No Cinnamon','Extra Cinnamon'],pick:'one'},exIce,exAllergy]},
+  {name:'Ice',options:['Light Ice','Extra Ice','No Ice'],pick:'one'},{name:'Garnish',options:['No Cinnamon','Extra Cinnamon'],pick:'one'},exAllergy]},
  {id:308,name:'Hibiscus Lime Agua Fresca',price:3,category:'Other Beverages',station:'beverage',modGroups:[
   {name:'Ice',options:['Light Ice','Extra Ice','No Ice'],pick:'one'},{name:'Garnish',options:['No Lime Garnish','Extra Lime'],pick:'one'},exAllergy]},
  {id:307,name:'Peach Tea',price:3,category:'Other Beverages',station:'beverage',modGroups:[
@@ -861,7 +864,7 @@ const exemptionMenuData=[
 ].map((item,i)=>({...item,mods:item.modGroups.flatMap(g=>g.options),sortOrder:i}));
 // Items from earlier Exemption Day drafts that are not on the final menu (desserts aren't being run).
 const retiredExemptionIds=[309,314,315,316,317,318];
-const exemptionMenuVersion=9;
+const exemptionMenuVersion=10;
 function importExemptionMenu(){
   let changed=false;
   if(!Array.isArray(db.menu))db.menu=[];
@@ -886,7 +889,22 @@ function importExemptionMenu(){
     db.menu.forEach(m=>{if(retiredExemptionIds.includes(m.id)&&m.active!==false){m.active=false;changed=true;}});
     db.exemptionMenuVersion=exemptionMenuVersion;changed=true;
   }
+  if(importCafeHolidaySpecials())changed=true;
   if(changed)save();
+  return changed;
+}
+// Holiday Specials section on the Café menu (Counter + To-Go). Imported with the Exemption Day
+// menu (so it also runs on data arriving from other devices). Bump cafeHolidayVersion to update.
+const cafeHolidayData=exHolidayLattes([[115,'Peppermint Mocha'],[116,'Winter Wonderland'],[117,'Pumpkin Spice Latte'],[118,'Chocolate Hazelnut Truffle'],[119,'Caramel Pumpkin Cheesecake'],[120,'Gingerbread Cookie Latte'],[121,'S\'mores Mocha'],[122,'Brown Sugar Cinnamon Latte']],'Holiday Specials').map((item,i)=>({...item,mods:item.modGroups.flatMap(g=>g.options),sortOrder:i}));
+const cafeHolidayVersion=1;
+function importCafeHolidaySpecials(){
+  let changed=false, update=(Number(db.cafeHolidayVersion)||0)<cafeHolidayVersion;
+  cafeHolidayData.forEach(item=>{
+    let fresh=JSON.parse(JSON.stringify(item)), existing=db.menu.find(m=>m.id===item.id);
+    if(!existing){db.menu.push({...fresh,inv:'bistro',menu:'cafe',services:['counter','togo'],active:true,dailyPar:0});changed=true;return;}
+    if(update)['name','price','category','station','mods','modGroups','sortOrder'].forEach(k=>{if(JSON.stringify(existing[k])!==JSON.stringify(fresh[k])){existing[k]=fresh[k];changed=true;}});
+  });
+  if(update){db.cafeHolidayVersion=cafeHolidayVersion;changed=true;}
   return changed;
 }
 window.importExemptionMenu=importExemptionMenu;
@@ -1678,7 +1696,8 @@ function renderBistroMenuButtons(orderType,menu){
   menu=menu||(orderType==='table'?'bistro':'cafe');
   let items=menuSorted(db.menu.filter(m=>m.active!==false&&menuOf(m)===menu&&(menu==='bistro'||!Array.isArray(m.services)||m.services.includes(orderType))));
   if(!items.length) return '<p>No menu items configured.</p>';
-  let categories=[...new Set(items.map(m=>m.category||'Other'))].sort((a,b)=>(a==='Catering')-(b==='Catering'));
+  // Holiday Specials list first; Catering last.
+  let categories=[...new Set(items.map(m=>m.category||'Other'))].sort((a,b)=>((b==='Holiday Specials')-(a==='Holiday Specials'))||((a==='Catering')-(b==='Catering')));
   return categories.map(c=>`<h4 class="menu-category">${c}</h4><div class="menu-grid">${items.filter(m=>(m.category||'Other')===c).map(m=>{
     let d86=isMenu86(m);
     return `<button class="menu-item ${d86?'disabled86':''}" onclick="modifierModal(${m.id},state.seat)">${m.name}<br><span class="small">${money(m.price)}${d86?' &bull; Sold Out':''}</span></button>`;

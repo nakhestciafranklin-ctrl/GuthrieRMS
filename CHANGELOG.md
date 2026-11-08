@@ -1,5 +1,9 @@
 # Guthrie RMS Changelog
 
+## Holiday Specials on the Café Menu; Iced Drinks
+- The Café Menu tab has a Holiday Specials section at the top with the 8 holiday lattes ($3 each). Each asks Hot or Iced, then whipped cream, drizzle and ice. They are separate from the Exemption Day lattes, so each menu keeps its own daily pars.
+- Horchata no longer asks Hot or Iced; like Peach Tea and Hibiscus Lime Agua Fresca it comes iced and can be added with no choices (ice and garnish options are still there).
+
 ## Checkout Redesign, Veteran Discount, Holiday Latte Buttons
 - Tapping Checkout on an order now opens a payment screen for that order at the top of the page: the ticket on the left and Payment on the right (stacked on narrow screens), with a big Total Due and a "Mark Paid • $total" button. "All Orders" returns to the list and "Back to Order (Edit Items)" reopens the order to change it.
 - Before, the payment panel sat beside (or below) the order list and Find an Order results, so with many orders it was pushed off screen. The order list is now compact tiles (name, total, item count, sent or not, how long it has been open) in a scrolling box, with a count on each tab (Tables / Counter / To-Go / Catering). Find an Order and refunds are below the list.
