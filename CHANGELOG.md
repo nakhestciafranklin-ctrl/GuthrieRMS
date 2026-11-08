@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## KMS Recall, Clearing Inactive Tickets, and Back from Checkout
+- Recently Completed on the KMS now lists every completed ticket, not just the last 5. It shows 10 to start, with Show 10 More and Show All. Each ticket has a checkbox, so several can be recalled at once with Recall Selected (Select All Shown / Clear Selection help).
+- Expo and All Tickets show "Clear Inactive Tickets (1 hr+)" when any ticket has had no activity (sent, started, completed or recalled) for over an hour. Clearing takes them off the KMS and moves them to Recently Completed, where they can be recalled. Unpaid orders stay open for checkout.
+- Checkout has a "Back to Order" button on the order being rung up. It opens the order screen (on the same menu tab, e.g. Exemption Day) to add, remove or change items; then tap Checkout again.
+
 ## Exemption Day Menu (Final, Wednesday Nov 11)
 - The Exemption Day tab now matches the printed food and coffee menus, in menu order:
   - Breakfast Tacos (All Day) $2: Bacon, Pork Sausage or Turkey Sausage, on flour tortillas only. Salsa (red, green, on the side or none); No Eggs / No Potatoes / No Cheese / Extra Cheese.
