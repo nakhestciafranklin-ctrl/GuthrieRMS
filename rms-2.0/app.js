@@ -2553,11 +2553,14 @@ function lvModifiers(){
   });
   return {list,links,conflicts,discounts:Object.entries(discounts).map(([name,amount])=>({name,amount}))};
 }
+// Items with the same name on more than one menu (e.g. Peach Tea on Café, Bistro and Exemption Day)
+// get the menu added, e.g. "Peach Tea (Café)", so they can be told apart on the Loyverse POS.
+function lvItemName(m){let same=btMenuItems(false).filter(x=>String(x.name).trim().toLowerCase()===String(m.name).trim().toLowerCase());if(same.length<2)return m.name;let menus=new Set(same.map(x=>x.menu));return menus.size===same.length?`${m.name} (${btMenuName(m.menu)||'Menu'})`:`${m.name} (${btMenuName(m.menu)||'Menu'} ${m.category||''})`.replace(/\s+\)/,')');}
 const LV_ITEM_HEAD=['Handle','SKU','Name','Category','Description','Sold by weight','Option 1 name','Option 1 value','Option 2 name','Option 2 value','Option 3 name','Option 3 value','Default price','Cost','Barcode','Included in composite','Use production','Supplier','Purchase cost','Track stock'];
 function lvItemRows(withMods){
   let store=lvStore(), mods=lvModifiers(), modNames=withMods?mods.list.map(x=>x.name):[];
   let head=[...LV_ITEM_HEAD,...(store?[`Available for sale [${store}]`,`Price [${store}]`,`In stock [${store}]`,`Low stock [${store}]`]:[]),...modNames.map(n=>`Modifier - ${n}`)];
-  let rows=btMenuItems(false).map(m=>{let price=(Number(m.price)||0).toFixed(2);return [lvHandle(m),String(LV_SKU_BASE+Number(m.id)),m.name,lvCategory(m),'','N','','','','','','',price,'','','N','N','','','N',...(store?['Y',price,'','']:[]),...modNames.map(n=>(mods.links[m.id]||[]).includes(n)?'Y':'N')];});
+  let rows=btMenuItems(false).map(m=>{let price=(Number(m.price)||0).toFixed(2);return [lvHandle(m),String(LV_SKU_BASE+Number(m.id)),lvItemName(m),lvCategory(m),'','N','','','','','','',price,'','','N','N','','','N',...(store?['Y',price,'','']:[]),...modNames.map(n=>(mods.links[m.id]||[]).includes(n)?'Y':'N')];});
   return [head,...rows];
 }
 // Inventory as Loyverse stock items that are not for sale, so stock counts can be tried in Loyverse.
@@ -2565,7 +2568,7 @@ function lvItemRows(withMods){
 function lvInventoryRows(){
   let store=lvStore();
   let head=[...LV_ITEM_HEAD,`Available for sale [${store}]`,`Price [${store}]`,`In stock [${store}]`,`Low stock [${store}]`];
-  return [head,...(db.inventory||[]).map(i=>{let div=String(i.division||'').trim(); return [('inv-'+i.id+'-'+String(i.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')).slice(0,60),String(800000+Number(i.id)),i.name,'Inventory'+(div?': '+div.charAt(0).toUpperCase()+div.slice(1):''),[i.unit,i.location].filter(Boolean).join(' • '),'N','','','','','','','','',i.barcode||'','N','N',i.vendor||'','','Y','N','',Number(i.onHand)||0,Number(i.par)||0];})];
+  return [head,...(db.inventory||[]).map(i=>{let div=String(i.division||'').trim(); return [('inv-'+i.id+'-'+String(i.name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')).slice(0,60),String(800000+Number(i.id)),((db.inventory||[]).filter(x=>x.name===i.name).length>1&&i.unit?`${i.name} (${i.unit})`:i.name),'Inventory'+(div?': '+div.charAt(0).toUpperCase()+div.slice(1):''),[i.unit,i.location].filter(Boolean).join(' • '),'N','','','','','','','','',i.barcode||'','N','N',i.vendor||'','','Y','N','',Number(i.onHand)||0,Number(i.par)||0];})];
 }
 window.lvExport=kind=>{
   let day=new Date().toISOString().slice(0,10), d=btData(), mods=lvModifiers();
@@ -2630,7 +2633,7 @@ views.loyverse=()=>{
       <li><b>Kitchen (KMS)</b>: in Loyverse, add a Kitchen printer group or the Loyverse KDS app and pick which categories each station gets.</li>
     </ul>
     <h3>Menu being sent</h3>
-    ${Object.entries(groups).map(([g,list])=>`<h4>${btEsc(g)} (${list.length})</h4><div style="overflow-x:auto"><table class="report-table"><thead><tr><th>SKU</th><th>Item</th><th>Category</th><th>Price</th><th>Modifiers</th></tr></thead><tbody>${list.map(m=>`<tr><td class="small">${LV_SKU_BASE+Number(m.id)}</td><td>${btEsc(m.name)}</td><td>${btEsc(lvCategory(m))}</td><td>${money(m.price)}</td><td class="small">${btEsc((mods.links[m.id]||[]).join(', '))}</td></tr>`).join('')}</tbody></table></div>`).join('')}
+    ${Object.entries(groups).map(([g,list])=>`<h4>${btEsc(g)} (${list.length})</h4><div style="overflow-x:auto"><table class="report-table"><thead><tr><th>SKU</th><th>Item</th><th>Category</th><th>Price</th><th>Modifiers</th></tr></thead><tbody>${list.map(m=>`<tr><td class="small">${LV_SKU_BASE+Number(m.id)}</td><td>${btEsc(lvItemName(m))}</td><td>${btEsc(lvCategory(m))}</td><td>${money(m.price)}</td><td class="small">${btEsc((mods.links[m.id]||[]).join(', '))}</td></tr>`).join('')}</tbody></table></div>`).join('')}
   </section>`;
 };
 
