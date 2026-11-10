@@ -293,6 +293,7 @@ if(!isConfigured(firebaseConfig)){
               window.__guthrieRMSApplyingCloud=true;
               try{
                 if(typeof window.importRosterStudents==='function') window.importRosterStudents();
+                if(typeof window.importStaffSetup==='function') window.importStaffSetup();
                 if(typeof window.importCafeMenu==='function') window.importCafeMenu();
                 if(typeof window.importBistroMenu==='function') window.importBistroMenu();
                 if(typeof window.importExemptionMenu==='function') window.importExemptionMenu();

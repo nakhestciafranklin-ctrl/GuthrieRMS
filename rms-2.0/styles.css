@@ -124,3 +124,4 @@ button,.primary,.secondary,.small-btn,.tile,.menu-item,.input,.tabs button,.seat
 .bt-screen .row{gap:10px;flex-wrap:wrap}
 .bt-screen .small-btn{border:2px solid var(--blue);background:#fff;color:var(--blue);font-weight:700;padding:12px 14px;cursor:pointer}
 .bt-screen .small-btn:hover{background:#eef5ff}
+.menu-section-bar{margin:18px 0 8px;padding:8px 14px;background:var(--blue,#003DA5);color:#fff;border-radius:8px;font-size:1.05rem;letter-spacing:.04em;text-transform:uppercase}

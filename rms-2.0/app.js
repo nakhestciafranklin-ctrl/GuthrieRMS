@@ -675,7 +675,29 @@ function importRosterStudents(){
   return changed;
 }
 window.importRosterStudents=importRosterStudents;
+// Staff PINs set up with the BriskTable work: instructors and an admin manager login.
+// Runs once per data copy (staffSetupVersion); a PIN already used by someone else is never reused.
+const staffPinSetup={instructors:{'Chef Mikhail':'1111','Benjamin Baze':'2222','Alexander Bove':'3333','Andi Pope':'4444'},admin:{name:'Admin Franklin',pin:'1908'}};
+const staffSetupVersion=1;
+function importStaffSetup(){
+  if((Number(db.staffSetupVersion)||0)>=staffSetupVersion)return false;
+  const pinTaken=(pin,self)=>db.users.some(u=>u!==self&&String(u.pin)===pin);
+  Object.entries(staffPinSetup.instructors).forEach(([name,pin])=>{
+    let t=db.users.find(u=>u.role==='teacher'&&String(u.name||'').trim().toLowerCase()===name.toLowerCase());
+    if(!t||pinTaken(pin,t))return;
+    t.pin=pin;t.active=true;
+  });
+  let a=staffPinSetup.admin;
+  if(!db.users.some(u=>String(u.name||'').toLowerCase()===a.name.toLowerCase())&&!pinTaken(a.pin)){
+    let id=(db.users.reduce((max,u)=>Math.max(max,Number(u.id)||0),0))+1;
+    db.users.push({id,name:a.name,pin:a.pin,role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'});
+  }
+  db.staffSetupVersion=staffSetupVersion;save();
+  return true;
+}
+window.importStaffSetup=importStaffSetup;
 importRosterStudents();
+importStaffSetup();
 // Common Grounds café items from the Common Grounds Version 2.0 recipe workbook.
 // Prices are the Common Grounds café menu prices (cookies $1, muffins $2,
 // refreshers/lattes/coffee $3, entrées $4). Bump cafeMenuVersion when prices change.
@@ -848,10 +870,11 @@ const exemptionMenuData=[
   exProtein,exLeaveOff(['Chile con Queso']),exToppings(['Chile con Queso']),exEntreeOther]},
  {id:313,name:'Rice Bowl',price:8,category:'Lunch Entrées (B, C & D Block)',station:'grill',modPrices:exEntreePrices,modGroups:[
   exBowlProtein,exLeaveOff(['Rice','Black Beans','Roasted Corn']),exToppings(),exEntreeOther]},
- // Each holiday latte has its own button; the pop-up then asks hot or iced and garnish.
- ...exHolidayLattes([[321,'Peppermint Mocha'],[322,'Winter Wonderland'],[323,'Pumpkin Spice Latte'],[324,'Chocolate Hazelnut Truffle'],[325,'Caramel Pumpkin Cheesecake'],[326,'Gingerbread Cookie Latte'],[327,'S\'mores Mocha'],[328,'Brown Sugar Cinnamon Latte']],'Holiday Latte Collection'),
+ // Holiday lattes are flavors of Latte (POS setup carried over from BriskTable); the separate
+ // holiday latte items 321-328 are retired below (kept, hidden) so old orders still read right.
+ // ...exHolidayLattes([[321,'Peppermint Mocha'],[322,'Winter Wonderland'],[323,'Pumpkin Spice Latte'],[324,'Chocolate Hazelnut Truffle'],[325,'Caramel Pumpkin Cheesecake'],[326,'Gingerbread Cookie Latte'],[327,'S\'mores Mocha'],[328,'Brown Sugar Cinnamon Latte']],'Holiday Latte Collection'),
  {id:305,name:'Latte',price:3,category:'Coffee & Espresso',station:'beverage',modGroups:[
-  {name:'Flavor',options:exBaseFlavors,pick:'one',required:true},exHotIced,
+  {name:'Flavor',options:[...exHolidayFlavors,...exBaseFlavors],pick:'one',required:true},exHotIced,
   {name:'Garnish',options:['Add Whipped Cream','Add Drizzle'],pick:'many'},exIce,exAllergy]},
  {id:319,name:'Cappuccino',price:3,category:'Coffee & Espresso',station:'beverage',modGroups:[
   {name:'Flavor',options:[...exHolidayFlavors,...exBaseFlavors,'No Flavor'],pick:'one',required:true},exHotIced,
@@ -867,8 +890,8 @@ const exemptionMenuData=[
   {name:'Ice',options:['Light Ice','Extra Ice','No Ice'],pick:'one'},{name:'Garnish',options:['No Peach Garnish','Extra Peach'],pick:'one'},exAllergy]}
 ].map((item,i)=>({...item,mods:item.modGroups.flatMap(g=>g.options),sortOrder:i}));
 // Items from earlier Exemption Day drafts that are not on the final menu (desserts aren't being run).
-const retiredExemptionIds=[309,314,315,316,317,318];
-const exemptionMenuVersion=11;
+const retiredExemptionIds=[309,314,315,316,317,318,321,322,323,324,325,326,327,328];
+const exemptionMenuVersion=12;
 function importExemptionMenu(){
   let changed=false;
   if(!Array.isArray(db.menu))db.menu=[];
@@ -900,7 +923,14 @@ function importExemptionMenu(){
 // Holiday Specials section on the Café menu (Counter + To-Go). Imported with the Exemption Day
 // menu (so it also runs on data arriving from other devices). Bump cafeHolidayVersion to update.
 const cafeHolidayData=exHolidayLattes([[115,'Peppermint Mocha'],[116,'Winter Wonderland'],[117,'Pumpkin Spice Latte'],[118,'Chocolate Hazelnut Truffle'],[119,'Caramel Pumpkin Cheesecake'],[120,'Gingerbread Cookie Latte'],[121,'S\'mores Mocha'],[122,'Brown Sugar Cinnamon Latte']],'Holiday Specials').map((item,i)=>({...item,mods:item.modGroups.flatMap(g=>g.options),sortOrder:i}));
-const cafeHolidayVersion=1;
+// RMS 2.0: the 8 Holiday Specials (115-122) are retired (kept, hidden) and the Café gets a Latte
+// whose Flavor choice includes the holiday flavors, like the Exemption Day Latte.
+const cafeLatte={id:123,name:'Latte',price:3,category:'Beverage',station:'beverage',modGroups:[
+  {name:'Flavor',options:[...exHolidayFlavors,...exBaseFlavors],pick:'one',required:true},exHotIced,
+  {name:'Garnish',options:['Add Whipped Cream','Add Drizzle'],pick:'many'},exIce,exAllergy]};
+cafeLatte.mods=cafeLatte.modGroups.flatMap(g=>g.options);
+const retiredCafeHolidayIds=[115,116,117,118,119,120,121,122];
+const cafeHolidayVersion=2;
 function importCafeHolidaySpecials(){
   let changed=false, update=(Number(db.cafeHolidayVersion)||0)<cafeHolidayVersion;
   cafeHolidayData.forEach(item=>{
@@ -908,7 +938,10 @@ function importCafeHolidaySpecials(){
     if(!existing){db.menu.push({...fresh,inv:'bistro',menu:'cafe',services:['counter','togo'],active:true,dailyPar:0});changed=true;return;}
     if(update)['name','price','category','station','mods','modGroups','sortOrder'].forEach(k=>{if(JSON.stringify(existing[k])!==JSON.stringify(fresh[k])){existing[k]=fresh[k];changed=true;}});
   });
-  if(update){db.cafeHolidayVersion=cafeHolidayVersion;changed=true;}
+  {let fresh=JSON.parse(JSON.stringify(cafeLatte)), existing=db.menu.find(m=>m.id===cafeLatte.id);
+   if(!existing){db.menu.push({...fresh,inv:'bistro',menu:'cafe',services:['counter','togo'],active:true,dailyPar:0});changed=true;}
+   else if(update)['name','price','category','station','mods','modGroups'].forEach(k=>{if(JSON.stringify(existing[k])!==JSON.stringify(fresh[k])){existing[k]=fresh[k];changed=true;}});}
+  if(update){db.menu.forEach(m=>{if(retiredCafeHolidayIds.includes(m.id)&&m.active!==false){m.active=false;changed=true;}});db.cafeHolidayVersion=cafeHolidayVersion;changed=true;}
   return changed;
 }
 window.importExemptionMenu=importExemptionMenu;
@@ -1029,7 +1062,7 @@ function render(){
   const allowed=allowedViews();
   if(!views[state.view] || (!canView(state.view) && !['dashboard','order'].includes(state.view))) state.view='dashboard';
   const dashboardShortcut = state.view==='dashboard' ? '' : `<div class="dashboard-shortcut"><button class="primary" data-view="dashboard">🏠 Dashboard</button><span>Dashboard &gt; ${state.viewLabel||state.view}</span></div>`;
-  app.innerHTML=topbar()+`<div class="rms2-banner">RMS 2.0 test copy &bull; changes here do not affect the live Guthrie RMS</div><main class="wrap">${dashboardShortcut}${views[state.view]()}</main>`;
+  app.innerHTML=topbar()+`<div class="rms2-banner">Guthrie POS (RMS 2.0) &bull; separate from the live Guthrie RMS</div><main class="wrap">${dashboardShortcut}${views[state.view]()}</main>`;
   bindCommon();
   // Opening a different screen (or a different order at checkout) starts at the top, so the
   // payment panel isn't left below the old scroll position.
@@ -1048,7 +1081,7 @@ function login(){applyTheme();app.innerHTML=`<div class="login"><div class="card
 function allowedViews(){
   if(!state.user) return [];
   normalizeAccessForUser(state.user);
-  const order=['clock','dining','quick','pars','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','brisktable','setup'];
+  const order=['clock','dining','quick','pars','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'];
   return order.filter(v=>(state.user.access||[]).includes(v) || state.user.role==='manager');
 }
 function canView(v){return allowedViews().includes(v)||state.user.role==='manager';}
@@ -1700,9 +1733,13 @@ function renderBistroMenuButtons(orderType,menu){
   menu=menu||(orderType==='table'?'bistro':'cafe');
   let items=menuSorted(db.menu.filter(m=>m.active!==false&&menuOf(m)===menu&&(menu==='bistro'||!Array.isArray(m.services)||m.services.includes(orderType))));
   if(!items.length) return '<p>No menu items configured.</p>';
-  // Holiday Specials list first; Catering last.
-  let categories=[...new Set(items.map(m=>m.category||'Other'))].sort((a,b)=>((b==='Holiday Specials')-(a==='Holiday Specials'))||((a==='Catering')-(b==='Catering')));
-  return categories.map(c=>`<h4 class="menu-category">${c}</h4><div class="menu-grid">${items.filter(m=>(m.category||'Other')===c).map(m=>{
+  // Grouped into sections with a bar between them (same layout as the BriskTable setup):
+  // Breakfast, Entrées, Sides, Bakery & Desserts, Drinks, Catering. A category with no section
+  // (e.g. one a manager added) is its own section after those.
+  const secOrder=['Breakfast','Entrées','Sides','Bakery & Desserts','Drinks','Catering'];
+  const secOf=m=>BT_SECTIONS[m.category]||m.category||'Other';
+  let categories=[...new Set(items.map(secOf))].sort((a,b)=>{let i=secOrder.indexOf(a),j=secOrder.indexOf(b);return (i<0?99:i)-(j<0?99:j);});
+  return categories.map(c=>`<h4 class="menu-section-bar">${c}</h4><div class="menu-grid">${items.filter(m=>secOf(m)===c).map(m=>{
     let d86=isMenu86(m);
     return `<button class="menu-item ${d86?'disabled86':''}" onclick="modifierModal(${m.id},state.seat)">${m.name}<br><span class="small">${money(m.price)}${d86?' &bull; Sold Out':''}</span></button>`;
   }).join('')}</div>`).join('');
