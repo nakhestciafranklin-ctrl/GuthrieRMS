@@ -152,8 +152,10 @@ if(!isConfigured(firebaseConfig)){
       }
       function mergeOrder(baseJSON,l,c){
         const localNewer=(Number(l.updatedAt)||0)>(Number(c.updatedAt)||0);
-        if(!baseJSON)return localNewer?l:c;
-        const b=JSON.parse(baseJSON), out={};
+        // No shared starting copy (an order created here that the cloud hadn't confirmed yet):
+        // merge against an empty one, so anything either side has is kept (a KMS tap from the
+        // cloud and a payment made here offline both survive); only real conflicts go to the newer.
+        const b=baseJSON?JSON.parse(baseJSON):{}, out={};
         new Set([...Object.keys(c),...Object.keys(l),...Object.keys(b)]).forEach(k=>{
           if(k==='updatedAt')return;
           let v;
@@ -380,7 +382,7 @@ if(!isConfigured(firebaseConfig)){
                   if(orderKey(l)===orderKey(c)){delete pending[id];return;}
                   // Merge against the copy the offline change was made on, so changes other
                   // devices made meanwhile (KMS taps, payment) are kept too.
-                  const m=base?mergeOrder(base,l,c):((Number(l.updatedAt)||0)>(Number(c.updatedAt)||0)?l:c);
+                  const m=mergeOrder(base,l,c);
                   if(orderKey(m)!==orderKey(c)){cloudOrders[i]=m;localWins=true;}else delete pending[id];
                 });
                 savePending();
