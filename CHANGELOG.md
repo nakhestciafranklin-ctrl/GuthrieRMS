@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Firebase Usage Limit ("resource-exhausted")
+- When Firebase's free-plan limits are used up, every save fails with "resource-exhausted" and no iPad can sync. The app now says so plainly: managers see "Firebase usage limit reached … Upgrade to the Blaze plan", students see "Tell a manager right away", and Settings › Data explains the fix.
+- While the limit is reached, iPads retry once a minute instead of every 2 seconds. Orders stay saved on each iPad and are sent when sync resumes.
+- Cause: every change re-sends the whole shared data (about 600 KB on a busy day) to every iPad, which uses up the free plan quickly. Fix: upgrade the Firebase project to the Blaze (pay-as-you-go) plan.
+
 ## No More "Local Only — Timed Out"
 - An iPad that takes longer than 6 seconds to reach the cloud (busy Wi-Fi, or every iPad reloading at once after an update) now shows "Connecting to the cloud… still trying" and keeps connecting, instead of "Local only — cloud connection timed out".
 - Orders, payments, 86s and other changes made while an iPad is still connecting are tracked from the moment the app opens and merged into the cloud copy when it connects (field by field), so nothing done on a slow iPad is lost. Before, the cloud copy replaced them.

@@ -331,13 +331,16 @@ if(!isConfigured(firebaseConfig)){
               syncHealth.bytes=JSON.stringify(clean).length;
               tx.set(sharedDocRef,clean);
             });
-            syncHealth.lastOk=Date.now(); syncHealth.failingSince=null; syncHealth.error='';
+            syncHealth.lastOk=Date.now(); syncHealth.failingSince=null; syncHealth.error=''; syncHealth.quota=false;
           }catch(err){
             console.warn('Guthrie RMS cloud sync: push failed, retrying.',err);
             if(!syncHealth.failingSince)syncHealth.failingSince=Date.now();
-            syncHealth.error=String(err&&(err.message||err.code)||err||'');
+            syncHealth.error=String(err&&(err.code||err.message)||err||'');
+            // Firebase usage limit reached (free plan quota): retrying every 2 s only adds load.
+            // Back off and retry every minute; the banner tells staff what to do.
+            syncHealth.quota=/resource-exhausted|quota/i.test(syncHealth.error+' '+(err&&err.message||''));
             lastSyncedJSON=null;
-            setTimeout(pushToCloud,2000);
+            setTimeout(pushToCloud,syncHealth.quota?60000:2000);
           }finally{
             pushing=false;
             if(pushAgain){pushAgain=false;pushToCloud();}
@@ -485,10 +488,12 @@ if(!isConfigured(firebaseConfig)){
         // The listener stops after an error: show it, keep the app running, and reconnect.
         console.warn('Guthrie RMS: cloud connection lost, reconnecting.',err);
         syncHealth.connected=false; syncHealth.connectStart=Date.now(); syncHealth.connectError=String(err&&(err.code||err.message)||err);
+        const quota=/resource-exhausted|quota/i.test(syncHealth.connectError+' '+(err&&err.message||''));
+        if(quota)syncHealth.quota=true;
         cloudReady=false;
-        setCloudStatus(false,'Cloud connection lost — reconnecting…');
+        setCloudStatus(false,quota?'Firebase usage limit reached — not syncing':'Cloud connection lost — reconnecting…');
         if(typeof window.startGuthrieRMS==='function') window.startGuthrieRMS();
-        setTimeout(subscribe,5000);
+        setTimeout(subscribe,quota?60000:5000);
       });
       }
       subscribe();
