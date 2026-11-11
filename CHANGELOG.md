@@ -6,7 +6,6 @@
 - Options are typed one group per line, for example "Size (required, pick 1): Cup, Bowl +2". "required" must be chosen, "pick 1" allows only one, and +1 / -8 after an option adds an upcharge or discount. The order pop-up shows them as groups like the Exemption Day items.
 - Hide takes an item off the order screens and Daily Pars without deleting it (Show puts it back). Delete removes it from every screen but keeps it for past orders and reports; Deleted lists them with Restore.
 - Changes sync to every device. Items changed or deleted here are no longer overwritten by built-in menu updates.
-- New-Order Sound on the KMS (below) is included.
 
 ## New-Order Sound on the KMS
 - The KMS plays a chime (two quick dings) and shows "New ticket on the KMS" when a ticket arrives, or more items are sent on an open ticket, with work for the station on screen. All Tickets and Expo chime for every ticket; Grill, Fry, Beverage, etc. only for tickets with items for that station.
