@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## KMS Sound Plays Only at the Order's Stations
+- Each KMS iPad now remembers its station (saved on that iPad). Before, every iPad went back to All Tickets when the app reloaded, so every station chimed for every order.
+- A station chimes only for orders with items (or parts, like fries) sent to it. An order with tacos and a latte chimes on Grill and Beverage only. Expo and All Tickets chime for every order.
+- Each station has its own tone (Grill lowest, then Fry, Salad, Beverage, Dessert), so nearby stations can tell whose order came in. The KMS shows "This iPad: Grill" next to the sound buttons, and the pop-up says which station the new ticket is for.
+
 ## Settings > Menu Items: Add, Edit, Hide and Delete Products
 - New Menu Items page in Settings (managers). Pick Café Menu, Bistro Menu or Exemption Day to see its items by section, with picture, price, KMS station and status. Search box to find an item.
 - + Add Item / Edit: name, price, menu, category (section), KMS station, picture (any of the menu photos, or an automatic food icon) and options.

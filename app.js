@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111102;
+window.GUTHRIE_RMS_VERSION=2026111103;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -976,7 +976,7 @@ function assignBistroTeamPositions(){
 }
 window.assignBistroTeamPositions=assignBistroTeamPositions;
 assignBistroTeamPositions();
-let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
+let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:null,settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();
 function save(){soldCache=null;localStorage.setItem('guthrieRMS7A',JSON.stringify(db));}
@@ -1373,7 +1373,7 @@ function kmsItemDone(o,i){return kmsTasks(o).filter(t=>t.i===i).every(t=>t.done)
 function kmsVisibleItems(o,station){return (station==='all'||station==='expo')?validItems(o):[...new Set(kmsStationTasks(o,station).map(t=>t.i))];}
 function kmsStationDone(o,station){let ts=kmsStationTasks(o,station);return ts.length>0&&ts.every(t=>t.done);}
 function kms(){
- let station=state.kmsStation||'all', label=kmsStationLabels[station]||'All Tickets';
+ let station=kmsCurrentStation(), label=kmsStationLabels[station]||'All Tickets';
  let active=db.orders.filter(kmsActive).sort((a,b)=>new Date(a.sent)-new Date(b.sent));
  let list=active.filter(o=>kmsVisibleItems(o,station).length);
  let perStation=!['all','expo'].includes(station);
@@ -1382,7 +1382,7 @@ function kms(){
  let allRecent=db.orders.filter(o=>o.kmsStage==='completed'&&o.sent).sort((a,b)=>kmsLastTime(b)-kmsLastTime(a));
  let recentLimit=Number(state.kmsRecentLimit)||10, recent=allRecent.slice(0,recentLimit);
  let inactive=['all','expo'].includes(station)?active.filter(kmsInactive):[];
- return `<section class="card kms-screen"><div class="row kms-title"><h1>KMS BOH Station Screens</h1>${kmsSoundButton()}</div><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). Items with parts from another station (like a sandwich's fries) show that part on that station's screen too. This only marks your station's work; the ticket stays up for the other stations. Expo sees every item, part, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${inactive.length?`<div class="row section kms-inactive"><span><b>${inactive.length}</b> ticket(s) with no activity for over an hour.</span><button class="small-btn danger" onclick="clearInactiveKmsTickets()">Clear Inactive Tickets (1 hr+)</button></div>`:''}${allRecent.length?`<details class="section" ${state.kmsRecentOpen?'open':''} ontoggle="state.kmsRecentOpen=this.open"><summary><b>Recently Completed</b> (${allRecent.length})</summary><div class="row kms-recent-actions"><button class="small-btn" onclick="recallSelectedKmsTickets()">Recall Selected</button><button class="small-btn" onclick="document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=true);kmsRecallPick()">Select All Shown</button><button class="small-btn" onclick="state.kmsRecallSel=[];document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=false)">Clear Selection</button></div>${recent.map(o=>`<div class="row kms-recent"><label class="kms-recall-label"><input type="checkbox" class="kms-recall-check" value="${o.id}" ${(state.kmsRecallSel||[]).includes(o.id)?'checked':''} onchange="kmsRecallPick()"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • ${(o.kmsLog||[]).slice(-1)[0]?.stage==='Cleared (Inactive)'?'cleared':'completed'} ${new Date(kmsLastTime(o)).toLocaleString([], {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></label><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}<div class="row">${allRecent.length>recent.length?`<button class="small-btn" onclick="state.kmsRecentLimit=${recentLimit+10};state.kmsRecentOpen=true;render()">Show 10 More</button><button class="small-btn" onclick="state.kmsRecentLimit=${allRecent.length};state.kmsRecentOpen=true;render()">Show All (${allRecent.length})</button>`:''}<span class="small">Showing ${recent.length} of ${allRecent.length}</span></div></details>`:''}</section>`;
+ return `<section class="card kms-screen"><div class="row kms-title"><h1>KMS BOH Station Screens</h1>${kmsSoundButton()}</div><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). Items with parts from another station (like a sandwich's fries) show that part on that station's screen too. This only marks your station's work; the ticket stays up for the other stations. Expo sees every item, part, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="setKmsStation('${key}')"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${inactive.length?`<div class="row section kms-inactive"><span><b>${inactive.length}</b> ticket(s) with no activity for over an hour.</span><button class="small-btn danger" onclick="clearInactiveKmsTickets()">Clear Inactive Tickets (1 hr+)</button></div>`:''}${allRecent.length?`<details class="section" ${state.kmsRecentOpen?'open':''} ontoggle="state.kmsRecentOpen=this.open"><summary><b>Recently Completed</b> (${allRecent.length})</summary><div class="row kms-recent-actions"><button class="small-btn" onclick="recallSelectedKmsTickets()">Recall Selected</button><button class="small-btn" onclick="document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=true);kmsRecallPick()">Select All Shown</button><button class="small-btn" onclick="state.kmsRecallSel=[];document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=false)">Clear Selection</button></div>${recent.map(o=>`<div class="row kms-recent"><label class="kms-recall-label"><input type="checkbox" class="kms-recall-check" value="${o.id}" ${(state.kmsRecallSel||[]).includes(o.id)?'checked':''} onchange="kmsRecallPick()"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • ${(o.kmsLog||[]).slice(-1)[0]?.stage==='Cleared (Inactive)'?'cleared':'completed'} ${new Date(kmsLastTime(o)).toLocaleString([], {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></label><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}<div class="row">${allRecent.length>recent.length?`<button class="small-btn" onclick="state.kmsRecentLimit=${recentLimit+10};state.kmsRecentOpen=true;render()">Show 10 More</button><button class="small-btn" onclick="state.kmsRecentLimit=${allRecent.length};state.kmsRecentOpen=true;render()">Show All (${allRecent.length})</button>`:''}<span class="small">Showing ${recent.length} of ${allRecent.length}</span></div></details>`:''}</section>`;
 }
 // Last time anything happened on a ticket: sent, a log entry (start, recall...) or any item/part
 // started or completed. Tickets idle for over an hour can be cleared from Expo / All Tickets.
@@ -1479,6 +1479,15 @@ function kmsButtons(o){let st=kmsStageOf(o); if(st==='sent')return `<button clas
 // on or off with the button on the KMS (saved on that device). Browsers only allow sound after
 // the screen has been tapped once, so the first tap anywhere turns the audio on.
 let kmsAudio=null, kmsSeen=null, kmsSeenStation=null;
+// Each KMS iPad remembers its station (saved on that device), so after a reload the Grill iPad
+// is still on Grill and only chimes for orders with Grill items. All Tickets / Expo chime for all.
+function kmsCurrentStation(){
+ if(!state.kmsStation){try{let s=localStorage.getItem('guthrieKmsStation');if(s&&kmsStationLabels[s])state.kmsStation=s;}catch(e){}}
+ return state.kmsStation||'all';
+}
+window.setKmsStation=key=>{state.kmsStation=key;try{localStorage.setItem('guthrieKmsStation',key);}catch(e){}render();};
+// Each station has its own tone so nearby stations can tell whose order came in.
+const kmsStationTones={grill:523,fry:659,salad:784,beverage:988,dessert:1175,catering:440,expo:880,all:880};
 function kmsSoundOn(){try{return localStorage.getItem('guthrieKmsSound')!=='off';}catch(e){return true;}}
 function kmsAudioReady(){return !!kmsAudio&&kmsAudio.state==='running';}
 function unlockKmsAudio(){
@@ -1491,11 +1500,11 @@ function unlockKmsAudio(){
  }catch(e){}
 }
 ['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,unlockKmsAudio,{passive:true}));
-function playKmsChime(){
+function playKmsChime(station){
  if(!kmsSoundOn())return; unlockKmsAudio(); if(!kmsAudio)return;
- let t0=kmsAudio.currentTime+0.05;
- // Two rising two-note dings.
- [[0,880],[0.18,1320],[0.6,880],[0.78,1320]].forEach(([dt,f])=>{
+ let t0=kmsAudio.currentTime+0.05, base=kmsStationTones[station||kmsCurrentStation()]||880;
+ // Two rising two-note dings in this station's tone.
+ [[0,base],[0.18,base*1.5],[0.6,base],[0.78,base*1.5]].forEach(([dt,f])=>{
   let o=kmsAudio.createOscillator(), g=kmsAudio.createGain(); o.type='sine'; o.frequency.value=f;
   g.gain.setValueAtTime(0.0001,t0+dt); g.gain.exponentialRampToValueAtTime(0.5,t0+dt+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t0+dt+0.35);
   o.connect(g).connect(kmsAudio.destination); o.start(t0+dt); o.stop(t0+dt+0.4);
@@ -1514,16 +1523,16 @@ function kmsSendKeys(station){
 }
 function checkKmsNewOrders(){
  if(!(state.user&&state.view==='kms')){kmsSeen=null;return;}
- let station=state.kmsStation||'all', keys=kmsSendKeys(station);
+ let station=kmsCurrentStation(), keys=kmsSendKeys(station);
  // Entering the KMS or switching stations: remember what is already up, no sound.
  if(!kmsSeen||kmsSeenStation!==station){kmsSeen=keys;kmsSeenStation=station;return;}
  let fresh=[...keys].filter(k=>!kmsSeen.has(k));
  kmsSeen=keys;
- if(fresh.length){playKmsChime(); toast(fresh.length>1?`${fresh.length} new tickets`:'New ticket on the KMS');}
+ if(fresh.length){playKmsChime(station); toast(`${fresh.length>1?fresh.length+' new tickets':'New ticket'} for ${kmsStationLabels[station]||'the KMS'}`);}
 }
 function kmsSoundButton(){
  let on=kmsSoundOn();
- return `<div class="row kms-sound"><button class="small-btn" onclick="toggleKmsSound()">${on?'🔔 Sound On':'🔕 Sound Off'}</button>${on?`<button class="small-btn" onclick="playKmsChime()">Test Sound</button>`:''}${on&&!kmsAudioReady()?`<button class="primary kms-sound-unlock" onclick="unlockKmsAudio();this.remove()">Tap to Enable Sound</button>`:''}</div>`;
+ return `<div class="row kms-sound"><span class="small">This iPad: <b>${kmsStationLabels[kmsCurrentStation()]||'All Tickets'}</b></span><button class="small-btn" onclick="toggleKmsSound()">${on?'🔔 Sound On':'🔕 Sound Off'}</button>${on?`<button class="small-btn" onclick="playKmsChime()">Test Sound</button>`:''}${on&&!kmsAudioReady()?`<button class="primary kms-sound-unlock" onclick="unlockKmsAudio();this.remove()">Tap to Enable Sound</button>`:''}</div>`;
 }
 // Tick the timers in place instead of re-rendering, so open logs and scroll position stay put.
 setInterval(()=>{
