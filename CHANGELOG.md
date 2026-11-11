@@ -1,5 +1,11 @@
 # Guthrie RMS Changelog
 
+## New-Order Sound on the KMS
+- The KMS plays a chime (two quick dings) and shows "New ticket on the KMS" when a ticket arrives, or more items are sent on an open ticket, with work for the station on screen. All Tickets and Expo chime for every ticket; Grill, Fry, Beverage, etc. only for tickets with items for that station.
+- A ticket already up when the KMS opens (or when switching stations) doesn't chime.
+- "Sound On / Sound Off" button at the top of the KMS, saved separately on each device, plus "Test Sound".
+- Browsers only allow sound after the screen is tapped, so tap the KMS once after opening it ("Tap to Enable Sound" shows until then). Keep the iPad's volume up and the side switch off silent.
+
 ## Café Latte Hot or Iced
 - The Café's Iced Latte is now "Latte" ($3) and asks Hot or Iced; Vanilla / Mocha / Caramel / Pumpkin flavor is optional. The Bistro's Iced Latte is unchanged.
 
