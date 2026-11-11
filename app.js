@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111102;
+window.GUTHRIE_RMS_VERSION=2026111104;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -976,7 +976,7 @@ function assignBistroTeamPositions(){
 }
 window.assignBistroTeamPositions=assignBistroTeamPositions;
 assignBistroTeamPositions();
-let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:'all',settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
+let state={user:null,view:'dashboard',pin:'',activeOrder:null,seat:1,checkoutType:'table',selectedOrder:null,invDivision:'bistro',kmsStation:null,settingsTab:'business',userSearch:'',userBlockFilter:'',scheduleSearch:'',inventorySearch:''};
 // Repair older saved tickets so every checkout item has a unique removable line id.
 let _changed=false; db.orders.forEach(o=>{(o.items||[]).forEach((it,idx)=>{ if(!it.lineId){ it.lineId=String((it.id||o.id||Date.now()))+'-'+idx+'-'+Math.random().toString(36).slice(2,7); _changed=true; } });}); if(_changed) save();
 function save(){soldCache=null;localStorage.setItem('guthrieRMS7A',JSON.stringify(db));}
@@ -1373,7 +1373,7 @@ function kmsItemDone(o,i){return kmsTasks(o).filter(t=>t.i===i).every(t=>t.done)
 function kmsVisibleItems(o,station){return (station==='all'||station==='expo')?validItems(o):[...new Set(kmsStationTasks(o,station).map(t=>t.i))];}
 function kmsStationDone(o,station){let ts=kmsStationTasks(o,station);return ts.length>0&&ts.every(t=>t.done);}
 function kms(){
- let station=state.kmsStation||'all', label=kmsStationLabels[station]||'All Tickets';
+ let station=kmsCurrentStation(), label=kmsStationLabels[station]||'All Tickets';
  let active=db.orders.filter(kmsActive).sort((a,b)=>new Date(a.sent)-new Date(b.sent));
  let list=active.filter(o=>kmsVisibleItems(o,station).length);
  let perStation=!['all','expo'].includes(station);
@@ -1382,7 +1382,7 @@ function kms(){
  let allRecent=db.orders.filter(o=>o.kmsStage==='completed'&&o.sent).sort((a,b)=>kmsLastTime(b)-kmsLastTime(a));
  let recentLimit=Number(state.kmsRecentLimit)||10, recent=allRecent.slice(0,recentLimit);
  let inactive=['all','expo'].includes(station)?active.filter(kmsInactive):[];
- return `<section class="card kms-screen"><div class="row kms-title"><h1>KMS BOH Station Screens</h1>${kmsSoundButton()}</div><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). Items with parts from another station (like a sandwich's fries) show that part on that station's screen too. This only marks your station's work; the ticket stays up for the other stations. Expo sees every item, part, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${inactive.length?`<div class="row section kms-inactive"><span><b>${inactive.length}</b> ticket(s) with no activity for over an hour.</span><button class="small-btn danger" onclick="clearInactiveKmsTickets()">Clear Inactive Tickets (1 hr+)</button></div>`:''}${allRecent.length?`<details class="section" ${state.kmsRecentOpen?'open':''} ontoggle="state.kmsRecentOpen=this.open"><summary><b>Recently Completed</b> (${allRecent.length})</summary><div class="row kms-recent-actions"><button class="small-btn" onclick="recallSelectedKmsTickets()">Recall Selected</button><button class="small-btn" onclick="document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=true);kmsRecallPick()">Select All Shown</button><button class="small-btn" onclick="state.kmsRecallSel=[];document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=false)">Clear Selection</button></div>${recent.map(o=>`<div class="row kms-recent"><label class="kms-recall-label"><input type="checkbox" class="kms-recall-check" value="${o.id}" ${(state.kmsRecallSel||[]).includes(o.id)?'checked':''} onchange="kmsRecallPick()"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • ${(o.kmsLog||[]).slice(-1)[0]?.stage==='Cleared (Inactive)'?'cleared':'completed'} ${new Date(kmsLastTime(o)).toLocaleString([], {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></label><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}<div class="row">${allRecent.length>recent.length?`<button class="small-btn" onclick="state.kmsRecentLimit=${recentLimit+10};state.kmsRecentOpen=true;render()">Show 10 More</button><button class="small-btn" onclick="state.kmsRecentLimit=${allRecent.length};state.kmsRecentOpen=true;render()">Show All (${allRecent.length})</button>`:''}<span class="small">Showing ${recent.length} of ${allRecent.length}</span></div></details>`:''}</section>`;
+ return `<section class="card kms-screen"><div class="row kms-title"><h1>KMS BOH Station Screens</h1>${kmsSoundButton()}</div><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). Items with parts from another station (like a sandwich's fries) show that part on that station's screen too. This only marks your station's work; the ticket stays up for the other stations. Expo sees every item, part, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="setKmsStation('${key}')"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${inactive.length?`<div class="row section kms-inactive"><span><b>${inactive.length}</b> ticket(s) with no activity for over an hour.</span><button class="small-btn danger" onclick="clearInactiveKmsTickets()">Clear Inactive Tickets (1 hr+)</button></div>`:''}${allRecent.length?`<details class="section" ${state.kmsRecentOpen?'open':''} ontoggle="state.kmsRecentOpen=this.open"><summary><b>Recently Completed</b> (${allRecent.length})</summary><div class="row kms-recent-actions"><button class="small-btn" onclick="recallSelectedKmsTickets()">Recall Selected</button><button class="small-btn" onclick="document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=true);kmsRecallPick()">Select All Shown</button><button class="small-btn" onclick="state.kmsRecallSel=[];document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=false)">Clear Selection</button></div>${recent.map(o=>`<div class="row kms-recent"><label class="kms-recall-label"><input type="checkbox" class="kms-recall-check" value="${o.id}" ${(state.kmsRecallSel||[]).includes(o.id)?'checked':''} onchange="kmsRecallPick()"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • ${(o.kmsLog||[]).slice(-1)[0]?.stage==='Cleared (Inactive)'?'cleared':'completed'} ${new Date(kmsLastTime(o)).toLocaleString([], {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></label><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}<div class="row">${allRecent.length>recent.length?`<button class="small-btn" onclick="state.kmsRecentLimit=${recentLimit+10};state.kmsRecentOpen=true;render()">Show 10 More</button><button class="small-btn" onclick="state.kmsRecentLimit=${allRecent.length};state.kmsRecentOpen=true;render()">Show All (${allRecent.length})</button>`:''}<span class="small">Showing ${recent.length} of ${allRecent.length}</span></div></details>`:''}</section>`;
 }
 // Last time anything happened on a ticket: sent, a log entry (start, recall...) or any item/part
 // started or completed. Tickets idle for over an hour can be cleared from Expo / All Tickets.
@@ -1479,23 +1479,32 @@ function kmsButtons(o){let st=kmsStageOf(o); if(st==='sent')return `<button clas
 // on or off with the button on the KMS (saved on that device). Browsers only allow sound after
 // the screen has been tapped once, so the first tap anywhere turns the audio on.
 let kmsAudio=null, kmsSeen=null, kmsSeenStation=null;
+// Each KMS iPad remembers its station (saved on that device), so after a reload the Grill iPad
+// is still on Grill and only chimes for orders with Grill items. All Tickets / Expo chime for all.
+function kmsCurrentStation(){
+ if(!state.kmsStation){try{let s=localStorage.getItem('guthrieKmsStation');if(s&&kmsStationLabels[s])state.kmsStation=s;}catch(e){}}
+ return state.kmsStation||'all';
+}
+window.setKmsStation=key=>{state.kmsStation=key;try{localStorage.setItem('guthrieKmsStation',key);}catch(e){}render();};
+// Each station has its own tone so nearby stations can tell whose order came in.
+const kmsStationTones={grill:523,fry:659,salad:784,beverage:988,dessert:1175,catering:440,expo:880,all:880};
 function kmsSoundOn(){try{return localStorage.getItem('guthrieKmsSound')!=='off';}catch(e){return true;}}
 function kmsAudioReady(){return !!kmsAudio&&kmsAudio.state==='running';}
 function unlockKmsAudio(){
  try{
   let AC=window.AudioContext||window.webkitAudioContext; if(!AC)return;
   if(!kmsAudio)kmsAudio=new AC();
-  if(kmsAudio.state!=='running')kmsAudio.resume().then(()=>{let b=document.querySelector('.kms-sound-unlock');if(b)b.remove();}).catch(()=>{});
+  if(kmsAudio.state!=='running')kmsAudio.resume().then(()=>{let b=document.getElementById('kmsSoundBanner');if(b)b.remove();}).catch(()=>{});
   // A silent blip completes the unlock on iPad Safari.
   let g=kmsAudio.createGain(); g.gain.value=0; let o=kmsAudio.createOscillator(); o.connect(g).connect(kmsAudio.destination); o.start(); o.stop(kmsAudio.currentTime+0.01);
  }catch(e){}
 }
 ['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,unlockKmsAudio,{passive:true}));
-function playKmsChime(){
+function playKmsChime(station){
  if(!kmsSoundOn())return; unlockKmsAudio(); if(!kmsAudio)return;
- let t0=kmsAudio.currentTime+0.05;
- // Two rising two-note dings.
- [[0,880],[0.18,1320],[0.6,880],[0.78,1320]].forEach(([dt,f])=>{
+ let t0=kmsAudio.currentTime+0.05, base=kmsStationTones[station||kmsCurrentStation()]||880;
+ // Two rising two-note dings in this station's tone.
+ [[0,base],[0.18,base*1.5],[0.6,base],[0.78,base*1.5]].forEach(([dt,f])=>{
   let o=kmsAudio.createOscillator(), g=kmsAudio.createGain(); o.type='sine'; o.frequency.value=f;
   g.gain.setValueAtTime(0.0001,t0+dt); g.gain.exponentialRampToValueAtTime(0.5,t0+dt+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t0+dt+0.35);
   o.connect(g).connect(kmsAudio.destination); o.start(t0+dt); o.stop(t0+dt+0.4);
@@ -1514,21 +1523,26 @@ function kmsSendKeys(station){
 }
 function checkKmsNewOrders(){
  if(!(state.user&&state.view==='kms')){kmsSeen=null;return;}
- let station=state.kmsStation||'all', keys=kmsSendKeys(station);
+ let station=kmsCurrentStation(), keys=kmsSendKeys(station);
  // Entering the KMS or switching stations: remember what is already up, no sound.
  if(!kmsSeen||kmsSeenStation!==station){kmsSeen=keys;kmsSeenStation=station;return;}
  let fresh=[...keys].filter(k=>!kmsSeen.has(k));
  kmsSeen=keys;
- if(fresh.length){playKmsChime(); toast(fresh.length>1?`${fresh.length} new tickets`:'New ticket on the KMS');}
+ if(fresh.length){window.__kmsHeardKeys=(window.__kmsHeardKeys||0)+fresh.length; playKmsChime(station); toast(`${fresh.length>1?fresh.length+' new tickets':'New ticket'} for ${kmsStationLabels[station]||'the KMS'}`);}
 }
 function kmsSoundButton(){
  let on=kmsSoundOn();
- return `<div class="row kms-sound"><button class="small-btn" onclick="toggleKmsSound()">${on?'🔔 Sound On':'🔕 Sound Off'}</button>${on?`<button class="small-btn" onclick="playKmsChime()">Test Sound</button>`:''}${on&&!kmsAudioReady()?`<button class="primary kms-sound-unlock" onclick="unlockKmsAudio();this.remove()">Tap to Enable Sound</button>`:''}</div>`;
+ return `<div class="row kms-sound"><span class="small">This iPad: <b>${kmsStationLabels[kmsCurrentStation()]||'All Tickets'}</b></span><button class="small-btn" onclick="toggleKmsSound()">${on?'🔔 Sound On':'🔕 Sound Off'}</button>${on?`<button class="small-btn" onclick="playKmsChime()">Test Sound</button>`:''}</div>`;
 }
 // Tick the timers in place instead of re-rendering, so open logs and scroll position stay put.
 setInterval(()=>{
  checkKmsNewOrders();
  if(!(state.user&&state.view==='kms'))return;
+ // Sound can be switched off by the browser (after a reload, or the iPad sleeping); show a big
+ // banner until someone taps, so a KMS never misses chimes without anyone noticing.
+ let sb=document.getElementById('kmsSoundBanner'), need=kmsSoundOn()&&!kmsAudioReady();
+ if(need&&!sb){document.querySelector('.kms-screen')?.insertAdjacentHTML('afterbegin','<button id="kmsSoundBanner" class="kms-sound-banner" onclick="unlockKmsAudio()">🔇 Sound is off on this iPad — tap here to turn it on</button>');}
+ else if(!need&&sb)sb.remove();
  document.querySelectorAll('[data-kms-sent]').forEach(el=>{let t=kmsElapsed(el.dataset.kmsSent), tk=el.closest('.ticket'); el.textContent=t.text; if(tk){tk.classList.toggle('warn',t.cls==='warn');tk.classList.toggle('late',t.cls==='late');}});
 },1000);
 function kmsLine(orderId,lineId){let o=db.orders.find(x=>x.id===orderId);return {o,i:o&&validItems(o).find(x=>x.lineId===lineId)};}
@@ -2537,13 +2551,59 @@ window.addSettingsListItem=(field)=>{let v=$('#newListItem')?.value.trim();if(!v
 window.removeSettingsListItem=(field,i)=>{if(!confirm('Remove this item?'))return;db.settings[field].splice(i,1);save();render();toast('Removed.');};
 function settingsData(){
   return `<div class="settings-page">
-    <div class="settings-page-head"><h1>Data</h1><p>Local demo data stored in this browser only.</p></div>
+    <div class="settings-page-head"><h1>Data</h1><p>Shared data size, old order cleanup, and local demo reset.</p></div>
+    ${(()=>{let h=syncHealth(),b=sharedDataBytes(),lim=h?.limit||1048576,pct=Math.min(100,b/lim*100),old=oldPaidOrders().length,orders=(db.orders||[]).length;
+      return `<div class="settings-card"><h2>Shared Data</h2><p>All devices share one cloud copy, limited to 1 MB. It is now <b>${Math.round(b/1024)} KB (${pct.toFixed(0)}%)</b> with ${orders} order(s).</p><div class="size-meter"><span style="width:${pct.toFixed(1)}%;background:${pct>=75?'var(--red)':pct>=50?'var(--gold)':'var(--green)'}"></span></div><p class="small">Paid orders older than 7 days are cleared automatically every hour on every device (open orders are never cleared). Export any reports you need before then.</p><p>Sync: ${h?(h.failingSince?`<b style="color:var(--red)">not syncing since ${new Date(h.failingSince).toLocaleTimeString()}</b>`:h.lastOk?'last saved to the cloud '+new Date(h.lastOk).toLocaleTimeString():'connected'):'local only (no cloud)'}</p><button class="primary" onclick="clearOldPaidOrdersNow()">Clear Paid Orders Older Than 7 Days Now (${old})</button></div>`;})()}
     <div class="settings-card">
       <p>This resets all locally saved Guthrie RMS demo data in this browser (orders, inventory changes, users, schedule, etc.) back to the built-in demo seed.</p>
       <button class="primary danger" onclick="if(confirm('Reset all local demo data? This cannot be undone.')){localStorage.removeItem('guthrieRMS7A');localStorage.removeItem('guthrieRMS5A');localStorage.removeItem('guthrieRMS4K');localStorage.removeItem('guthrieRMS4F');location.reload();}">Reset Local App Data</button>
     </div>
   </div>`;
 }
+
+// ---- Sync health, data size and weekly cleanup ----
+// Banner on every screen when this device's changes haven't reached the cloud for a while
+// (Wi-Fi down, or the shared data too big to save), so it never fails silently.
+// Managers also see a warning as the shared data nears Firestore's 1 MB per-document limit.
+function syncHealth(){return window.__guthrieSyncHealth||null;}
+function sharedDataBytes(){let h=syncHealth();try{return Math.max(h?.bytes||0,JSON.stringify(db).length);}catch(e){return h?.bytes||0;}}
+function updateSyncBanner(){
+  let h=syncHealth(), el=document.getElementById('syncBanner');
+  if(!el){el=document.createElement('div');el.id='syncBanner';document.body.appendChild(el);}
+  let msg='', cls='';
+  if(state.user&&h&&h.failingSince&&Date.now()-h.failingSince>8000){
+    let secs=Math.round((Date.now()-h.failingSince)/1000);
+    let big=/size|too large|exceeds|maximum/i.test(h.error);
+    msg=`⚠ Not syncing for ${secs<120?secs+' sec':Math.round(secs/60)+' min'}. ${big?'The shared data is too big to save; a manager should open Settings › Data.':'Changes on this iPad have not reached the other devices yet. Check Wi-Fi; it keeps retrying.'}`;
+    cls='sync-bad';
+  } else if(state.user?.role==='manager'&&h){
+    let pct=sharedDataBytes()/h.limit*100;
+    if(pct>=75){msg=`Shared data is ${Math.round(pct)}% full. Open Settings › Data to clear old paid orders.`;cls='sync-warn';}
+  }
+  if(el.dataset.msg!==msg){el.dataset.msg=msg;el.textContent=msg;el.className=cls;el.style.display=msg?'block':'none';}
+}
+setInterval(updateSyncBanner,2000);
+// Paid orders older than 7 days are cleared from the shared data (their removal syncs to every
+// device), keeping it well under the size limit. Open, unpaid orders are never cleared.
+const PAID_ORDER_KEEP_DAYS=7;
+function oldPaidOrders(){
+  let cutoff=Date.now()-PAID_ORDER_KEEP_DAYS*864e5;
+  return (db.orders||[]).filter(o=>o.paid&&!kmsActive(o)&&(new Date(o.paidAt||o.payment?.processedAt||Number(o.id)).getTime()||Number(o.id))<cutoff);
+}
+function clearOldPaidOrders(){
+  let old=oldPaidOrders(); if(!old.length)return 0;
+  let ids=new Set(old.map(o=>o.id));
+  db.orders=db.orders.filter(o=>!ids.has(o.id));
+  (db.tables||[]).forEach(t=>{if(ids.has(t.orderId)){t.orderId=null;t.status='open';}});
+  save(); return old.length;
+}
+window.clearOldPaidOrdersNow=()=>{let n=oldPaidOrders().length;if(!n){alert('No paid orders older than 7 days.');return;}if(!confirm(`Clear ${n} paid order(s) older than 7 days from every device? Export any reports you need first.`))return;clearOldPaidOrders();render();toast(`Cleared ${n} old paid order(s).`);};
+// Runs a minute after start-up (once cloud data has loaded) and then every hour.
+function scheduleOldOrderCleanup(){
+  let run=()=>{if(!window.__guthrieRMSApplyingCloud&&(window.__guthrieRMSBooted||!window.__guthrieSyncHealth)){let n=clearOldPaidOrders();if(n)console.info('Cleared '+n+' paid orders older than 7 days.');}};
+  setTimeout(run,60000); setInterval(run,3600000);
+}
+scheduleOldOrderCleanup();
 
 window.addEventListener('error',function(e){
   const root=document.getElementById('app');

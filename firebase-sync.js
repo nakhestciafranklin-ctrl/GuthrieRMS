@@ -32,6 +32,9 @@ function isConfigured(cfg){
   return !!(cfg && cfg.apiKey && !String(cfg.apiKey).startsWith('REPLACE_'));
 }
 
+// Sync health for the app's banners: when the last push succeeded, since when pushes have been
+// failing (null when fine), why, and the shared doc's size (Firestore's limit is 1 MiB per doc).
+const syncHealth=window.__guthrieSyncHealth={lastOk:0,failingSince:null,error:'',bytes:0,limit:1048576};
 function setCloudStatus(ok,message){
   window.__guthrieRMSCloudStatus={ok,message};
 }
@@ -92,8 +95,68 @@ if(!isConfigured(firebaseConfig)){
           if(baseOrders.get(o.id)!==k&&stamped.get(o.id)!==k){o.updatedAt=Date.now();stamped.set(o.id,orderKey(o));}
         });
       }
+      // ---- Field-level merge of one order ----
+      // Two devices often change the same order at the same moment (the register marks it paid
+      // while a KMS station taps Complete). Taking the whole newer copy dropped the other
+      // device's change (a lost payment or a lost tap). Instead this is a three-way merge against
+      // the copy this device last received from the cloud (base): a field changed on only one
+      // side takes that side's value; a field changed on both sides takes the newer order's
+      // value. Ticket lines merge by lineId (each line, and each part of a line, field by field),
+      // so a line removed on one device stays removed and a line added on another is kept.
+      // The KMS log and refunds are combined from both sides.
+      const J=v=>v===undefined?'\u0000':JSON.stringify(v);
+      const isObj=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
+      function merge3(b,l,c,localNewer){
+        const lj=J(l),cj=J(c); if(lj===cj)return c;
+        const bj=J(b); if(lj===bj)return c; if(cj===bj)return l;
+        if(isObj(l)&&isObj(c)&&(b===undefined||isObj(b))){
+          const out={};
+          new Set([...Object.keys(c),...Object.keys(l)]).forEach(k=>{const v=merge3(b?.[k],l[k],c[k],localNewer);if(v!==undefined)out[k]=v;});
+          return out;
+        }
+        return localNewer?l:c;
+      }
+      function unionList(b,l,c){
+        const lj=J(l),cj=J(c); if(lj===cj)return c; if(lj===J(b))return c; if(cj===J(b))return l;
+        const out=[...(c||[])], seen=new Set(out.map(x=>JSON.stringify(x)));
+        (l||[]).forEach(x=>{const k=JSON.stringify(x);if(!seen.has(k)){seen.add(k);out.push(x);}});
+        if(out.every(x=>x&&x.time))out.sort((x,y)=>new Date(x.time)-new Date(y.time));
+        return out;
+      }
+      function mergeLines(b,l,c,localNewer){
+        const key=i=>String(i&&(i.lineId??i.id));
+        const B=new Map((b||[]).map(i=>[key(i),i])), L=new Map((l||[]).map(i=>[key(i),i])), C=new Map((c||[]).map(i=>[key(i),i]));
+        const order=[...C.keys()]; L.forEach((_,k)=>{if(!C.has(k))order.push(k);});
+        const out=[];
+        order.forEach(k=>{
+          const bi=B.get(k), li=L.get(k), ci=C.get(k);
+          if(li&&ci){out.push(merge3(bi,li,ci,localNewer));return;}
+          const only=li||ci;
+          // Present on one side only: new there (keep it), or removed on the other side
+          // (stays removed unless this side changed it since).
+          if(!bi||J(only)!==J(bi))out.push(only);
+        });
+        return out;
+      }
+      function mergeOrder(baseJSON,l,c){
+        const localNewer=(Number(l.updatedAt)||0)>(Number(c.updatedAt)||0);
+        if(!baseJSON)return localNewer?l:c;
+        const b=JSON.parse(baseJSON), out={};
+        new Set([...Object.keys(c),...Object.keys(l),...Object.keys(b)]).forEach(k=>{
+          if(k==='updatedAt')return;
+          let v;
+          if(k==='items')v=mergeLines(b.items,l.items,c.items,localNewer);
+          else if(k==='kmsLog'||k==='refunds')v=unionList(b[k],l[k],c[k]);
+          else v=merge3(b[k],l[k],c[k],localNewer);
+          if(v!==undefined)out[k]=v;
+        });
+        // A paid order stays paid even if a KMS device moved its ticket status meanwhile.
+        if(out.paid&&!/paid|refund/i.test(String(out.status||'')))out.status='paid';
+        out.updatedAt=Math.max(Number(l.updatedAt)||0,Number(c.updatedAt)||0);
+        return out;
+      }
       // Returns true when this device holds order changes the cloud doesn't have yet.
-      function mergeOrders(cloudData,localOrders,localDeleted){
+      function mergeOrders(cloudData,localOrders,localDeleted,base=baseOrders){
         const cloudOrders=cloudData.orders||[];
         const local=new Map((localOrders||[]).map(o=>[o.id,o]));
         const seen=new Set(); const out=[]; let localWins=false;
@@ -105,7 +168,12 @@ if(!isConfigured(firebaseConfig)){
           seen.add(c.id);
           if(deleted[c.id]){localWins=true;return;}
           const l=local.get(c.id);
-          if(l){ if((Number(l.updatedAt)||0)>(Number(c.updatedAt)||0)){out.push(l);localWins=true;} else out.push(c); }
+          if(l){
+            if(orderKey(l)===orderKey(c)){out.push(c);return;}
+            const m=mergeOrder(base.get(c.id),l,c);
+            if(orderKey(m)!==orderKey(c))localWins=true;
+            out.push(m);
+          }
           else out.push(c);
         });
         (localOrders||[]).forEach(l=>{
@@ -185,13 +253,16 @@ if(!isConfigured(firebaseConfig)){
         clearTimeout(pushTimer);
         pushTimer=setTimeout(async()=>{
           if(pushing){pushAgain=true;return;}
-          let json;
+          let json, base;
           try{
             if(APP_VERSION&&!(Number(window.db.appVersion)>=APP_VERSION))window.db.appVersion=APP_VERSION;
             stampLocalChanges();
             stampLocalUnits();
             json=JSON.stringify(cleanForFirestore(window.db));
             if(json===lastSyncedJSON)return;
+            // The cloud copy this device's data was based on, captured with it, so a retry after
+            // another device's write still merges against the right starting point.
+            base=new Map(baseOrders);
             lastSyncedJSON=json;
           }catch(err){
             console.warn('Guthrie RMS cloud sync: could not prepare data for cloud push.',err);
@@ -205,14 +276,19 @@ if(!isConfigured(firebaseConfig)){
               let out=local;
               if(snap.exists()){
                 out=snap.data();
-                mergeOrders(out,local.orders,local.deletedOrders);
+                mergeOrders(out,local.orders,local.deletedOrders,base);
                 mergeUnits(out,local);
                 out.appVersion=Math.max(Number(out.appVersion)||0,Number(local.appVersion)||0);
               }
-              tx.set(sharedDocRef,cleanForFirestore(out));
+              const clean=cleanForFirestore(out);
+              syncHealth.bytes=JSON.stringify(clean).length;
+              tx.set(sharedDocRef,clean);
             });
+            syncHealth.lastOk=Date.now(); syncHealth.failingSince=null; syncHealth.error='';
           }catch(err){
             console.warn('Guthrie RMS cloud sync: push failed, retrying.',err);
+            if(!syncHealth.failingSince)syncHealth.failingSince=Date.now();
+            syncHealth.error=String(err&&(err.message||err.code)||err||'');
             lastSyncedJSON=null;
             setTimeout(pushToCloud,2000);
           }finally{
@@ -267,6 +343,7 @@ if(!isConfigured(firebaseConfig)){
             const cloudData=snap.data();
             if(newerVersionInCloud(cloudData))return;
             const cloudJSON=JSON.stringify(cloudData);
+            syncHealth.bytes=cloudJSON.length; syncHealth.lastSnapshot=Date.now();
             if(cloudJSON!==lastSyncedJSON){
               lastSyncedJSON=cloudJSON;
               // First load takes the cloud's orders as-is (this device's saved copy may be days old).
