@@ -54,7 +54,7 @@ if(!isConfigured(firebaseConfig)){
   (async()=>{
     const fallbackTimer=setTimeout(()=>bootApp('cloud connection timed out'),FALLBACK_TIMEOUT_MS);
     try{
-      const [{initializeApp},{getAuth,signInAnonymously},{getFirestore,doc,onSnapshot,setDoc,runTransaction}]=await Promise.all([
+      const [{initializeApp},{getAuth,signInAnonymously},{getFirestore,doc,onSnapshot,setDoc,runTransaction,getDoc}]=await Promise.all([
         import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
         import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
         import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')
@@ -83,7 +83,19 @@ if(!isConfigured(firebaseConfig)){
       // Deleted orders are recorded in db.deletedOrders (id -> time). An order missing from an
       // incoming copy is NOT taken as deleted: with many devices, one that hadn't received a new
       // order yet would send a copy without it, and the others used to drop it (a lost sale).
-      const TOMBSTONE_DAYS=7;
+      const TOMBSTONE_DAYS=3;
+      // Orders changed on this device that the cloud hasn't confirmed yet, kept in this iPad's
+      // storage as id -> {at: updatedAt, base: the cloud copy the change was made on}. If the iPad
+      // reloads before they reach the cloud (Wi-Fi dropped), they are merged into the cloud copy
+      // on the next connect (field by field, against that base) instead of being lost.
+      const PENDING_KEY='guthrieRMSPendingOrders';
+      let pending={}; try{pending=JSON.parse(localStorage.getItem(PENDING_KEY)||'{}')||{};}catch(e){pending={};}
+      function savePending(){try{localStorage.setItem(PENDING_KEY,JSON.stringify(pending));}catch(e){}}
+      function confirmPending(cloudOrders){
+        let changed=false; const byId=new Map((cloudOrders||[]).map(o=>[String(o.id),o]));
+        Object.entries(pending).forEach(([id,p])=>{const c=byId.get(id);if(c&&(Number(c.updatedAt)||0)>=Number(p?.at??p)){delete pending[id];changed=true;}});
+        if(changed)savePending();
+      }
       function stampLocalChanges(){
         const data=window.db;
         if(data){
@@ -92,7 +104,7 @@ if(!isConfigured(firebaseConfig)){
         }
         (window.db?.orders||[]).forEach(o=>{
           const k=orderKey(o);
-          if(baseOrders.get(o.id)!==k&&stamped.get(o.id)!==k){o.updatedAt=Date.now();stamped.set(o.id,orderKey(o));}
+          if(baseOrders.get(o.id)!==k&&stamped.get(o.id)!==k){o.updatedAt=Date.now();stamped.set(o.id,orderKey(o));pending[o.id]={at:o.updatedAt,base:pending[o.id]?.base??baseOrders.get(o.id)??null};savePending();}
         });
       }
       // ---- Field-level merge of one order ----
@@ -140,8 +152,10 @@ if(!isConfigured(firebaseConfig)){
       }
       function mergeOrder(baseJSON,l,c){
         const localNewer=(Number(l.updatedAt)||0)>(Number(c.updatedAt)||0);
-        if(!baseJSON)return localNewer?l:c;
-        const b=JSON.parse(baseJSON), out={};
+        // No shared starting copy (an order created here that the cloud hadn't confirmed yet):
+        // merge against an empty one, so anything either side has is kept (a KMS tap from the
+        // cloud and a payment made here offline both survive); only real conflicts go to the newer.
+        const b=baseJSON?JSON.parse(baseJSON):{}, out={};
         new Set([...Object.keys(c),...Object.keys(l),...Object.keys(b)]).forEach(k=>{
           if(k==='updatedAt')return;
           let v;
@@ -150,6 +164,11 @@ if(!isConfigured(firebaseConfig)){
           else v=merge3(b[k],l[k],c[k],localNewer);
           if(v!==undefined)out[k]=v;
         });
+        // Ticket stage follows the combined log: completed (or cleared) stays completed unless it
+        // was recalled or more items were sent after that, so a done ticket never pops back up.
+        const life=(out.kmsLog||[]).filter(e=>/^(Completed|Cleared \(Inactive\)|Recalled|Sent to Kitchen|Added Items Sent)$/.test(e?.stage)).pop();
+        if(life&&/^(Completed|Cleared)/.test(life.stage)&&out.kmsStage!=='completed')out.kmsStage='completed';
+        else if(life&&out.kmsStage==='completed'&&!/^(Completed|Cleared)/.test(life.stage))out.kmsStage=life.stage==='Recalled'?'started':'sent';
         // A paid order stays paid even if a KMS device moved its ticket status meanwhile.
         if(out.paid&&!/paid|refund/i.test(String(out.status||'')))out.status='paid';
         out.updatedAt=Math.max(Number(l.updatedAt)||0,Number(c.updatedAt)||0);
@@ -232,6 +251,13 @@ if(!isConfigured(firebaseConfig)){
           cp.items=cp.items||{};
           if(newer('production')){cp.date=lp.date;cp.history=lp.history;keep('production');}
           Object.entries(lp.items||{}).forEach(([id,item])=>{const k='production.items.'+id;if(newer(k)){cp.items[id]=item;keep(k);}});
+        }
+        // The list of archived days only ever grows: combine both sides so a day archived on one
+        // iPad isn't dropped by another iPad saving its list at the same moment.
+        if(Array.isArray(local?.archiveDays)||Array.isArray(cloudData.archiveDays)){
+          const all=[...new Set([...(cloudData.archiveDays||[]),...(local?.archiveDays||[])])].sort();
+          if(all.length!==(cloudData.archiveDays||[]).length)localWins=true;
+          cloudData.archiveDays=all;
         }
         cloudData.syncStamps=stamps;
         return localWins;
@@ -348,7 +374,24 @@ if(!isConfigured(firebaseConfig)){
               lastSyncedJSON=cloudJSON;
               // First load takes the cloud's orders as-is (this device's saved copy may be days old).
               // After that, merge so orders this device just entered or updated aren't lost.
-              if(firstSnapshot){ rememberBase(cloudData.orders); }
+              if(firstSnapshot){
+                rememberBase(cloudData.orders);
+                // Orders this iPad changed that never reached the cloud (e.g. it reloaded while offline).
+                const localOrders=window.db?.orders||[], cloudOrders=cloudData.orders=cloudData.orders||[];
+                const dead=cloudData.deletedOrders||{};
+                Object.keys(pending).forEach(id=>{
+                  const l=localOrders.find(o=>String(o.id)===id); if(!l||dead[id]){delete pending[id];return;}
+                  const i=cloudOrders.findIndex(o=>String(o.id)===id);
+                  if(i<0){cloudOrders.push(l);localWins=true;return;}
+                  const c=cloudOrders[i], base=pending[id]?.base??null;
+                  if(orderKey(l)===orderKey(c)){delete pending[id];return;}
+                  // Merge against the copy the offline change was made on, so changes other
+                  // devices made meanwhile (KMS taps, payment) are kept too.
+                  const m=mergeOrder(base,l,c);
+                  if(orderKey(m)!==orderKey(c)){cloudOrders[i]=m;localWins=true;}else delete pending[id];
+                });
+                savePending();
+              }
               else {
                 stampLocalChanges(); stampLocalUnits();
                 const local=window.db, localOrders=local?.orders||[];
@@ -356,6 +399,7 @@ if(!isConfigured(firebaseConfig)){
                 if(mergeUnits(cloudData,local))localWins=true;
                 rememberBase(JSON.parse(cloudJSON).orders);
               }
+              confirmPending(JSON.parse(cloudJSON).orders);
               window.db=cloudData;
               // Re-applying migrations must not push on its own: a device running different
               // code would undo it and push back, and the two would overwrite each other's
@@ -380,7 +424,7 @@ if(!isConfigured(firebaseConfig)){
           cloudReady=true;
           // On connect only: if this device's migrations changed the cloud copy (new menu
           // items, modifiers, prices), send the result up once so every device gets it.
-          if(firstSnapshot){firstSnapshot=false;pushToCloud();}
+          if(firstSnapshot){firstSnapshot=false;pushToCloud();if(localWins)console.info('Guthrie RMS: re-sending orders saved on this iPad while offline.');}
           // This device had newer order changes than the cloud copy it just received: send them back up.
           else if(localWins){pushToCloud();}
           clearTimeout(fallbackTimer);
@@ -395,6 +439,39 @@ if(!isConfigured(firebaseConfig)){
         clearTimeout(fallbackTimer);
         bootApp('cloud sync error',err);
       });
+
+      // ---- Order archive (long-term storage) ----
+      // Paid orders from earlier days are moved out of the shared doc into one archive doc per
+      // day (guthrieRMS/archive_YYYY-MM-DD, then _2, _3... if a day passes ~900 KB), so the shared
+      // doc stays small and fast while history is kept for reports.
+      const ARCHIVE_PART_BYTES=900000;
+      const archiveRef=(day,part)=>doc(firestore,'guthrieRMS','archive_'+day+(part>1?'_'+part:''));
+      window.__guthrieArchive={
+        async save(day,orders){
+          let remaining=orders.slice();
+          for(let part=1;part<=30&&remaining.length;part++){
+            let left=[];
+            await runTransaction(firestore,async tx=>{
+              const snap=await tx.get(archiveRef(day,part));
+              const cur=snap.exists()?(snap.data().orders||[]):[];
+              const ids=new Map(cur.map((o,i)=>[o.id,i])); let size=JSON.stringify(cur).length; left=[];
+              remaining.forEach(o=>{
+                if(ids.has(o.id)){cur[ids.get(o.id)]=o;return;}
+                const n=JSON.stringify(o).length;
+                if(size+n<ARCHIVE_PART_BYTES||!cur.length){cur.push(o);ids.set(o.id,cur.length-1);size+=n;}else left.push(o);
+              });
+              tx.set(archiveRef(day,part),cleanForFirestore({day,part,orders:cur,updatedAt:Date.now()}));
+            });
+            remaining=left;
+          }
+          if(remaining.length)throw new Error('archive full for '+day);
+        },
+        async load(day){
+          const out=[];
+          for(let part=1;part<=30;part++){const snap=await getDoc(archiveRef(day,part));if(!snap.exists())break;out.push(...(snap.data().orders||[]));}
+          return out;
+        }
+      };
 
       // Wrap the app's existing save() so every local save is also pushed to the cloud.
       const originalSave=window.save;

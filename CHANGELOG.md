@@ -1,5 +1,18 @@
 # Guthrie RMS Changelog
 
+## Rush-Proof Orders: Offline Safety, Order Archive Storage, Smaller Shared Data
+- Orders rung up while an iPad has no Wi-Fi are kept on that iPad until the cloud confirms them, even if the iPad reloads before reconnecting. They are sent as soon as it's back online and merged field by field with anything other devices changed meanwhile (KMS taps, payment). Before, a reload before reconnecting could drop them.
+- Order archive (long-term storage): paid orders from earlier days move hourly out of the shared data into one cloud archive per day (guthrieRMS/archive_YYYY-MM-DD). The shared data then holds mainly today, so it stays small and fast in a rush, and history is kept instead of cleared after 7 days. Reports (Today, Last 7 Days, This Month, All Time, Custom) include archived days. If the Firebase rules don't allow the archive, the app falls back to clearing paid orders older than 7 days and Settings › Data shows the rule to add.
+- An hour after an order is paid and its ticket is done, the KMS timing details are dropped (who started/finished each item and when); sales, items, options, payment and par counts are kept. About doubles how many orders one day can hold.
+- A finished ticket stays finished when devices reconnect: the ticket stage follows its combined log, so it only reopens when it was recalled or more items were sent.
+- Settings › Data shows archive status, archived days, orders waiting, and "Archive Earlier Days Now".
+- Load-tested (simulated shared database, 1 register + 6 KMS iPads, 60–100 orders at 1–2 a second, plus a register that loses Wi-Fi, rings up 3 orders, reloads and reconnects): no lost orders, payments or KMS taps; the offline orders reached the KMS after reconnecting; all iPads matched; chimes exact per station; earlier days archived (or cleared after 7 days when the archive is blocked).
+
+## Easier Option (Modifier) Editing in Settings › Menu Items
+- The Add / Edit item pop-up replaces the typed options box with an option editor. Each group is a card with its name, a Required / Optional switch, a Pick 1 / Pick any switch, and one row per option with a +/− $ box for an upcharge (1.00) or discount (-8). Add Option, ✕ to remove, ↑ ↓ to reorder groups, Delete Group.
+- "+ Add a common group…" adds a ready-made group to edit: Hot or Iced, Ice, Flavor, Protein, Tortilla, Leave Off, Add Toppings, Warm, Allergy Alert.
+- A live Preview shows the options exactly as students will see them when ringing up.
+
 ## Reliability for Busy Service (1 register + 6 KMS iPads)
 - Fixed: a payment could be lost when the register marked an order paid at the same moment a KMS station tapped that order (the device that saved last replaced the whole order). Orders now merge field by field against the last shared copy: a change made on only one device is always kept, ticket lines merge by line (removed lines stay removed, added lines are kept), and the KMS log and refunds combine. A paid order stays paid.
 - Load-tested with a simulated shared database, 1 register and 6 KMS iPads (Grill, Fry, Beverage, Expo, All Tickets, a second Grill) tapping Start/Complete at once: 60 orders at about 1 a second and 120 orders at about 2 a second, each sent and paid right away. Result: no lost orders, payments or KMS taps, every iPad ended up identical, and each station chimed exactly once per order sent to it.

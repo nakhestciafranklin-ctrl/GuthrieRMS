@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111104;
+window.GUTHRIE_RMS_VERSION=2026111106;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -1993,6 +1993,22 @@ function reportRange(){
   if(r==='custom') return {from:state.reportFrom||null,to:state.reportTo||null,label:`${state.reportFrom||'Start'} to ${state.reportTo||'Today'}`};
   return {from:null,to:null,label:'All Time'};
 }
+// Reports include archived orders (earlier days moved to cloud storage). Days in the report range
+// are loaded once and cached; the report redraws when they arrive.
+const archiveCache={}, archiveLoading=new Set();
+function reportOrders(){
+  let {from,to}=reportRange(), A=window.__guthrieArchive;
+  let days=(db.archiveDays||[]).filter(d=>(!from||d>=from)&&(!to||d<=to));
+  let missing=days.filter(d=>!archiveCache[d]&&!archiveLoading.has(d));
+  if(A&&missing.length){
+    missing.forEach(d=>archiveLoading.add(d));
+    Promise.all(missing.map(d=>A.load(d).then(o=>{archiveCache[d]=o;}).catch(e=>{console.warn('Archive load failed',d,e);archiveCache[d]=[];}).finally(()=>archiveLoading.delete(d))))
+      .then(()=>{if(state.view==='reports')render();});
+  }
+  let ids=new Set((db.orders||[]).map(o=>o.id));
+  return [...(db.orders||[]),...days.flatMap(d=>archiveCache[d]||[]).filter(o=>!ids.has(o.id)&&ids.add(o.id))];
+}
+function reportArchiveNote(){let {from,to}=reportRange();let n=(db.archiveDays||[]).filter(d=>(!from||d>=from)&&(!to||d<=to)&&archiveLoading.has(d)).length;return n?`<p class="notice">Loading ${n} archived day(s)…</p>`:'';}
 function inReportRange(iso){
   if(!iso) return state.reportRange==='all';
   let {from,to}=reportRange(), day=new Date(iso).toLocaleDateString('en-CA');
@@ -2011,8 +2027,8 @@ function itemSalesBreakdown(orders){
 }
 function reports(){
   let range=reportRange();
-  let paidOrders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
-  let sales=paidOrders.reduce((a,o)=>a+total(o),0);
+  let paidOrders=reportOrders().filter(o=>o.paid&&inReportRange(o.paidAt));
+  let sales=paidOrders.reduce((a,o)=>a+total(o),0), archiveNote=reportArchiveNote();
   let refunds=(db.refunds||[]).filter(r=>inReportRange(r.processedAt)).reduce((a,r)=>a+(Number(r.amount)||0),0);
   let byType={};paidOrders.forEach(o=>{byType[o.type]=(byType[o.type]||0)+total(o);});
   let items=itemSalesBreakdown(paidOrders);
@@ -2021,7 +2037,7 @@ function reports(){
   let low=db.inventory.filter(i=>Number(i.onHand)<Number(i.par));
   let ranges=[['today','Today'],['week','Last 7 Days'],['month','This Month'],['all','All Time'],['custom','Custom']];
   let modText=r=>Object.entries(r.mods).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k} ×${v}`).join(', ');
-  return `<section class="card"><h1>Reports</h1>
+  return `<section class="card"><h1>Reports</h1>${archiveNote}
     <div class="row">${ranges.map(([k,l])=>`<button class="${(state.reportRange||'today')===k?'primary':'small-btn'}" onclick="state.reportRange='${k}';render()">${l}</button>`).join('')}</div>
     ${(state.reportRange==='custom')?`<div class="row section"><label>From<input type="date" class="input" value="${state.reportFrom||''}" onchange="state.reportFrom=this.value;render()"></label><label>To<input type="date" class="input" value="${state.reportTo||''}" onchange="state.reportTo=this.value;render()"></label></div>`:''}
     <p class="notice">Showing sales for <b>${range.label}</b>. Labor hours and inventory are current totals.</p>
@@ -2045,11 +2061,11 @@ function reports(){
 }
 window.exportReportCSV=()=>{
   let rows=[['Order ID','Type','Customer','Total','Status','Paid At']];
-  db.orders.filter(o=>o.paid&&inReportRange(o.paidAt)).forEach(o=>rows.push([o.id,o.type,o.customer,total(o).toFixed(2),o.status,o.paidAt||'']));
+  reportOrders().filter(o=>o.paid&&inReportRange(o.paidAt)).forEach(o=>rows.push([o.id,o.type,o.customer,total(o).toFixed(2),o.status,o.paidAt||'']));
   downloadCSV('guthrie-rms-sales.csv',rows);
 };
 window.exportItemSalesCSV=()=>{
-  let {label}=reportRange(), orders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
+  let {label}=reportRange(), orders=reportOrders().filter(o=>o.paid&&inReportRange(o.paidAt));
   let rows=[['Range','Item','Category','Qty Sold','Sales','Modifiers']];
   itemSalesBreakdown(orders).forEach(r=>rows.push([label,r.name,r.category,r.qty,r.sales.toFixed(2),Object.entries(r.mods).map(([k,v])=>`${k} x${v}`).join('; ')]));
   downloadCSV(`guthrie-rms-item-sales-${label.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,rows);
@@ -2455,31 +2471,79 @@ window.removePosition=(i)=>{if(!confirm('Remove this position?'))return;db.posit
 // An item changed here is marked editedAt so the built-in menu updates never overwrite it.
 // Delete keeps the item (hidden, marked deleted) so old orders and reports still read right and
 // the built-in menus don't add it back; it can be restored from the Deleted list.
-// Options are typed one group per line: "Group (required, pick 1): Option A, Option B +1, Option C -8".
+// Options are edited as groups (cards) in the Add / Edit pop-up; see the option editor below.
 const menuLabels={cafe:'Café Menu',bistro:'Bistro Menu',exemption:'Exemption Day'};
 function menuStations(){return kmsStationList.filter(([k])=>!['all','expo'].includes(k));}
 function optPrice(m,o){let v=Number(m?.modPrices?.[o])||0;return v?` ${v>0?'+':'-'}${Math.abs(v)%1?Math.abs(v).toFixed(2):Math.abs(v)}`:'';}
-function menuOptionsText(m){
+// Visual option editor in the Add / Edit pop-up. Options are kept in groups (cards): each has a
+// name, Required on/off, Pick 1 or Pick any, and option rows with an optional price change.
+// The working copy lives in meGroups while the pop-up is open; typing updates it directly
+// (no redraw, so the cursor stays put) and the live preview below shows the student's view.
+let meGroups=[];
+function groupsFromItem(m){
+  let price=o=>Number(m?.modPrices?.[o])||0;
   if(Array.isArray(m?.modGroups)&&m.modGroups.length){
-    let grouped=new Set(m.modGroups.flatMap(g=>g.options||[])), extra=(m.mods||[]).filter(o=>!grouped.has(o));
-    let lines=m.modGroups.map(g=>{let f=[g.required?'required':'',g.pick==='one'?'pick 1':''].filter(Boolean);return `${g.name}${f.length?` (${f.join(', ')})`:''}: ${(g.options||[]).map(o=>o+optPrice(m,o)).join(', ')}`;});
-    if(extra.length)lines.push('Other: '+extra.map(o=>o+optPrice(m,o)).join(', '));
-    return lines.join('\n');
+    let grouped=new Set(m.modGroups.flatMap(g=>g.options||[])), extra=(m?.mods||[]).filter(o=>!grouped.has(o));
+    let gs=m.modGroups.map(g=>({name:g.name||'',required:!!g.required,pick:g.pick==='one'?'one':'many',options:(g.options||[]).map(o=>({name:o,price:price(o)}))}));
+    if(extra.length)gs.push({name:'Other',required:false,pick:'many',options:extra.map(o=>({name:o,price:price(o)}))});
+    return gs;
   }
-  return (m?.mods||[]).length?'Options: '+m.mods.map(o=>o+optPrice(m,o)).join(', '):'';
+  return (m?.mods||[]).length?[{name:'Options',required:false,pick:'many',options:m.mods.map(o=>({name:o,price:price(o)}))}]:[];
 }
-function parseMenuOptions(text){
-  let groups=[],prices={};
-  String(text||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(line=>{
-    let name='Options',flags='',body=line,c=line.indexOf(':');
-    if(c>=0){name=line.slice(0,c).trim()||'Options';body=line.slice(c+1);}
-    let fm=name.match(/^(.*?)\s*\(([^)]*)\)\s*$/); if(fm){name=fm[1].trim()||'Options';flags=fm[2].toLowerCase();}
-    let options=body.split(',').map(o=>o.trim()).filter(Boolean).map(o=>{let pm=o.match(/^(.*?)\s+([+-])\s*\$?(\d+(?:\.\d+)?)$/);if(pm){let n=pm[1].trim();prices[n]=(pm[2]==='-'?-1:1)*Number(pm[3]);return n;}return o;});
-    options=options.filter((o,i)=>options.indexOf(o)===i);
-    if(options.length)groups.push({name,options,pick:/pick\s*1|one|choose\s*1/.test(flags)?'one':'many',required:/required/.test(flags)});
-  });
-  return {groups,prices};
+// Ready-made groups for the "+ Add a common group" menu.
+const meGroupTemplates={
+  hotIced:{name:'Hot or Iced',required:true,pick:'one',options:['Hot','Iced']},
+  ice:{name:'Ice',required:false,pick:'one',options:['Light Ice','Extra Ice','No Ice']},
+  flavor:{name:'Flavor',required:false,pick:'one',options:['Vanilla','Mocha','Caramel','Pumpkin']},
+  protein:{name:'Protein',required:true,pick:'one',options:['Seasoned Shredded Beef','Shredded Chicken','Black Beans Only']},
+  tortilla:{name:'Tortilla',required:true,pick:'one',options:['Flour Tortilla','Corn Tortilla']},
+  leaveOff:{name:'Leave Off',required:false,pick:'many',options:['No Cheese','No Lettuce','No Tomato','No Sauce']},
+  toppings:{name:'Add Toppings',required:false,pick:'many',options:['Add Cheese','Add Avocado']},
+  warm:{name:'Warm',required:false,pick:'many',options:['Warm']},
+  allergy:{name:'Allergy',required:false,pick:'many',options:['Allergy Alert']}
+};
+function meOptionRow(gi,oi,o){
+  return `<div class="me-opt"><input class="input" placeholder="Option name (e.g. Extra Cheese)" value="${attr(o.name)}" oninput="meSet(${gi},${oi},'name',this.value)"><span class="me-price">+/− $<input class="input" type="number" step="0.25" inputmode="decimal" placeholder="0" value="${o.price||''}" oninput="meSet(${gi},${oi},'price',this.value)"></span><button class="small-btn danger" title="Remove option" onclick="meRemoveOption(${gi},${oi})">✕</button></div>`;
 }
+function meGroupCard(g,gi){
+  return `<div class="me-group">
+    <div class="me-group-head"><input class="input me-group-name" placeholder="Group name (e.g. Protein, Add Toppings)" value="${attr(g.name)}" oninput="meGroups[${gi}].name=this.value;mePreview()">
+      <button class="small-btn" title="Move up" onclick="meMove(${gi},-1)" ${gi===0?'disabled':''}>↑</button><button class="small-btn" title="Move down" onclick="meMove(${gi},1)" ${gi===meGroups.length-1?'disabled':''}>↓</button><button class="small-btn danger" onclick="meRemoveGroup(${gi})">Delete Group</button></div>
+    <div class="row me-switches">
+      <div class="me-seg"><button class="${g.required?'on':''}" onclick="meGroupSet(${gi},'required',true)">Required</button><button class="${g.required?'':'on'}" onclick="meGroupSet(${gi},'required',false)">Optional</button></div>
+      <div class="me-seg"><button class="${g.pick==='one'?'on':''}" onclick="meGroupSet(${gi},'pick','one')">Pick 1</button><button class="${g.pick==='one'?'':'on'}" onclick="meGroupSet(${gi},'pick','many')">Pick any</button></div>
+      <span class="small">${g.required?'Students must choose':'Students may skip'} &bull; ${g.pick==='one'?'only one choice':'any number of choices'}</span>
+    </div>
+    <div class="me-opts">${g.options.map((o,oi)=>meOptionRow(gi,oi,o)).join('')}</div>
+    <button class="small-btn" onclick="meAddOption(${gi})">+ Add Option</button>
+  </div>`;
+}
+function meDraw(){
+  let box=document.getElementById('meGroups'); if(!box)return;
+  box.innerHTML=meGroups.length?meGroups.map(meGroupCard).join(''):'<p class="small">No options yet. This item will be added with no choices.</p>';
+  mePreview();
+}
+function meCleanGroups(){
+  return meGroups.map(g=>{let seen=new Set();let options=g.options.map(o=>({name:String(o.name||'').trim(),price:Math.round((Number(o.price)||0)*100)/100})).filter(o=>o.name&&!seen.has(o.name.toLowerCase())&&seen.add(o.name.toLowerCase()));return {name:String(g.name||'').trim()||'Options',required:!!g.required,pick:g.pick==='one'?'one':'many',options};}).filter(g=>g.options.length);
+}
+function mePreview(){
+  let box=document.getElementById('mePreview'); if(!box)return;
+  let gs=meCleanGroups(), prices={};
+  gs.forEach(g=>g.options.forEach(o=>{if(o.price)prices[o.name]=o.price;}));
+  let fake={id:-1,name:'',modGroups:gs.map(g=>({...g,options:g.options.map(o=>o.name)})),mods:gs.flatMap(g=>g.options.map(o=>o.name)),modPrices:prices};
+  box.innerHTML=gs.length?modGroupsHtml(fake):'<p class="small">No options.</p>';
+}
+window.meSet=(gi,oi,k,v)=>{let o=meGroups[gi]?.options[oi];if(!o)return;o[k]=k==='price'?v:v;mePreview();};
+window.meGroupSet=(gi,k,v)=>{if(!meGroups[gi])return;meGroups[gi][k]=v;meDraw();};
+window.meAddOption=gi=>{meGroups[gi].options.push({name:'',price:0});meDraw();let ins=document.querySelectorAll('#meGroups .me-group')[gi]?.querySelectorAll('.me-opt input:not([type=number])');ins?.[ins.length-1]?.focus();};
+window.meRemoveOption=(gi,oi)=>{meGroups[gi].options.splice(oi,1);meDraw();};
+window.meAddGroup=key=>{
+  let t=key&&meGroupTemplates[key];
+  meGroups.push(t?{name:t.name,required:t.required,pick:t.pick,options:t.options.map(n=>({name:n,price:0}))}:{name:'',required:false,pick:'many',options:[{name:'',price:0}]});
+  meDraw(); let cards=document.querySelectorAll('#meGroups .me-group'); let last=cards[cards.length-1]; last?.scrollIntoView({block:'center'}); if(!t)last?.querySelector('.me-group-name')?.focus();
+};
+window.meRemoveGroup=gi=>{let g=meGroups[gi];if(g&&g.options.some(o=>o.name)&&!confirm(`Delete the group "${g.name||'Options'}" and its ${g.options.length} option(s)?`))return;meGroups.splice(gi,1);meDraw();};
+window.meMove=(gi,d)=>{let j=gi+d;if(j<0||j>=meGroups.length)return;[meGroups[gi],meGroups[j]]=[meGroups[j],meGroups[gi]];meDraw();};
 function settingsMenu(){
   let f=state.menuAdminFilter||'cafe', q=(state.menuAdminSearch||'').trim().toLowerCase();
   let deleted=f==='deleted';
@@ -2508,11 +2572,15 @@ window.editMenuItem=id=>{
       <label>KMS Station<select class="input" id="meStation">${menuStations().map(([k,l])=>`<option value="${k}" ${(m?.station||'grill')===k?'selected':''}>${l}</option>`).join('')}</select></label>
       <label>Picture<select class="input" id="mePhoto"><option value="">${m&&menuPhotos[m.id]?'Default photo':'Food icon (automatic)'}</option>${photos.map(p=>`<option value="${p}" ${cur===p?'selected':''}>${p.replace(/-/g,' ')}</option>`).join('')}</select></label>
     </div>
-    <label class="section">Options<textarea class="input" id="meOptions" rows="7" placeholder="Protein (required, pick 1): Beef, Chicken&#10;Add Toppings: Add Guacamole +1, Add Salsa&#10;Other: Allergy Alert">${attr(menuOptionsText(m))}</textarea></label>
-    <p class="small">One group per line: <b>Group (required, pick 1): Option, Option +1</b>. "required" means it must be chosen; "pick 1" allows only one. Put +1 or -8 after an option for an upcharge or discount. Leave blank for no options.</p>
+    <h3 class="section">Options (Modifiers)</h3>
+    <p class="small">Options are grouped, like "Protein" or "Add Toppings". <b>Required</b> groups must be chosen before the item can be added; <b>Pick 1</b> allows one choice, <b>Pick any</b> allows several. Put an amount in +/− $ to charge extra (1.00) or take off (-8).</p>
+    <div id="meGroups"></div>
+    <div class="row section"><button class="primary" onclick="meAddGroup()">+ Add Option Group</button><select class="input" onchange="if(this.value){meAddGroup(this.value);this.value='';}"><option value="">+ Add a common group…</option><option value="hotIced">Hot or Iced</option><option value="ice">Ice</option><option value="flavor">Flavor (syrup)</option><option value="protein">Protein</option><option value="tortilla">Tortilla</option><option value="leaveOff">Leave Off</option><option value="toppings">Add Toppings</option><option value="warm">Warm</option><option value="allergy">Allergy Alert</option></select></div>
+    <details class="section me-preview-box" open><summary><b>Preview</b> (what students see)</summary><div id="mePreview"></div></details>
     <label class="row"><input type="checkbox" id="meActive" ${m?.active===false?'':'checked'}> Show on the order screens</label>
     <div class="row section"><button class="primary success" onclick="saveMenuItem(${m?m.id:'null'})">Save Item</button><button class="primary danger" onclick="document.getElementById('menuEdit').remove()">Cancel</button></div>
   </div></div>`);
+  meGroups=groupsFromItem(m); meDraw();
   $('#meName')?.focus();
 };
 window.saveMenuItem=id=>{
@@ -2521,7 +2589,11 @@ window.saveMenuItem=id=>{
   if($('#mePrice').value===''||!(price>=0)){alert('Enter a price (0 or more).');return;}
   let dup=(db.menu||[]).find(x=>x.id!==id&&!x.deleted&&menuOf(x)===menu&&x.name.trim().toLowerCase()===name.toLowerCase());
   if(dup&&!confirm(`${menuLabels[menu]} already has "${dup.name}". Save anyway?`))return;
-  let {groups,prices}=parseMenuOptions($('#meOptions').value);
+  let clean=meCleanGroups(), prices={};
+  let blank=meGroups.filter(g=>!g.options.some(o=>String(o.name||'').trim()));
+  if(blank.length&&!confirm(`${blank.length} option group(s) have no options and will be left out. Save anyway?`))return;
+  clean.forEach(g=>g.options.forEach(o=>{if(o.price)prices[o.name]=o.price;}));
+  let groups=clean.map(g=>({name:g.name,options:g.options.map(o=>o.name),pick:g.pick,required:g.required}));
   let m=id!=null?db.menu.find(x=>x.id===id):null, oldMenu=m?menuOf(m):menu;
   if(!m){m={id:Math.max(1000,...(db.menu||[]).map(x=>Number(x.id)||0))+1,inv:'bistro',dailyPar:0,custom:true};db.menu.push(m);}
   Object.assign(m,{name,price:Math.round(price*100)/100,menu,category,station:$('#meStation').value,active:$('#meActive').checked,editedAt:now()});
@@ -2553,7 +2625,9 @@ function settingsData(){
   return `<div class="settings-page">
     <div class="settings-page-head"><h1>Data</h1><p>Shared data size, old order cleanup, and local demo reset.</p></div>
     ${(()=>{let h=syncHealth(),b=sharedDataBytes(),lim=h?.limit||1048576,pct=Math.min(100,b/lim*100),old=oldPaidOrders().length,orders=(db.orders||[]).length;
-      return `<div class="settings-card"><h2>Shared Data</h2><p>All devices share one cloud copy, limited to 1 MB. It is now <b>${Math.round(b/1024)} KB (${pct.toFixed(0)}%)</b> with ${orders} order(s).</p><div class="size-meter"><span style="width:${pct.toFixed(1)}%;background:${pct>=75?'var(--red)':pct>=50?'var(--gold)':'var(--green)'}"></span></div><p class="small">Paid orders older than 7 days are cleared automatically every hour on every device (open orders are never cleared). Export any reports you need before then.</p><p>Sync: ${h?(h.failingSince?`<b style="color:var(--red)">not syncing since ${new Date(h.failingSince).toLocaleTimeString()}</b>`:h.lastOk?'last saved to the cloud '+new Date(h.lastOk).toLocaleTimeString():'connected'):'local only (no cloud)'}</p><button class="primary" onclick="clearOldPaidOrdersNow()">Clear Paid Orders Older Than 7 Days Now (${old})</button></div>`;})()}
+      return `<div class="settings-card"><h2>Shared Data</h2><p>All devices share one cloud copy, limited to 1 MB. It is now <b>${Math.round(b/1024)} KB (${pct.toFixed(0)}%)</b> with ${orders} order(s).</p><div class="size-meter"><span style="width:${pct.toFixed(1)}%;background:${pct>=75?'var(--red)':pct>=50?'var(--gold)':'var(--green)'}"></span></div><p class="small">Paid orders from earlier days move to the archive automatically (hourly), so the shared data mainly holds today. Paid orders are also compacted an hour after they're done. Open orders are never moved.</p>
+      <h3>Order Archive (long-term storage)</h3>
+      <p>${window.__guthrieArchive?(archiveStatus.blocked?`<b style="color:var(--red)">Blocked by Firebase rules</b>, so paid orders older than 7 days are cleared instead. To turn the archive on, allow the app to read and write other documents in the <code>guthrieRMS</code> collection in Firebase Console › Firestore › Rules, for example:<br><code>match /guthrieRMS/{doc} { allow read, write: if request.auth != null; }</code>`:`Working${archiveStatus.last?' &bull; last run '+new Date(archiveStatus.last).toLocaleTimeString():''} &bull; ${(db.archiveDays||[]).length} day(s) archived${archiveStatus.error?` &bull; <b style="color:var(--red)">last error: ${attr(archiveStatus.error)}</b>`:''}`):'Not available (local only)'} &bull; ${archiveCandidates().length} order(s) waiting to archive.</p><p>Sync: ${h?(h.failingSince?`<b style="color:var(--red)">not syncing since ${new Date(h.failingSince).toLocaleTimeString()}</b>`:h.lastOk?'last saved to the cloud '+new Date(h.lastOk).toLocaleTimeString():'connected'):'local only (no cloud)'}</p><div class="row"><button class="primary" onclick="archiveOldOrdersNow()">Archive Earlier Days Now</button>${archiveStatus.blocked||!window.__guthrieArchive?`<button class="small-btn" onclick="clearOldPaidOrdersNow()">Clear Paid Orders Older Than 7 Days (${old})</button>`:''}</div></div>`;})()}
     <div class="settings-card">
       <p>This resets all locally saved Guthrie RMS demo data in this browser (orders, inventory changes, users, schedule, etc.) back to the built-in demo seed.</p>
       <button class="primary danger" onclick="if(confirm('Reset all local demo data? This cannot be undone.')){localStorage.removeItem('guthrieRMS7A');localStorage.removeItem('guthrieRMS5A');localStorage.removeItem('guthrieRMS4K');localStorage.removeItem('guthrieRMS4F');location.reload();}">Reset Local App Data</button>
@@ -2578,7 +2652,7 @@ function updateSyncBanner(){
     cls='sync-bad';
   } else if(state.user?.role==='manager'&&h){
     let pct=sharedDataBytes()/h.limit*100;
-    if(pct>=75){msg=`Shared data is ${Math.round(pct)}% full. Open Settings › Data to clear old paid orders.`;cls='sync-warn';}
+    if(pct>=75){msg=`Shared data is ${Math.round(pct)}% full. Open Settings › Data.`;cls='sync-warn';}
   }
   if(el.dataset.msg!==msg){el.dataset.msg=msg;el.textContent=msg;el.className=cls;el.style.display=msg?'block':'none';}
 }
@@ -2598,12 +2672,63 @@ function clearOldPaidOrders(){
   save(); return old.length;
 }
 window.clearOldPaidOrdersNow=()=>{let n=oldPaidOrders().length;if(!n){alert('No paid orders older than 7 days.');return;}if(!confirm(`Clear ${n} paid order(s) older than 7 days from every device? Export any reports you need first.`))return;clearOldPaidOrders();render();toast(`Cleared ${n} old paid order(s).`);};
-// Runs a minute after start-up (once cloud data has loaded) and then every hour.
-function scheduleOldOrderCleanup(){
-  let run=()=>{if(!window.__guthrieRMSApplyingCloud&&(window.__guthrieRMSBooted||!window.__guthrieSyncHealth)){let n=clearOldPaidOrders();if(n)console.info('Cleared '+n+' paid orders older than 7 days.');}};
-  setTimeout(run,60000); setInterval(run,3600000);
+// ---- Order archive and compaction ----
+// Paid orders from earlier days (tickets done) move to the cloud archive, one archive per day,
+// so the shared data only holds today and stays small and fast during a rush. Reports read the
+// archive. If the archive can't be written (e.g. Firebase rules block it), paid orders older
+// than 7 days are cleared instead, as before.
+const archiveStatus={last:0,moved:0,error:'',running:false};
+const dayOf=iso=>new Date(iso).toLocaleDateString('en-CA');
+function archiveCandidates(){let today=new Date().toLocaleDateString('en-CA');return (db.orders||[]).filter(o=>o.paid&&o.paidAt&&!kmsActive(o)&&dayOf(o.paidAt)<today);}
+async function archiveOldOrders(){
+  let A=window.__guthrieArchive;
+  if(archiveStatus.running)return;
+  if(!A||archiveStatus.blocked){clearOldPaidOrders();return;}
+  let list=archiveCandidates(); if(!list.length){archiveStatus.last=Date.now();return;}
+  archiveStatus.running=true;
+  try{
+    let byDay={}; list.forEach(o=>(byDay[dayOf(o.paidAt)]=byDay[dayOf(o.paidAt)]||[]).push(JSON.parse(JSON.stringify(o))));
+    for(let [day,orders] of Object.entries(byDay)){
+      await A.save(day,orders);
+      let ids=new Set(orders.map(o=>o.id));
+      db.orders=db.orders.filter(o=>!ids.has(o.id));
+      db.archiveDays=[...new Set([...(db.archiveDays||[]),day])].sort();
+      delete archiveCache[day];
+      archiveStatus.moved+=orders.length; save();
+    }
+    archiveStatus.error=''; archiveStatus.last=Date.now();
+  }catch(e){
+    archiveStatus.error=String(e&&(e.code||e.message)||e);
+    if(/permission|denied|insufficient/i.test(archiveStatus.error))archiveStatus.blocked=true;
+    console.warn('Guthrie RMS: archive failed; falling back to clearing orders older than 7 days.',e);
+    clearOldPaidOrders();
+  }finally{archiveStatus.running=false;}
 }
-scheduleOldOrderCleanup();
+window.archiveOldOrdersNow=async()=>{await archiveOldOrders();render();toast(archiveStatus.error?'Archive could not run: '+archiveStatus.error:'Earlier days are archived.');};
+// An hour after an order is paid and its ticket is done, drop the KMS timing details (who
+// started / finished each item and when) and keep only the last two log entries. Sales, items,
+// options, payment and par counts are kept. Roughly doubles how many orders a day can hold.
+function compactOrders(){
+  let cutoff=Date.now()-3600000, n=0;
+  (db.orders||[]).forEach(o=>{
+    if(o.compact||!o.paid||kmsActive(o)||!(new Date(o.paidAt||0).getTime()<cutoff))return;
+    validItems(o).forEach(i=>{['kmsStarted','kmsStartedBy','kmsStartedAt','kmsDoneBy','kmsDoneAt','modCharge'].forEach(k=>delete i[k]);
+      if(i.kmsParts)Object.keys(i.kmsParts).forEach(k=>{i.kmsParts[k]={kmsDone:!!i.kmsParts[k]?.kmsDone};});});
+    if(Array.isArray(o.kmsLog)&&o.kmsLog.length>2)o.kmsLog=o.kmsLog.slice(-2);
+    o.compact=1; n++;
+  });
+  if(n)save();
+  return n;
+}
+// Archive runs about a minute after start-up (once cloud data has loaded), then hourly;
+// compaction every 10 minutes. Devices start at slightly different times to spread the work.
+function scheduleOrderMaintenance(){
+  let ready=()=>!window.__guthrieRMSApplyingCloud&&(window.__guthrieRMSBooted||!window.__guthrieSyncHealth);
+  let runArchive=()=>{if(ready())archiveOldOrders();}, runCompact=()=>{if(ready())compactOrders();};
+  setTimeout(runArchive,45000+Math.random()*45000); setInterval(runArchive,3600000);
+  setTimeout(runCompact,60000+Math.random()*60000); setInterval(runCompact,600000);
+}
+scheduleOrderMaintenance();
 
 window.addEventListener('error',function(e){
   const root=document.getElementById('app');
