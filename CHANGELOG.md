@@ -1,5 +1,12 @@
 # Guthrie RMS Changelog
 
+## No More "Local Only — Timed Out"
+- An iPad that takes longer than 6 seconds to reach the cloud (busy Wi-Fi, or every iPad reloading at once after an update) now shows "Connecting to the cloud… still trying" and keeps connecting, instead of "Local only — cloud connection timed out".
+- Orders, payments, 86s and other changes made while an iPad is still connecting are tracked from the moment the app opens and merged into the cloud copy when it connects (field by field), so nothing done on a slow iPad is lost. Before, the cloud copy replaced them.
+- If the cloud connection drops during service, the iPad reconnects by itself (every 5 seconds) and sends anything saved while disconnected. Sign-in also retries instead of giving up.
+- A red banner shows on any iPad not connected for more than 10 seconds: orders are saved on the iPad and will be sent when it connects. If the cloud code couldn't load at all, the banner says "Tap here to retry", and the iPad retries by itself when nobody is mid-order.
+- Tested: a register that takes 20 seconds to connect, rings up 2 orders, pays an order the Grill was completing and 86s an item meanwhile; and a connection drop mid-service. Everything reached the cloud and the KMS, with both the payment and the Grill's tap kept.
+
 ## Rush-Proof Orders: Offline Safety, Order Archive Storage, Smaller Shared Data
 - Orders rung up while an iPad has no Wi-Fi are kept on that iPad until the cloud confirms them, even if the iPad reloads before reconnecting. They are sent as soon as it's back online and merged field by field with anything other devices changed meanwhile (KMS taps, payment). Before, a reload before reconnecting could drop them.
 - Order archive (long-term storage): paid orders from earlier days move hourly out of the shared data into one cloud archive per day (guthrieRMS/archive_YYYY-MM-DD). The shared data then holds mainly today, so it stays small and fast in a rush, and history is kept instead of cleared after 7 days. Reports (Today, Last 7 Days, This Month, All Time, Custom) include archived days. If the Firebase rules don't allow the archive, the app falls back to clearing paid orders older than 7 days and Settings › Data shows the rule to add.
