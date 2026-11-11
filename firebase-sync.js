@@ -52,19 +52,15 @@ if(!isConfigured(firebaseConfig)){
   bootApp('Firebase is not configured yet');
 } else {
   (async()=>{
-    const fallbackTimer=setTimeout(()=>bootApp('cloud connection timed out'),FALLBACK_TIMEOUT_MS);
+    // Show the app after a few seconds even if the cloud is slow to answer (busy Wi-Fi, all
+    // iPads reloading at once). It keeps connecting in the background; anything done meanwhile
+    // is tracked below and merged into the cloud copy when it connects, so nothing is lost.
+    syncHealth.connected=false; syncHealth.connectStart=Date.now(); syncHealth.connectError='';
+    const fallbackTimer=setTimeout(()=>{
+      setCloudStatus(false,'Connecting to the cloud… still trying');
+      if(typeof window.startGuthrieRMS==='function') window.startGuthrieRMS();
+    },FALLBACK_TIMEOUT_MS);
     try{
-      const [{initializeApp},{getAuth,signInAnonymously},{getFirestore,doc,onSnapshot,setDoc,runTransaction,getDoc}]=await Promise.all([
-        import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
-        import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
-        import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')
-      ]);
-
-      const app=initializeApp(firebaseConfig);
-      const auth=getAuth(app);
-      const firestore=getFirestore(app);
-      const sharedDocRef=doc(firestore,...SHARED_DOC_PATH);
-
       let cloudReady=false;
       let lastSyncedJSON=null;
       let pushTimer=null;
@@ -268,6 +264,31 @@ if(!isConfigured(firebaseConfig)){
         return JSON.parse(JSON.stringify(data));
       }
 
+      // Track changes from the moment the app starts, not only once the cloud answers: the copy
+      // saved on this iPad is the starting point, so orders rung up while still connecting are
+      // marked pending and merged (field by field) when the cloud copy arrives.
+      const sessionStart=Date.now();
+      rememberBase(window.db?.orders); rememberUnits(window.db||{});
+      const originalSave=window.save;
+      if(typeof originalSave==='function'){
+        window.save=function(){
+          if(!cloudReady){try{stampLocalChanges();stampLocalUnits();}catch(e){console.warn('Guthrie RMS: could not track a change made before connecting.',e);}}
+          originalSave();
+          if(cloudReady)pushToCloud();
+        };
+      }
+
+      const [{initializeApp},{getAuth,signInAnonymously},{getFirestore,doc,onSnapshot,setDoc,runTransaction,getDoc}]=await Promise.all([
+        import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
+        import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
+        import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')
+      ]);
+
+      const app=initializeApp(firebaseConfig);
+      const auth=getAuth(app);
+      const firestore=getFirestore(app);
+      const sharedDocRef=doc(firestore,...SHARED_DOC_PATH);
+
       // Each push is a transaction: read the latest cloud copy, merge this device's changes into it,
       // and write only if no other device wrote in between (Firestore retries if one did). A plain
       // write of this device's whole copy used to overwrite orders and pars that other devices had
@@ -310,13 +331,16 @@ if(!isConfigured(firebaseConfig)){
               syncHealth.bytes=JSON.stringify(clean).length;
               tx.set(sharedDocRef,clean);
             });
-            syncHealth.lastOk=Date.now(); syncHealth.failingSince=null; syncHealth.error='';
+            syncHealth.lastOk=Date.now(); syncHealth.failingSince=null; syncHealth.error=''; syncHealth.quota=false;
           }catch(err){
             console.warn('Guthrie RMS cloud sync: push failed, retrying.',err);
             if(!syncHealth.failingSince)syncHealth.failingSince=Date.now();
-            syncHealth.error=String(err&&(err.message||err.code)||err||'');
+            syncHealth.error=String(err&&(err.code||err.message)||err||'');
+            // Firebase usage limit reached (free plan quota): retrying every 2 s only adds load.
+            // Back off and retry every minute; the banner tells staff what to do.
+            syncHealth.quota=/resource-exhausted|quota/i.test(syncHealth.error+' '+(err&&err.message||''));
             lastSyncedJSON=null;
-            setTimeout(pushToCloud,2000);
+            setTimeout(pushToCloud,syncHealth.quota?60000:2000);
           }finally{
             pushing=false;
             if(pushAgain){pushAgain=false;pushToCloud();}
@@ -355,8 +379,17 @@ if(!isConfigured(firebaseConfig)){
         renderWaiting=setTimeout(check,400);
       }
 
-      await signInAnonymously(auth);
+      // Sign-in can fail on a weak connection: keep retrying instead of giving up.
+      for(let attempt=0;;attempt++){
+        try{await signInAnonymously(auth);break;}
+        catch(err){
+          syncHealth.connectError=String(err&&(err.code||err.message)||err);
+          console.warn('Guthrie RMS: cloud sign-in failed, retrying.',err);
+          await new Promise(r=>setTimeout(r,Math.min(30000,3000*(attempt+1))));
+        }
+      }
 
+      function subscribe(){
       onSnapshot(sharedDocRef,async(snap)=>{
         let localWins=false;
         try{
@@ -391,6 +424,17 @@ if(!isConfigured(firebaseConfig)){
                   if(orderKey(m)!==orderKey(c)){cloudOrders[i]=m;localWins=true;}else delete pending[id];
                 });
                 savePending();
+                // Settings, pars, menu and other changes made on this iPad before it connected
+                // (stamped this session only) are kept, newest change wins.
+                const local=window.db||{}, ls=local.syncStamps||{}, sess={};
+                stampedUnits.forEach((_,k)=>{if(ls[k])sess[k]=ls[k];});
+                if(Object.keys(sess).length&&mergeUnits(cloudData,{...local,syncStamps:sess}))localWins=true;
+                // Orders deleted on this iPad before it connected.
+                Object.entries(local.deletedOrders||{}).forEach(([id,at])=>{
+                  if(Number(at)<sessionStart||(cloudData.deletedOrders||{})[id])return;
+                  cloudData.deletedOrders=cloudData.deletedOrders||{}; cloudData.deletedOrders[id]=Number(at);
+                  cloudData.orders=(cloudData.orders||[]).filter(o=>String(o.id)!==String(id)); localWins=true;
+                });
               }
               else {
                 stampLocalChanges(); stampLocalUnits();
@@ -421,13 +465,18 @@ if(!isConfigured(firebaseConfig)){
               if(window.__guthrieRMSBooted) renderWhenIdle();
             }
           }
+          const wasReady=cloudReady;
           cloudReady=true;
+          // Reconnected after a dropped connection: send anything saved here while disconnected,
+          // even when the cloud copy itself hadn't changed meanwhile.
+          if(!wasReady&&!firstSnapshot){pushToCloud();}
           // On connect only: if this device's migrations changed the cloud copy (new menu
           // items, modifiers, prices), send the result up once so every device gets it.
           if(firstSnapshot){firstSnapshot=false;pushToCloud();if(localWins)console.info('Guthrie RMS: re-sending orders saved on this iPad while offline.');}
           // This device had newer order changes than the cloud copy it just received: send them back up.
           else if(localWins){pushToCloud();}
           clearTimeout(fallbackTimer);
+          syncHealth.connected=true; syncHealth.connectError='';
           window.__guthrieRMSBooted=true;
           setCloudStatus(true,'Connected — shared with all devices');
           bootApp();
@@ -436,9 +485,18 @@ if(!isConfigured(firebaseConfig)){
           bootApp('error applying cloud data',err);
         }
       },(err)=>{
-        clearTimeout(fallbackTimer);
-        bootApp('cloud sync error',err);
+        // The listener stops after an error: show it, keep the app running, and reconnect.
+        console.warn('Guthrie RMS: cloud connection lost, reconnecting.',err);
+        syncHealth.connected=false; syncHealth.connectStart=Date.now(); syncHealth.connectError=String(err&&(err.code||err.message)||err);
+        const quota=/resource-exhausted|quota/i.test(syncHealth.connectError+' '+(err&&err.message||''));
+        if(quota)syncHealth.quota=true;
+        cloudReady=false;
+        setCloudStatus(false,quota?'Firebase usage limit reached — not syncing':'Cloud connection lost — reconnecting…');
+        if(typeof window.startGuthrieRMS==='function') window.startGuthrieRMS();
+        setTimeout(subscribe,quota?60000:5000);
       });
+      }
+      subscribe();
 
       // ---- Order archive (long-term storage) ----
       // Paid orders from earlier days are moved out of the shared doc into one archive doc per
@@ -473,18 +531,10 @@ if(!isConfigured(firebaseConfig)){
         }
       };
 
-      // Wrap the app's existing save() so every local save is also pushed to the cloud.
-      const originalSave=window.save;
-      if(typeof originalSave==='function'){
-        window.save=function(){
-          originalSave();
-          pushToCloud();
-        };
-      }
-
       window.addEventListener('beforeunload',()=>{unsubscribed=true;});
     }catch(err){
       clearTimeout(fallbackTimer);
+      syncHealth.connectError='Could not load the cloud connection'+(err&&err.message?' ('+err.message+')':'');
       bootApp('failed to load or initialize',err);
     }
   })();
