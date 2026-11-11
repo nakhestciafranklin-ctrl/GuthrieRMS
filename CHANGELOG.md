@@ -1,5 +1,12 @@
 # Guthrie RMS Changelog
 
+## Reliability for Busy Service (1 register + 6 KMS iPads)
+- Fixed: a payment could be lost when the register marked an order paid at the same moment a KMS station tapped that order (the device that saved last replaced the whole order). Orders now merge field by field against the last shared copy: a change made on only one device is always kept, ticket lines merge by line (removed lines stay removed, added lines are kept), and the KMS log and refunds combine. A paid order stays paid.
+- Load-tested with a simulated shared database, 1 register and 6 KMS iPads (Grill, Fry, Beverage, Expo, All Tickets, a second Grill) tapping Start/Complete at once: 60 orders at about 1 a second and 120 orders at about 2 a second, each sent and paid right away. Result: no lost orders, payments or KMS taps, every iPad ended up identical, and each station chimed exactly once per order sent to it.
+- Paid orders older than 7 days are cleared automatically (every hour, on every device) to keep the shared data far under the cloud's 1 MB limit. Open orders are never cleared. Settings › Data shows the shared data size, sync status and a "Clear Now" button.
+- A red banner shows on any iPad whose changes have not reached the cloud for more than 8 seconds (e.g. Wi-Fi down), instead of failing silently. Managers see a yellow warning if the shared data passes 75% of the limit.
+- KMS: a large "Sound is off on this iPad — tap here" banner shows whenever the browser has turned sound off (after a reload or the iPad sleeping) and disappears once tapped.
+
 ## KMS Sound Plays Only at the Order's Stations
 - Each KMS iPad now remembers its station (saved on that iPad). Before, every iPad went back to All Tickets when the app reloaded, so every station chimed for every order.
 - A station chimes only for orders with items (or parts, like fries) sent to it. An order with tacos and a latte chimes on Grill and Beverage only. Expo and All Tickets chime for every order.
