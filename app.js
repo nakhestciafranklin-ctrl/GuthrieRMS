@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026110811;
+window.GUTHRIE_RMS_VERSION=2026111102;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -700,6 +700,7 @@ function importCafeMenu(){
   let repriceExisting=(Number(db.cafeMenuVersion)||0)<cafeMenuVersion;
   cafeMenuData.forEach(item=>{
     let existing=db.menu.find(m=>m.id===item.id);
+    if(existing&&(existing.editedAt||existing.deleted))return; // changed or deleted in Settings > Menu Items
     if(existing){
       if(repriceExisting&&existing.price!==item.price){existing.price=item.price;changed=true;}
       return;
@@ -755,6 +756,7 @@ function importBistroMenu(){
   if(!Array.isArray(db.menu))db.menu=[];
   bistroMenuData.forEach(item=>{
     let existing=db.menu.find(m=>m.id===item.id);
+    if(existing&&(existing.editedAt||existing.deleted))return; // changed or deleted in Settings > Menu Items
     if(existing){
       if(item.modPrices&&!existing.modPrices){existing.modPrices={...item.modPrices};changed=true;}
       // Station and components follow the menu (e.g. fries moved to the Fry station).
@@ -871,6 +873,7 @@ function importExemptionMenu(){
   let updateExisting=(Number(db.exemptionMenuVersion)||0)<exemptionMenuVersion;
   exemptionMenuData.forEach(item=>{
     let existing=db.menu.find(m=>m.id===item.id);
+    if(existing&&(existing.editedAt||existing.deleted))return; // changed or deleted in Settings > Menu Items
     if(existing){
       if(updateExisting){
         let fresh=JSON.parse(JSON.stringify(item));
@@ -912,6 +915,7 @@ function importCafeHolidaySpecials(){
   let changed=false, update=(Number(db.cafeHolidayVersion)||0)<cafeHolidayVersion;
   cafeHolidayData.forEach(item=>{
     let fresh=JSON.parse(JSON.stringify(item)), existing=db.menu.find(m=>m.id===item.id);
+    if(existing&&(existing.editedAt||existing.deleted))return; // changed or deleted in Settings > Menu Items
     if(!existing){db.menu.push({...fresh,inv:'bistro',menu:'cafe',services:['counter','togo'],active:true,dailyPar:0});changed=true;return;}
     if(update)['name','price','category','station','mods','modGroups','sortOrder'].forEach(k=>{if(JSON.stringify(existing[k])!==JSON.stringify(fresh[k])){if(fresh[k]===undefined)delete existing[k];else existing[k]=fresh[k];changed=true;}});
   });
@@ -1378,7 +1382,7 @@ function kms(){
  let allRecent=db.orders.filter(o=>o.kmsStage==='completed'&&o.sent).sort((a,b)=>kmsLastTime(b)-kmsLastTime(a));
  let recentLimit=Number(state.kmsRecentLimit)||10, recent=allRecent.slice(0,recentLimit);
  let inactive=['all','expo'].includes(station)?active.filter(kmsInactive):[];
- return `<section class="card kms-screen"><h1>KMS BOH Station Screens</h1><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). Items with parts from another station (like a sandwich's fries) show that part on that station's screen too. This only marks your station's work; the ticket stays up for the other stations. Expo sees every item, part, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${inactive.length?`<div class="row section kms-inactive"><span><b>${inactive.length}</b> ticket(s) with no activity for over an hour.</span><button class="small-btn danger" onclick="clearInactiveKmsTickets()">Clear Inactive Tickets (1 hr+)</button></div>`:''}${allRecent.length?`<details class="section" ${state.kmsRecentOpen?'open':''} ontoggle="state.kmsRecentOpen=this.open"><summary><b>Recently Completed</b> (${allRecent.length})</summary><div class="row kms-recent-actions"><button class="small-btn" onclick="recallSelectedKmsTickets()">Recall Selected</button><button class="small-btn" onclick="document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=true);kmsRecallPick()">Select All Shown</button><button class="small-btn" onclick="state.kmsRecallSel=[];document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=false)">Clear Selection</button></div>${recent.map(o=>`<div class="row kms-recent"><label class="kms-recall-label"><input type="checkbox" class="kms-recall-check" value="${o.id}" ${(state.kmsRecallSel||[]).includes(o.id)?'checked':''} onchange="kmsRecallPick()"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • ${(o.kmsLog||[]).slice(-1)[0]?.stage==='Cleared (Inactive)'?'cleared':'completed'} ${new Date(kmsLastTime(o)).toLocaleString([], {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></label><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}<div class="row">${allRecent.length>recent.length?`<button class="small-btn" onclick="state.kmsRecentLimit=${recentLimit+10};state.kmsRecentOpen=true;render()">Show 10 More</button><button class="small-btn" onclick="state.kmsRecentLimit=${allRecent.length};state.kmsRecentOpen=true;render()">Show All (${allRecent.length})</button>`:''}<span class="small">Showing ${recent.length} of ${allRecent.length}</span></div></details>`:''}</section>`;
+ return `<section class="card kms-screen"><div class="row kms-title"><h1>KMS BOH Station Screens</h1>${kmsSoundButton()}</div><p class="notice">Two steps: tap <b>Start</b> when you begin an item, then <b>Complete</b> when it is finished (or use Start All / Complete All for your station). Items with parts from another station (like a sandwich's fries) show that part on that station's screen too. This only marks your station's work; the ticket stays up for the other stations. Expo sees every item, part, modifier, and note and completes the ticket. Paying a check does not clear its ticket.</p><div class="station-grid">${kmsStationList.map(([key,l])=>`<button class="station-tile ${station===key?'active':''}" onclick="state.kmsStation='${key}';render()"><span>${l}</span><b>${counts[key]||0}</b></button>`).join('')}</div><div class="kms-header"><h2>${label}</h2><span>${open.length} active ticket(s)</span></div>${open.map(o=>kmsTicket(o,station)).join('')||'<p>No tickets for this station.</p>'}${done.length?`<h3>Done at ${label} (waiting on Expo)</h3>${done.map(o=>kmsTicket(o,station)).join('')}`:''}${inactive.length?`<div class="row section kms-inactive"><span><b>${inactive.length}</b> ticket(s) with no activity for over an hour.</span><button class="small-btn danger" onclick="clearInactiveKmsTickets()">Clear Inactive Tickets (1 hr+)</button></div>`:''}${allRecent.length?`<details class="section" ${state.kmsRecentOpen?'open':''} ontoggle="state.kmsRecentOpen=this.open"><summary><b>Recently Completed</b> (${allRecent.length})</summary><div class="row kms-recent-actions"><button class="small-btn" onclick="recallSelectedKmsTickets()">Recall Selected</button><button class="small-btn" onclick="document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=true);kmsRecallPick()">Select All Shown</button><button class="small-btn" onclick="state.kmsRecallSel=[];document.querySelectorAll('.kms-recall-check').forEach(c=>c.checked=false)">Clear Selection</button></div>${recent.map(o=>`<div class="row kms-recent"><label class="kms-recall-label"><input type="checkbox" class="kms-recall-check" value="${o.id}" ${(state.kmsRecallSel||[]).includes(o.id)?'checked':''} onchange="kmsRecallPick()"><span><b>${o.customer}</b> • ${o.type.toUpperCase()} • ${validItems(o).length} item(s) • ${(o.kmsLog||[]).slice(-1)[0]?.stage==='Cleared (Inactive)'?'cleared':'completed'} ${new Date(kmsLastTime(o)).toLocaleString([], {month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></label><button class="small-btn" onclick="recallKmsTicket(${o.id})">Recall</button></div>`).join('')}<div class="row">${allRecent.length>recent.length?`<button class="small-btn" onclick="state.kmsRecentLimit=${recentLimit+10};state.kmsRecentOpen=true;render()">Show 10 More</button><button class="small-btn" onclick="state.kmsRecentLimit=${allRecent.length};state.kmsRecentOpen=true;render()">Show All (${allRecent.length})</button>`:''}<span class="small">Showing ${recent.length} of ${allRecent.length}</span></div></details>`:''}</section>`;
 }
 // Last time anything happened on a ticket: sent, a log entry (start, recall...) or any item/part
 // started or completed. Tickets idle for over an hour can be cleared from Expo / All Tickets.
@@ -1469,8 +1473,61 @@ function kmsLog(o){
  return logs.length?`<details class="small"><summary>Ticket action log</summary>${logs.map(l=>`<p>${new Date(l.time).toLocaleTimeString()} • ${l.stage} • ${l.by||''}</p>`).join('')}</details>`:'';
 }
 function kmsButtons(o){let st=kmsStageOf(o); if(st==='sent')return `<button class="primary" onclick="kmsStage(${o.id},'started')">Start Ticket</button>`; if(st==='started')return `<button class="primary success" onclick="kmsStage(${o.id},'completed')">Complete Ticket</button>`; return '';}
+// ---- KMS new-order sound ----
+// A chime plays on the KMS when a ticket is sent (or more items are sent on it) that has work
+// for the station on screen (any ticket on All Tickets / Expo). Each device can turn the sound
+// on or off with the button on the KMS (saved on that device). Browsers only allow sound after
+// the screen has been tapped once, so the first tap anywhere turns the audio on.
+let kmsAudio=null, kmsSeen=null, kmsSeenStation=null;
+function kmsSoundOn(){try{return localStorage.getItem('guthrieKmsSound')!=='off';}catch(e){return true;}}
+function kmsAudioReady(){return !!kmsAudio&&kmsAudio.state==='running';}
+function unlockKmsAudio(){
+ try{
+  let AC=window.AudioContext||window.webkitAudioContext; if(!AC)return;
+  if(!kmsAudio)kmsAudio=new AC();
+  if(kmsAudio.state!=='running')kmsAudio.resume().then(()=>{let b=document.querySelector('.kms-sound-unlock');if(b)b.remove();}).catch(()=>{});
+  // A silent blip completes the unlock on iPad Safari.
+  let g=kmsAudio.createGain(); g.gain.value=0; let o=kmsAudio.createOscillator(); o.connect(g).connect(kmsAudio.destination); o.start(); o.stop(kmsAudio.currentTime+0.01);
+ }catch(e){}
+}
+['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,unlockKmsAudio,{passive:true}));
+function playKmsChime(){
+ if(!kmsSoundOn())return; unlockKmsAudio(); if(!kmsAudio)return;
+ let t0=kmsAudio.currentTime+0.05;
+ // Two rising two-note dings.
+ [[0,880],[0.18,1320],[0.6,880],[0.78,1320]].forEach(([dt,f])=>{
+  let o=kmsAudio.createOscillator(), g=kmsAudio.createGain(); o.type='sine'; o.frequency.value=f;
+  g.gain.setValueAtTime(0.0001,t0+dt); g.gain.exponentialRampToValueAtTime(0.5,t0+dt+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t0+dt+0.35);
+  o.connect(g).connect(kmsAudio.destination); o.start(t0+dt); o.stop(t0+dt+0.4);
+ });
+}
+window.playKmsChime=playKmsChime;
+window.toggleKmsSound=()=>{let on=!kmsSoundOn(); try{localStorage.setItem('guthrieKmsSound',on?'on':'off');}catch(e){} unlockKmsAudio(); render(); if(on){playKmsChime();toast('KMS sound on');} else toast('KMS sound off');};
+// Keys for every send of every ticket this station would show; a key not seen before is new.
+function kmsSendKeys(station){
+ let keys=new Set();
+ (db.orders||[]).filter(kmsActive).forEach(o=>{
+  let mine=['all','expo'].includes(station)?validItems(o):kmsStationTasks(o,station).map(t=>t.i);
+  [...new Set(mine.map(i=>Number(i.sendRound)||1))].forEach(r=>keys.add(o.id+':'+r));
+ });
+ return keys;
+}
+function checkKmsNewOrders(){
+ if(!(state.user&&state.view==='kms')){kmsSeen=null;return;}
+ let station=state.kmsStation||'all', keys=kmsSendKeys(station);
+ // Entering the KMS or switching stations: remember what is already up, no sound.
+ if(!kmsSeen||kmsSeenStation!==station){kmsSeen=keys;kmsSeenStation=station;return;}
+ let fresh=[...keys].filter(k=>!kmsSeen.has(k));
+ kmsSeen=keys;
+ if(fresh.length){playKmsChime(); toast(fresh.length>1?`${fresh.length} new tickets`:'New ticket on the KMS');}
+}
+function kmsSoundButton(){
+ let on=kmsSoundOn();
+ return `<div class="row kms-sound"><button class="small-btn" onclick="toggleKmsSound()">${on?'🔔 Sound On':'🔕 Sound Off'}</button>${on?`<button class="small-btn" onclick="playKmsChime()">Test Sound</button>`:''}${on&&!kmsAudioReady()?`<button class="primary kms-sound-unlock" onclick="unlockKmsAudio();this.remove()">Tap to Enable Sound</button>`:''}</div>`;
+}
 // Tick the timers in place instead of re-rendering, so open logs and scroll position stay put.
 setInterval(()=>{
+ checkKmsNewOrders();
  if(!(state.user&&state.view==='kms'))return;
  document.querySelectorAll('[data-kms-sent]').forEach(el=>{let t=kmsElapsed(el.dataset.kmsSent), tk=el.closest('.ticket'); el.textContent=t.text; if(tk){tk.classList.toggle('warn',t.cls==='warn');tk.classList.toggle('late',t.cls==='late');}});
 },1000);
@@ -1723,7 +1780,7 @@ const menuIcons=[[/cookie/,'🍪'],[/muffin/,'🧁'],[/brownie|blondie/,'🍫'],
  [/broccolini/,'🥦'],[/frites|fries/,'🍟'],[/latte|coffee|mocha|cappuccino|americano|espresso/,'☕'],[/tea|lemonade|refresher|soda|agua|horchata|juice|water/,'🥤'],
  [/box lunch|tray|catering/,'🍱'],[/feature|special/,'⭐']];
 function menuIcon(m){let n=(m?.name||'').toLowerCase();return (menuIcons.find(([re])=>re.test(n))||[0,'🍽️'])[1];}
-function menuThumb(m,cls='menu-thumb'){let src=menuPhotos[m?.id];return `<span class="${cls}">${src?`<img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${menuIcon(m)}'))">`:menuIcon(m)}</span>`;}
+function menuThumb(m,cls='menu-thumb'){let src=m?.photo?`assets/menu/${m.photo}.jpg`:menuPhotos[m?.id];return `<span class="${cls}">${src?`<img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${menuIcon(m)}'))">`:menuIcon(m)}</span>`;}
 function renderBistroMenuButtons(orderType,menu){
   menu=menu||(orderType==='table'?'bistro':'cafe');
   let items=menuSorted(db.menu.filter(m=>m.active!==false&&menuOf(m)===menu&&(menu==='bistro'||!Array.isArray(m.services)||m.services.includes(orderType))));
@@ -2217,6 +2274,7 @@ function setup(){
     ['vendors','Vendors','Delivery and ordering vendors'],
     ['locations','Storage Locations','Inventory storage locations'],
     ['operations','Operations','Scheduling operation types'],
+    ['menu','Menu Items','Add, edit, and delete products'],
     ['kms','KMS Stations','Kitchen station routing'],
     ['data','Data','Reset local demo data']
   ];
@@ -2237,6 +2295,7 @@ function settingsPage(tab){
   if(tab==='vendors') return settingsListEditor('vendors','Vendors','Vendor');
   if(tab==='locations') return settingsListEditor('inventoryLocations','Storage Locations','Location');
   if(tab==='operations') return settingsListEditor('operations','Operations','Operation');
+  if(tab==='menu') return settingsMenu();
   if(tab==='kms') return settingsListEditor('kmsStations','KMS Stations','Station');
   if(tab==='data') return settingsData();
   return '';
@@ -2377,6 +2436,93 @@ function settingsPositions(){
 }
 window.addPosition=()=>{let v=$('#newPosition')?.value.trim();if(!v)return;if(db.positions.includes(v)){alert('That position already exists.');return;}db.positions.push(v);save();render();};
 window.removePosition=(i)=>{if(!confirm('Remove this position?'))return;db.positions.splice(i,1);save();render();};
+// ---- Settings > Menu Items ----
+// Managers add, edit, hide and delete products on the Café, Bistro and Exemption Day menus.
+// An item changed here is marked editedAt so the built-in menu updates never overwrite it.
+// Delete keeps the item (hidden, marked deleted) so old orders and reports still read right and
+// the built-in menus don't add it back; it can be restored from the Deleted list.
+// Options are typed one group per line: "Group (required, pick 1): Option A, Option B +1, Option C -8".
+const menuLabels={cafe:'Café Menu',bistro:'Bistro Menu',exemption:'Exemption Day'};
+function menuStations(){return kmsStationList.filter(([k])=>!['all','expo'].includes(k));}
+function optPrice(m,o){let v=Number(m?.modPrices?.[o])||0;return v?` ${v>0?'+':'-'}${Math.abs(v)%1?Math.abs(v).toFixed(2):Math.abs(v)}`:'';}
+function menuOptionsText(m){
+  if(Array.isArray(m?.modGroups)&&m.modGroups.length){
+    let grouped=new Set(m.modGroups.flatMap(g=>g.options||[])), extra=(m.mods||[]).filter(o=>!grouped.has(o));
+    let lines=m.modGroups.map(g=>{let f=[g.required?'required':'',g.pick==='one'?'pick 1':''].filter(Boolean);return `${g.name}${f.length?` (${f.join(', ')})`:''}: ${(g.options||[]).map(o=>o+optPrice(m,o)).join(', ')}`;});
+    if(extra.length)lines.push('Other: '+extra.map(o=>o+optPrice(m,o)).join(', '));
+    return lines.join('\n');
+  }
+  return (m?.mods||[]).length?'Options: '+m.mods.map(o=>o+optPrice(m,o)).join(', '):'';
+}
+function parseMenuOptions(text){
+  let groups=[],prices={};
+  String(text||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(line=>{
+    let name='Options',flags='',body=line,c=line.indexOf(':');
+    if(c>=0){name=line.slice(0,c).trim()||'Options';body=line.slice(c+1);}
+    let fm=name.match(/^(.*?)\s*\(([^)]*)\)\s*$/); if(fm){name=fm[1].trim()||'Options';flags=fm[2].toLowerCase();}
+    let options=body.split(',').map(o=>o.trim()).filter(Boolean).map(o=>{let pm=o.match(/^(.*?)\s+([+-])\s*\$?(\d+(?:\.\d+)?)$/);if(pm){let n=pm[1].trim();prices[n]=(pm[2]==='-'?-1:1)*Number(pm[3]);return n;}return o;});
+    options=options.filter((o,i)=>options.indexOf(o)===i);
+    if(options.length)groups.push({name,options,pick:/pick\s*1|one|choose\s*1/.test(flags)?'one':'many',required:/required/.test(flags)});
+  });
+  return {groups,prices};
+}
+function settingsMenu(){
+  let f=state.menuAdminFilter||'cafe', q=(state.menuAdminSearch||'').trim().toLowerCase();
+  let deleted=f==='deleted';
+  let items=menuSorted((db.menu||[]).filter(m=>deleted?m.deleted:(!m.deleted&&menuOf(m)===f)));
+  if(q)items=items.filter(m=>[m.name,m.category,m.station].join(' ').toLowerCase().includes(q));
+  let cats=[...new Set(items.map(m=>m.category||'Other'))];
+  let st=Object.fromEntries(menuStations());
+  let row=m=>`<tr class="${m.active===false&&!m.deleted?'menu-hidden-row':''}"><td>${menuThumb(m,'admin-thumb')}</td><td><b>${attr(m.name)}</b>${deleted?`<div class="small">${menuLabels[menuOf(m)]||''}</div>`:''}${(m.mods||[]).length?`<div class="small">${m.mods.length} option(s)</div>`:''}</td><td>${money(m.price)}</td><td>${st[m.station]||m.station||'—'}</td><td>${m.deleted?'Deleted':m.active===false?'<b style="color:var(--red)">Hidden</b>':'On menu'}</td><td><div class="row admin-actions">${deleted?`<button class="small-btn" onclick="restoreMenuItem(${m.id})">Restore</button>`:`<button class="small-btn" onclick="editMenuItem(${m.id})">Edit</button><button class="small-btn" onclick="toggleMenuItemActive(${m.id})">${m.active===false?'Show':'Hide'}</button><button class="small-btn danger" onclick="deleteMenuItem(${m.id})">Delete</button>`}</div></td></tr>`;
+  return `<div class="settings-page">
+    <div class="settings-page-head"><h1>Menu Items</h1><p>Add, edit, hide and delete products. Changes reach every register and KMS. Hide takes an item off the order screens without deleting it; for today only, use 86 on Daily Pars.</p></div>
+    <div class="row">${Object.entries(menuLabels).map(([k,l])=>`<button class="${f===k?'primary':'small-btn'}" onclick="state.menuAdminFilter='${k}';render()">${l}</button>`).join('')}<button class="${deleted?'primary':'small-btn'}" onclick="state.menuAdminFilter='deleted';render()">Deleted (${(db.menu||[]).filter(m=>m.deleted).length})</button><span class="spacer"></span>${deleted?'':`<button class="primary success" onclick="editMenuItem(null)">+ Add Item</button>`}</div>
+    <input class="input section" id="menuAdminSearch" type="search" placeholder="Search items" value="${attr(state.menuAdminSearch||'')}" oninput="state.menuAdminSearch=this.value;clearTimeout(window.__mas);window.__mas=setTimeout(()=>{render();let b=$('#menuAdminSearch');if(b){b.focus();b.setSelectionRange(b.value.length,b.value.length);}},250)" style="width:100%">
+    ${items.length?cats.map(c=>`<h2>${attr(c)}</h2><table class="report-table admin-menu-table"><tr><th></th><th>Item</th><th>Price</th><th>KMS Station</th><th>Status</th><th>Actions</th></tr>${items.filter(m=>(m.category||'Other')===c).map(row).join('')}</table>`).join(''):`<p>${deleted?'No deleted items.':'No items on this menu yet.'}</p>`}
+  </div>`;
+}
+window.editMenuItem=id=>{
+  let m=id!=null?db.menu.find(x=>x.id===id):null, menu=m?menuOf(m):(['cafe','bistro','exemption'].includes(state.menuAdminFilter)?state.menuAdminFilter:'cafe');
+  let cats=[...new Set((db.menu||[]).filter(x=>!x.deleted&&menuOf(x)===menu).map(x=>x.category).filter(Boolean))];
+  let photos=Object.keys(menuPhotoIds).sort(), cur=m?.photo||'';
+  app.insertAdjacentHTML('beforeend',`<div class="modal" id="menuEdit"><div class="card"><h2>${m?'Edit '+attr(m.name):'Add Menu Item'}</h2>
+    <div class="menu-edit-grid">
+      <label>Name<input class="input" id="meName" value="${attr(m?.name||'')}" placeholder="e.g. Chicken Tortilla Soup"></label>
+      <label>Price ($)<input class="input" id="mePrice" type="number" min="0" step="0.01" inputmode="decimal" value="${m?Number(m.price):''}" placeholder="0.00"></label>
+      <label>Menu<select class="input" id="meMenu">${Object.entries(menuLabels).map(([k,l])=>`<option value="${k}" ${menu===k?'selected':''}>${l}</option>`).join('')}</select></label>
+      <label>Category (section)<input class="input" id="meCategory" list="meCats" value="${attr(m?.category||'')}" placeholder="e.g. Beverage"><datalist id="meCats">${cats.map(c=>`<option value="${attr(c)}">`).join('')}</datalist></label>
+      <label>KMS Station<select class="input" id="meStation">${menuStations().map(([k,l])=>`<option value="${k}" ${(m?.station||'grill')===k?'selected':''}>${l}</option>`).join('')}</select></label>
+      <label>Picture<select class="input" id="mePhoto"><option value="">${m&&menuPhotos[m.id]?'Default photo':'Food icon (automatic)'}</option>${photos.map(p=>`<option value="${p}" ${cur===p?'selected':''}>${p.replace(/-/g,' ')}</option>`).join('')}</select></label>
+    </div>
+    <label class="section">Options<textarea class="input" id="meOptions" rows="7" placeholder="Protein (required, pick 1): Beef, Chicken&#10;Add Toppings: Add Guacamole +1, Add Salsa&#10;Other: Allergy Alert">${attr(menuOptionsText(m))}</textarea></label>
+    <p class="small">One group per line: <b>Group (required, pick 1): Option, Option +1</b>. "required" means it must be chosen; "pick 1" allows only one. Put +1 or -8 after an option for an upcharge or discount. Leave blank for no options.</p>
+    <label class="row"><input type="checkbox" id="meActive" ${m?.active===false?'':'checked'}> Show on the order screens</label>
+    <div class="row section"><button class="primary success" onclick="saveMenuItem(${m?m.id:'null'})">Save Item</button><button class="primary danger" onclick="document.getElementById('menuEdit').remove()">Cancel</button></div>
+  </div></div>`);
+  $('#meName')?.focus();
+};
+window.saveMenuItem=id=>{
+  let name=$('#meName').value.trim(), price=Number($('#mePrice').value), menu=$('#meMenu').value, category=$('#meCategory').value.trim()||'Other';
+  if(!name){alert('Enter a name.');return;}
+  if($('#mePrice').value===''||!(price>=0)){alert('Enter a price (0 or more).');return;}
+  let dup=(db.menu||[]).find(x=>x.id!==id&&!x.deleted&&menuOf(x)===menu&&x.name.trim().toLowerCase()===name.toLowerCase());
+  if(dup&&!confirm(`${menuLabels[menu]} already has "${dup.name}". Save anyway?`))return;
+  let {groups,prices}=parseMenuOptions($('#meOptions').value);
+  let m=id!=null?db.menu.find(x=>x.id===id):null, oldMenu=m?menuOf(m):menu;
+  if(!m){m={id:Math.max(1000,...(db.menu||[]).map(x=>Number(x.id)||0))+1,inv:'bistro',dailyPar:0,custom:true};db.menu.push(m);}
+  Object.assign(m,{name,price:Math.round(price*100)/100,menu,category,station:$('#meStation').value,active:$('#meActive').checked,editedAt:now()});
+  if(menu==='bistro')delete m.services;else m.services=['counter','togo'];
+  if(groups.length){m.modGroups=groups;m.mods=groups.flatMap(g=>g.options);}else{delete m.modGroups;m.mods=[];}
+  if(Object.keys(prices).length)m.modPrices=prices;else delete m.modPrices;
+  let ph=$('#mePhoto').value; if(ph)m.photo=ph;else delete m.photo;
+  // Moved to another menu: list it with that menu's other items instead of its old menu order.
+  if(oldMenu!==menu)delete m.sortOrder;
+  state.menuAdminFilter=menu;
+  document.getElementById('menuEdit').remove(); save(); render(); toast(`${name} saved.`);
+};
+window.toggleMenuItemActive=id=>{let m=db.menu.find(x=>x.id===id);if(!m)return;m.active=m.active===false;m.editedAt=now();save();render();toast(`${m.name} ${m.active?'is back on':'is hidden from'} the order screens.`);};
+window.deleteMenuItem=id=>{let m=db.menu.find(x=>x.id===id);if(!m)return;if(!confirm(`Delete ${m.name} from the ${menuLabels[menuOf(m)]||'menu'}?\n\nIt comes off every order screen and Daily Pars. Past orders and reports keep it. You can restore it from the Deleted list.`))return;m.deleted=true;m.active=false;m.editedAt=now();save();render();toast(`${m.name} deleted.`);};
+window.restoreMenuItem=id=>{let m=db.menu.find(x=>x.id===id);if(!m)return;m.deleted=false;m.active=true;m.editedAt=now();state.menuAdminFilter=menuOf(m);save();render();toast(`${m.name} restored.`);};
 function settingsListEditor(field,title,singular){
   let list=db.settings[field]||[];
   return `<div class="settings-page">
