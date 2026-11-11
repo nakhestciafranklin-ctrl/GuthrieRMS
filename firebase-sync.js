@@ -164,6 +164,11 @@ if(!isConfigured(firebaseConfig)){
           else v=merge3(b[k],l[k],c[k],localNewer);
           if(v!==undefined)out[k]=v;
         });
+        // Ticket stage follows the combined log: completed (or cleared) stays completed unless it
+        // was recalled or more items were sent after that, so a done ticket never pops back up.
+        const life=(out.kmsLog||[]).filter(e=>/^(Completed|Cleared \(Inactive\)|Recalled|Sent to Kitchen|Added Items Sent)$/.test(e?.stage)).pop();
+        if(life&&/^(Completed|Cleared)/.test(life.stage)&&out.kmsStage!=='completed')out.kmsStage='completed';
+        else if(life&&out.kmsStage==='completed'&&!/^(Completed|Cleared)/.test(life.stage))out.kmsStage=life.stage==='Recalled'?'started':'sent';
         // A paid order stays paid even if a KMS device moved its ticket status meanwhile.
         if(out.paid&&!/paid|refund/i.test(String(out.status||'')))out.status='paid';
         out.updatedAt=Math.max(Number(l.updatedAt)||0,Number(c.updatedAt)||0);
