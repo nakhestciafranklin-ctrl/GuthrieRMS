@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Easier Option (Modifier) Editing in Settings › Menu Items
+- The Add / Edit item pop-up replaces the typed options box with an option editor. Each group is a card with its name, a Required / Optional switch, a Pick 1 / Pick any switch, and one row per option with a +/− $ box for an upcharge (1.00) or discount (-8). Add Option, ✕ to remove, ↑ ↓ to reorder groups, Delete Group.
+- "+ Add a common group…" adds a ready-made group to edit: Hot or Iced, Ice, Flavor, Protein, Tortilla, Leave Off, Add Toppings, Warm, Allergy Alert.
+- A live Preview shows the options exactly as students will see them when ringing up.
+
 ## Reliability for Busy Service (1 register + 6 KMS iPads)
 - Fixed: a payment could be lost when the register marked an order paid at the same moment a KMS station tapped that order (the device that saved last replaced the whole order). Orders now merge field by field against the last shared copy: a change made on only one device is always kept, ticket lines merge by line (removed lines stay removed, added lines are kept), and the KMS log and refunds combine. A paid order stays paid.
 - Load-tested with a simulated shared database, 1 register and 6 KMS iPads (Grill, Fry, Beverage, Expo, All Tickets, a second Grill) tapping Start/Complete at once: 60 orders at about 1 a second and 120 orders at about 2 a second, each sent and paid right away. Result: no lost orders, payments or KMS taps, every iPad ended up identical, and each station chimed exactly once per order sent to it.
