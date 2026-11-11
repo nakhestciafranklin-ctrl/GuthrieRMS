@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111105;
+window.GUTHRIE_RMS_VERSION=2026111106;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -1993,6 +1993,22 @@ function reportRange(){
   if(r==='custom') return {from:state.reportFrom||null,to:state.reportTo||null,label:`${state.reportFrom||'Start'} to ${state.reportTo||'Today'}`};
   return {from:null,to:null,label:'All Time'};
 }
+// Reports include archived orders (earlier days moved to cloud storage). Days in the report range
+// are loaded once and cached; the report redraws when they arrive.
+const archiveCache={}, archiveLoading=new Set();
+function reportOrders(){
+  let {from,to}=reportRange(), A=window.__guthrieArchive;
+  let days=(db.archiveDays||[]).filter(d=>(!from||d>=from)&&(!to||d<=to));
+  let missing=days.filter(d=>!archiveCache[d]&&!archiveLoading.has(d));
+  if(A&&missing.length){
+    missing.forEach(d=>archiveLoading.add(d));
+    Promise.all(missing.map(d=>A.load(d).then(o=>{archiveCache[d]=o;}).catch(e=>{console.warn('Archive load failed',d,e);archiveCache[d]=[];}).finally(()=>archiveLoading.delete(d))))
+      .then(()=>{if(state.view==='reports')render();});
+  }
+  let ids=new Set((db.orders||[]).map(o=>o.id));
+  return [...(db.orders||[]),...days.flatMap(d=>archiveCache[d]||[]).filter(o=>!ids.has(o.id)&&ids.add(o.id))];
+}
+function reportArchiveNote(){let {from,to}=reportRange();let n=(db.archiveDays||[]).filter(d=>(!from||d>=from)&&(!to||d<=to)&&archiveLoading.has(d)).length;return n?`<p class="notice">Loading ${n} archived day(s)…</p>`:'';}
 function inReportRange(iso){
   if(!iso) return state.reportRange==='all';
   let {from,to}=reportRange(), day=new Date(iso).toLocaleDateString('en-CA');
@@ -2011,8 +2027,8 @@ function itemSalesBreakdown(orders){
 }
 function reports(){
   let range=reportRange();
-  let paidOrders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
-  let sales=paidOrders.reduce((a,o)=>a+total(o),0);
+  let paidOrders=reportOrders().filter(o=>o.paid&&inReportRange(o.paidAt));
+  let sales=paidOrders.reduce((a,o)=>a+total(o),0), archiveNote=reportArchiveNote();
   let refunds=(db.refunds||[]).filter(r=>inReportRange(r.processedAt)).reduce((a,r)=>a+(Number(r.amount)||0),0);
   let byType={};paidOrders.forEach(o=>{byType[o.type]=(byType[o.type]||0)+total(o);});
   let items=itemSalesBreakdown(paidOrders);
@@ -2021,7 +2037,7 @@ function reports(){
   let low=db.inventory.filter(i=>Number(i.onHand)<Number(i.par));
   let ranges=[['today','Today'],['week','Last 7 Days'],['month','This Month'],['all','All Time'],['custom','Custom']];
   let modText=r=>Object.entries(r.mods).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k} ×${v}`).join(', ');
-  return `<section class="card"><h1>Reports</h1>
+  return `<section class="card"><h1>Reports</h1>${archiveNote}
     <div class="row">${ranges.map(([k,l])=>`<button class="${(state.reportRange||'today')===k?'primary':'small-btn'}" onclick="state.reportRange='${k}';render()">${l}</button>`).join('')}</div>
     ${(state.reportRange==='custom')?`<div class="row section"><label>From<input type="date" class="input" value="${state.reportFrom||''}" onchange="state.reportFrom=this.value;render()"></label><label>To<input type="date" class="input" value="${state.reportTo||''}" onchange="state.reportTo=this.value;render()"></label></div>`:''}
     <p class="notice">Showing sales for <b>${range.label}</b>. Labor hours and inventory are current totals.</p>
@@ -2045,11 +2061,11 @@ function reports(){
 }
 window.exportReportCSV=()=>{
   let rows=[['Order ID','Type','Customer','Total','Status','Paid At']];
-  db.orders.filter(o=>o.paid&&inReportRange(o.paidAt)).forEach(o=>rows.push([o.id,o.type,o.customer,total(o).toFixed(2),o.status,o.paidAt||'']));
+  reportOrders().filter(o=>o.paid&&inReportRange(o.paidAt)).forEach(o=>rows.push([o.id,o.type,o.customer,total(o).toFixed(2),o.status,o.paidAt||'']));
   downloadCSV('guthrie-rms-sales.csv',rows);
 };
 window.exportItemSalesCSV=()=>{
-  let {label}=reportRange(), orders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
+  let {label}=reportRange(), orders=reportOrders().filter(o=>o.paid&&inReportRange(o.paidAt));
   let rows=[['Range','Item','Category','Qty Sold','Sales','Modifiers']];
   itemSalesBreakdown(orders).forEach(r=>rows.push([label,r.name,r.category,r.qty,r.sales.toFixed(2),Object.entries(r.mods).map(([k,v])=>`${k} x${v}`).join('; ')]));
   downloadCSV(`guthrie-rms-item-sales-${label.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,rows);
@@ -2609,7 +2625,9 @@ function settingsData(){
   return `<div class="settings-page">
     <div class="settings-page-head"><h1>Data</h1><p>Shared data size, old order cleanup, and local demo reset.</p></div>
     ${(()=>{let h=syncHealth(),b=sharedDataBytes(),lim=h?.limit||1048576,pct=Math.min(100,b/lim*100),old=oldPaidOrders().length,orders=(db.orders||[]).length;
-      return `<div class="settings-card"><h2>Shared Data</h2><p>All devices share one cloud copy, limited to 1 MB. It is now <b>${Math.round(b/1024)} KB (${pct.toFixed(0)}%)</b> with ${orders} order(s).</p><div class="size-meter"><span style="width:${pct.toFixed(1)}%;background:${pct>=75?'var(--red)':pct>=50?'var(--gold)':'var(--green)'}"></span></div><p class="small">Paid orders older than 7 days are cleared automatically every hour on every device (open orders are never cleared). Export any reports you need before then.</p><p>Sync: ${h?(h.failingSince?`<b style="color:var(--red)">not syncing since ${new Date(h.failingSince).toLocaleTimeString()}</b>`:h.lastOk?'last saved to the cloud '+new Date(h.lastOk).toLocaleTimeString():'connected'):'local only (no cloud)'}</p><button class="primary" onclick="clearOldPaidOrdersNow()">Clear Paid Orders Older Than 7 Days Now (${old})</button></div>`;})()}
+      return `<div class="settings-card"><h2>Shared Data</h2><p>All devices share one cloud copy, limited to 1 MB. It is now <b>${Math.round(b/1024)} KB (${pct.toFixed(0)}%)</b> with ${orders} order(s).</p><div class="size-meter"><span style="width:${pct.toFixed(1)}%;background:${pct>=75?'var(--red)':pct>=50?'var(--gold)':'var(--green)'}"></span></div><p class="small">Paid orders from earlier days move to the archive automatically (hourly), so the shared data mainly holds today. Paid orders are also compacted an hour after they're done. Open orders are never moved.</p>
+      <h3>Order Archive (long-term storage)</h3>
+      <p>${window.__guthrieArchive?(archiveStatus.blocked?`<b style="color:var(--red)">Blocked by Firebase rules</b>, so paid orders older than 7 days are cleared instead. To turn the archive on, allow the app to read and write other documents in the <code>guthrieRMS</code> collection in Firebase Console › Firestore › Rules, for example:<br><code>match /guthrieRMS/{doc} { allow read, write: if request.auth != null; }</code>`:`Working${archiveStatus.last?' &bull; last run '+new Date(archiveStatus.last).toLocaleTimeString():''} &bull; ${(db.archiveDays||[]).length} day(s) archived${archiveStatus.error?` &bull; <b style="color:var(--red)">last error: ${attr(archiveStatus.error)}</b>`:''}`):'Not available (local only)'} &bull; ${archiveCandidates().length} order(s) waiting to archive.</p><p>Sync: ${h?(h.failingSince?`<b style="color:var(--red)">not syncing since ${new Date(h.failingSince).toLocaleTimeString()}</b>`:h.lastOk?'last saved to the cloud '+new Date(h.lastOk).toLocaleTimeString():'connected'):'local only (no cloud)'}</p><div class="row"><button class="primary" onclick="archiveOldOrdersNow()">Archive Earlier Days Now</button>${archiveStatus.blocked||!window.__guthrieArchive?`<button class="small-btn" onclick="clearOldPaidOrdersNow()">Clear Paid Orders Older Than 7 Days (${old})</button>`:''}</div></div>`;})()}
     <div class="settings-card">
       <p>This resets all locally saved Guthrie RMS demo data in this browser (orders, inventory changes, users, schedule, etc.) back to the built-in demo seed.</p>
       <button class="primary danger" onclick="if(confirm('Reset all local demo data? This cannot be undone.')){localStorage.removeItem('guthrieRMS7A');localStorage.removeItem('guthrieRMS5A');localStorage.removeItem('guthrieRMS4K');localStorage.removeItem('guthrieRMS4F');location.reload();}">Reset Local App Data</button>
@@ -2634,7 +2652,7 @@ function updateSyncBanner(){
     cls='sync-bad';
   } else if(state.user?.role==='manager'&&h){
     let pct=sharedDataBytes()/h.limit*100;
-    if(pct>=75){msg=`Shared data is ${Math.round(pct)}% full. Open Settings › Data to clear old paid orders.`;cls='sync-warn';}
+    if(pct>=75){msg=`Shared data is ${Math.round(pct)}% full. Open Settings › Data.`;cls='sync-warn';}
   }
   if(el.dataset.msg!==msg){el.dataset.msg=msg;el.textContent=msg;el.className=cls;el.style.display=msg?'block':'none';}
 }
@@ -2654,12 +2672,63 @@ function clearOldPaidOrders(){
   save(); return old.length;
 }
 window.clearOldPaidOrdersNow=()=>{let n=oldPaidOrders().length;if(!n){alert('No paid orders older than 7 days.');return;}if(!confirm(`Clear ${n} paid order(s) older than 7 days from every device? Export any reports you need first.`))return;clearOldPaidOrders();render();toast(`Cleared ${n} old paid order(s).`);};
-// Runs a minute after start-up (once cloud data has loaded) and then every hour.
-function scheduleOldOrderCleanup(){
-  let run=()=>{if(!window.__guthrieRMSApplyingCloud&&(window.__guthrieRMSBooted||!window.__guthrieSyncHealth)){let n=clearOldPaidOrders();if(n)console.info('Cleared '+n+' paid orders older than 7 days.');}};
-  setTimeout(run,60000); setInterval(run,3600000);
+// ---- Order archive and compaction ----
+// Paid orders from earlier days (tickets done) move to the cloud archive, one archive per day,
+// so the shared data only holds today and stays small and fast during a rush. Reports read the
+// archive. If the archive can't be written (e.g. Firebase rules block it), paid orders older
+// than 7 days are cleared instead, as before.
+const archiveStatus={last:0,moved:0,error:'',running:false};
+const dayOf=iso=>new Date(iso).toLocaleDateString('en-CA');
+function archiveCandidates(){let today=new Date().toLocaleDateString('en-CA');return (db.orders||[]).filter(o=>o.paid&&o.paidAt&&!kmsActive(o)&&dayOf(o.paidAt)<today);}
+async function archiveOldOrders(){
+  let A=window.__guthrieArchive;
+  if(archiveStatus.running)return;
+  if(!A||archiveStatus.blocked){clearOldPaidOrders();return;}
+  let list=archiveCandidates(); if(!list.length){archiveStatus.last=Date.now();return;}
+  archiveStatus.running=true;
+  try{
+    let byDay={}; list.forEach(o=>(byDay[dayOf(o.paidAt)]=byDay[dayOf(o.paidAt)]||[]).push(JSON.parse(JSON.stringify(o))));
+    for(let [day,orders] of Object.entries(byDay)){
+      await A.save(day,orders);
+      let ids=new Set(orders.map(o=>o.id));
+      db.orders=db.orders.filter(o=>!ids.has(o.id));
+      db.archiveDays=[...new Set([...(db.archiveDays||[]),day])].sort();
+      delete archiveCache[day];
+      archiveStatus.moved+=orders.length; save();
+    }
+    archiveStatus.error=''; archiveStatus.last=Date.now();
+  }catch(e){
+    archiveStatus.error=String(e&&(e.code||e.message)||e);
+    if(/permission|denied|insufficient/i.test(archiveStatus.error))archiveStatus.blocked=true;
+    console.warn('Guthrie RMS: archive failed; falling back to clearing orders older than 7 days.',e);
+    clearOldPaidOrders();
+  }finally{archiveStatus.running=false;}
 }
-scheduleOldOrderCleanup();
+window.archiveOldOrdersNow=async()=>{await archiveOldOrders();render();toast(archiveStatus.error?'Archive could not run: '+archiveStatus.error:'Earlier days are archived.');};
+// An hour after an order is paid and its ticket is done, drop the KMS timing details (who
+// started / finished each item and when) and keep only the last two log entries. Sales, items,
+// options, payment and par counts are kept. Roughly doubles how many orders a day can hold.
+function compactOrders(){
+  let cutoff=Date.now()-3600000, n=0;
+  (db.orders||[]).forEach(o=>{
+    if(o.compact||!o.paid||kmsActive(o)||!(new Date(o.paidAt||0).getTime()<cutoff))return;
+    validItems(o).forEach(i=>{['kmsStarted','kmsStartedBy','kmsStartedAt','kmsDoneBy','kmsDoneAt','modCharge'].forEach(k=>delete i[k]);
+      if(i.kmsParts)Object.keys(i.kmsParts).forEach(k=>{i.kmsParts[k]={kmsDone:!!i.kmsParts[k]?.kmsDone};});});
+    if(Array.isArray(o.kmsLog)&&o.kmsLog.length>2)o.kmsLog=o.kmsLog.slice(-2);
+    o.compact=1; n++;
+  });
+  if(n)save();
+  return n;
+}
+// Archive runs about a minute after start-up (once cloud data has loaded), then hourly;
+// compaction every 10 minutes. Devices start at slightly different times to spread the work.
+function scheduleOrderMaintenance(){
+  let ready=()=>!window.__guthrieRMSApplyingCloud&&(window.__guthrieRMSBooted||!window.__guthrieSyncHealth);
+  let runArchive=()=>{if(ready())archiveOldOrders();}, runCompact=()=>{if(ready())compactOrders();};
+  setTimeout(runArchive,45000+Math.random()*45000); setInterval(runArchive,3600000);
+  setTimeout(runCompact,60000+Math.random()*60000); setInterval(runCompact,600000);
+}
+scheduleOrderMaintenance();
 
 window.addEventListener('error',function(e){
   const root=document.getElementById('app');
