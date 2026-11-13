@@ -282,6 +282,7 @@ if(!isConfigured(firebaseConfig)){
       let orderMode='legacy', ordersReady=false, ordersListening=false, migrating=false;
       const tomb=new Map();          // order id -> deletedAt, for orders deleted in the cloud
       const docIds=new Set();        // ids of orders that exist as order documents (from the listener)
+      const archivedIds=new Set();   // ids moved to the day archive: their documents are deleted outright
       const lastPushed=new Map();    // order id -> orderKey this device last wrote
       const mainOnly=d=>{const c={...(d||{})};delete c.orders;delete c.deletedOrders;return c;};
       const stripKind=d=>{const c={...d};delete c.kind;return c;};
@@ -514,7 +515,11 @@ if(!isConfigured(firebaseConfig)){
             else lastPushed.set(l.id,key);
           }),
           ...deleted.map(id=>async()=>{
-            await setDoc(orderRef(id),{kind:'order',id,deleted:true,deletedAt:Date.now()});
+            // Archived orders: delete the document (no marker, so iPads don't re-read thousands of
+            // markers on every reload). Other deletions leave a small marker for 3 days so an iPad
+            // that missed it can't send the order back.
+            if(archivedIds.has(String(id))){await deleteDoc(orderRef(id));archivedIds.delete(String(id));}
+            else await setDoc(orderRef(id),{kind:'order',id,deleted:true,deletedAt:Date.now()});
             tomb.set(String(id),Date.now()); baseOrders.delete(id); delete pending[String(id)]; if(window.db?.deletedOrders)delete window.db.deletedOrders[id];
           })
         ];
@@ -547,6 +552,7 @@ if(!isConfigured(firebaseConfig)){
       // Remove deleted-order markers older than 3 days (they only stop stale iPads re-adding orders).
       window.__guthrieOrderStore={
         mode:()=>orderMode,
+        markArchived(ids){(ids||[]).forEach(id=>archivedIds.add(String(id)));},
         async cleanTombstones(){
           const cutoff=Date.now()-TOMBSTONE_DAYS*864e5;
           for(const [id,at] of [...tomb]){if(at<cutoff){try{await deleteDoc(orderRef(id));tomb.delete(id);}catch(e){}}}

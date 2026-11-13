@@ -1528,7 +1528,7 @@ function checkKmsNewOrders(){
  if(!kmsSeen||kmsSeenStation!==station){kmsSeen=keys;kmsSeenStation=station;return;}
  let fresh=[...keys].filter(k=>!kmsSeen.has(k));
  kmsSeen=keys;
- if(fresh.length){window.__kmsHeardKeys=(window.__kmsHeardKeys||0)+fresh.length; playKmsChime(station); toast(`${fresh.length>1?fresh.length+' new tickets':'New ticket'} for ${kmsStationLabels[station]||'the KMS'}`);}
+ if(fresh.length){window.__kmsHeardKeys=(window.__kmsHeardKeys||0)+fresh.length;window.__kmsHeardList=(window.__kmsHeardList||[]).concat(fresh.map(k=>k+'@'+Date.now())).slice(-500); playKmsChime(station); toast(`${fresh.length>1?fresh.length+' new tickets':'New ticket'} for ${kmsStationLabels[station]||'the KMS'}`);}
 }
 function kmsSoundButton(){
  let on=kmsSoundOn();
@@ -2710,6 +2710,7 @@ async function archiveOldOrders(){
     for(let [day,orders] of Object.entries(byDay)){
       await A.save(day,orders);
       let ids=new Set(orders.map(o=>o.id));
+      window.__guthrieOrderStore?.markArchived?.([...ids]);
       db.orders=db.orders.filter(o=>!ids.has(o.id));
       db.archiveDays=[...new Set([...(db.archiveDays||[]),day])].sort();
       delete archiveCache[day];
