@@ -269,16 +269,33 @@ if(!isConfigured(firebaseConfig)){
       // marked pending and merged (field by field) when the cloud copy arrives.
       const sessionStart=Date.now();
       rememberBase(window.db?.orders); rememberUnits(window.db||{});
+      // Orders this iPad changed that never reached the cloud: compare against the copy they were
+      // changed from (or no copy for orders created here), so they're sent and merged on connect.
+      Object.entries(pending).forEach(([id,p])=>{const o=(window.db?.orders||[]).find(x=>String(x.id)===id);if(!o)return;if(p?.base)baseOrders.set(o.id,p.base);else baseOrders.delete(o.id);});
+
+      // ---- Where orders are stored ----
+      // 'docs': each order is its own small document (guthrieRMS/order_<id>, kind:'order'), so a
+      // change sends a few KB to each iPad instead of the whole shared data (which used up the free
+      // Firebase plan). The shared doc then holds everything except orders, and is marked
+      // orderStore:'docs'. 'legacy': orders live inside the shared doc (used until the first iPad
+      // on this version moves them, or if the Firebase rules don't allow the order documents).
+      let orderMode='legacy', ordersReady=false, ordersListening=false, migrating=false;
+      const tomb=new Map();          // order id -> deletedAt, for orders deleted in the cloud
+      const docIds=new Set();        // ids of orders that exist as order documents (from the listener)
+      const lastPushed=new Map();    // order id -> orderKey this device last wrote
+      const mainOnly=d=>{const c={...(d||{})};delete c.orders;delete c.deletedOrders;return c;};
+      const stripKind=d=>{const c={...d};delete c.kind;return c;};
       const originalSave=window.save;
       if(typeof originalSave==='function'){
         window.save=function(){
           if(!cloudReady){try{stampLocalChanges();stampLocalUnits();}catch(e){console.warn('Guthrie RMS: could not track a change made before connecting.',e);}}
           originalSave();
           if(cloudReady)pushToCloud();
+          else if(ordersReady&&orderMode==='docs')pushOrders();
         };
       }
 
-      const [{initializeApp},{getAuth,signInAnonymously},{getFirestore,doc,onSnapshot,setDoc,runTransaction,getDoc}]=await Promise.all([
+      const [{initializeApp},{getAuth,signInAnonymously},{getFirestore,doc,onSnapshot,setDoc,runTransaction,getDoc,collection,query,where,deleteDoc}]=await Promise.all([
         import('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'),
         import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js'),
         import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js')
@@ -300,12 +317,13 @@ if(!isConfigured(firebaseConfig)){
         clearTimeout(pushTimer);
         pushTimer=setTimeout(async()=>{
           if(pushing){pushAgain=true;return;}
-          let json, base;
+          let json, base, docsMode=orderMode==='docs';
+          if(docsMode||migrating)pushOrders();
           try{
             if(APP_VERSION&&!(Number(window.db.appVersion)>=APP_VERSION))window.db.appVersion=APP_VERSION;
             stampLocalChanges();
             stampLocalUnits();
-            json=JSON.stringify(cleanForFirestore(window.db));
+            json=JSON.stringify(cleanForFirestore(docsMode?mainOnly(window.db):window.db));
             if(json===lastSyncedJSON)return;
             // The cloud copy this device's data was based on, captured with it, so a retry after
             // another device's write still merges against the right starting point.
@@ -323,7 +341,13 @@ if(!isConfigured(firebaseConfig)){
               let out=local;
               if(snap.exists()){
                 out=snap.data();
-                mergeOrders(out,local.orders,local.deletedOrders,base);
+                if(docsMode){
+                  // Orders still written into the shared doc by an iPad on older code: move them
+                  // to order documents before taking them out of the shared doc.
+                  adoptLegacyOrders(out.orders);
+                  delete out.orders; delete out.deletedOrders; out.orderStore='docs';
+                }
+                else mergeOrders(out,local.orders,local.deletedOrders,base);
                 mergeUnits(out,local);
                 out.appVersion=Math.max(Number(out.appVersion)||0,Number(local.appVersion)||0);
               }
@@ -389,6 +413,146 @@ if(!isConfigured(firebaseConfig)){
         }
       }
 
+      // ---- Order documents ----
+      const orderRef=id=>doc(firestore,'guthrieRMS','order_'+id);
+      const ordersQuery=()=>query(collection(firestore,'guthrieRMS'),where('kind','==','order'));
+      // Orders found in the shared doc (from an iPad on older code) that the order documents don't
+      // have yet: add them here so pushOrders writes them as documents.
+      function adoptLegacyOrders(list){
+        if(!Array.isArray(list)||!list.length||!window.db)return;
+        const local=window.db.orders=window.db.orders||[]; const have=new Set(local.map(o=>String(o.id)));
+        let added=false;
+        list.forEach(o=>{const id=String(o?.id);if(!o||docIds.has(id)||tomb.has(id))return;if(!have.has(id)){local.push(o);have.add(id);}added=true;});
+        if(added){local.sort((a,b)=>a.id-b.id);pushOrders();}
+      }
+      function startOrdersListener(){
+        ordersListening=true; let first=true;
+        onSnapshot(ordersQuery(),snap=>{
+          try{
+            stampLocalChanges();
+            const local=window.db.orders=window.db.orders||[];
+            const byId=new Map(local.map(o=>[String(o.id),o]));
+            let dirty=false; const cloudList=[];
+            snap.docChanges().forEach(ch=>{
+              const d=ch.doc.data()||{}; const id=String(d.id??ch.doc.id.replace(/^order_/,''));
+              if(ch.type==='removed'||d.deleted){
+                tomb.set(id,Number(d.deletedAt)||Date.now()); docIds.delete(id);
+                const i=local.findIndex(o=>String(o.id)===id); if(i>=0)local.splice(i,1);
+                baseOrders.delete(Number(id)); baseOrders.delete(id); delete pending[id]; return;
+              }
+              const c=stripKind(d); cloudList.push(c); tomb.delete(id); docIds.add(id);
+              const l=byId.get(id), b=baseOrders.get(c.id);
+              if(!l){local.push(c);byId.set(id,c);}
+              else{
+                const lk=orderKey(l), ck=orderKey(c);
+                let next=c;
+                if(lk!==ck&&lk!==b){next=mergeOrder(b,l,c);if(orderKey(next)!==ck)dirty=true;}
+                local[local.indexOf(l)]=next; byId.set(id,next);
+              }
+              baseOrders.set(c.id,orderKey(c));
+            });
+            if(first){
+              first=false; ordersReady=true;
+              const inCloud=new Set(snap.docs.map(d=>String(d.data()?.id??d.id.replace(/^order_/,''))));
+              if(orderMode!=='docs'){
+                // First iPad on this version: move every order in the shared doc to order documents.
+                migrating=true;
+                dirty=true;
+              }else{
+                // Drop stale orders this iPad still had that the cloud no longer has (archived or
+                // deleted while it was off), unless this iPad changed them and hasn't sent them yet.
+                for(let i=local.length-1;i>=0;i--){const o=local[i],id=String(o.id);if(!inCloud.has(id)&&!pending[id]&&baseOrders.has(o.id)&&Number(o.id)<sessionStart){local.splice(i,1);baseOrders.delete(o.id);}}
+                dirty=true;
+              }
+            }
+            local.sort((a,b)=>a.id-b.id);
+            confirmPending(cloudList); savePending();
+            if(dirty)pushOrders();
+            if(window.__guthrieRMSBooted)renderWhenIdle();
+          }catch(err){console.warn('Guthrie RMS: could not apply order updates.',err);}
+        },err=>{
+          ordersListening=false;
+          const code=String(err&&(err.code||err.message)||err);
+          if(/permission|denied|insufficient/i.test(code)){
+            // Firebase rules don't allow order documents: keep orders in the shared doc.
+            syncHealth.orderDocsBlocked=true; migrating=false;
+            console.warn('Guthrie RMS: order documents not allowed by Firebase rules; keeping orders in the shared doc.',err);
+            return;
+          }
+          const quota=/resource-exhausted|quota/i.test(code+' '+(err&&err.message||''));
+          if(quota)syncHealth.quota=true;
+          setTimeout(()=>{if(!ordersListening)startOrdersListener();},quota?60000:5000);
+        });
+      }
+      // Send changed / deleted orders, one small transaction per order (field-by-field merge with
+      // the cloud copy), up to 4 at a time. Debounced so quick taps on one order send once.
+      let ordersTimer=null, ordersPushing=false, ordersAgain=false;
+      function pushOrders(){
+        if(!ordersReady||!(orderMode==='docs'||migrating))return;
+        clearTimeout(ordersTimer); ordersTimer=setTimeout(runOrdersPush,400);
+      }
+      async function runOrdersPush(){
+        if(ordersPushing){ordersAgain=true;return;}
+        stampLocalChanges();
+        const local=window.db?.orders||[], ids=new Set(local.map(o=>String(o.id)));
+        // Changed since the cloud copy, or not yet stored as an order document at all (new here,
+        // or still only in the shared doc during the move to order documents).
+        const changed=local.filter(o=>{const id=String(o.id),k=orderKey(o);if(tomb.has(id))return false;return (k!==baseOrders.get(o.id)||!docIds.has(id))&&k!==lastPushed.get(o.id);});
+        const deleted=[...baseOrders.keys()].filter(id=>!ids.has(String(id))&&!tomb.has(String(id)));
+        if(!changed.length&&!deleted.length){finishMigration();return;}
+        ordersPushing=true; let failed=null;
+        const baseSnap=new Map(baseOrders);
+        const jobs=[
+          ...changed.map(o=>async()=>{
+            const l=JSON.parse(JSON.stringify(o)), key=orderKey(o); let gone=false;
+            await runTransaction(firestore,async tx=>{
+              const s=await tx.get(orderRef(l.id)); let out=l; gone=false;
+              if(s.exists()){const c=stripKind(s.data());if(c.deleted){gone=true;return;}out=mergeOrder(baseSnap.get(l.id),l,c);}
+              tx.set(orderRef(l.id),{...cleanForFirestore(out),kind:'order'});
+            });
+            if(gone){const i=(window.db.orders||[]).findIndex(x=>x.id===l.id);if(i>=0)window.db.orders.splice(i,1);tomb.set(String(l.id),Date.now());baseOrders.delete(l.id);}
+            else lastPushed.set(l.id,key);
+          }),
+          ...deleted.map(id=>async()=>{
+            await setDoc(orderRef(id),{kind:'order',id,deleted:true,deletedAt:Date.now()});
+            tomb.set(String(id),Date.now()); baseOrders.delete(id); delete pending[String(id)]; if(window.db?.deletedOrders)delete window.db.deletedOrders[id];
+          })
+        ];
+        let next=0;
+        const worker=async()=>{while(next<jobs.length){const j=jobs[next++];try{await j();}catch(err){failed=err;}}};
+        await Promise.all([worker(),worker(),worker(),worker()]);
+        ordersPushing=false;
+        if(failed){
+          console.warn('Guthrie RMS: order save failed, retrying.',failed);
+          if(!syncHealth.failingSince)syncHealth.failingSince=Date.now();
+          syncHealth.error=String(failed.code||failed.message||failed);
+          syncHealth.quota=/resource-exhausted|quota/i.test(syncHealth.error+' '+(failed.message||''));
+          setTimeout(pushOrders,syncHealth.quota?60000:2000);
+        }else{
+          syncHealth.lastOk=Date.now(); syncHealth.failingSince=null; syncHealth.error=''; syncHealth.quota=false;
+          savePending();
+        }
+        if(ordersAgain||failed===null&&changed.length||migrating){ordersAgain=false;pushOrders();}
+      }
+      // Migration done once every order is in a document: mark the shared doc so every iPad
+      // switches to order documents, and take the orders out of the shared doc.
+      function finishMigration(){
+        if(!migrating)return;
+        const missing=(window.db?.orders||[]).filter(o=>!docIds.has(String(o.id))&&!tomb.has(String(o.id)));
+        if(missing.length){setTimeout(pushOrders,1000);return;}  // wait until the listener confirms every order
+        migrating=false; orderMode='docs'; syncHealth.orderMode='docs';
+        window.db.orderStore='docs'; console.info('Guthrie RMS: orders moved to order documents.');
+        if(typeof window.save==='function')window.save();
+      }
+      // Remove deleted-order markers older than 3 days (they only stop stale iPads re-adding orders).
+      window.__guthrieOrderStore={
+        mode:()=>orderMode,
+        async cleanTombstones(){
+          const cutoff=Date.now()-TOMBSTONE_DAYS*864e5;
+          for(const [id,at] of [...tomb]){if(at<cutoff){try{await deleteDoc(orderRef(id));tomb.delete(id);}catch(e){}}}
+        }
+      };
+
       function subscribe(){
       onSnapshot(sharedDocRef,async(snap)=>{
         let localWins=false;
@@ -401,13 +565,27 @@ if(!isConfigured(firebaseConfig)){
           }else{
             const cloudData=snap.data();
             if(newerVersionInCloud(cloudData))return;
+            if(cloudData.orderStore==='docs'&&orderMode!=='docs'){orderMode='docs';syncHealth.orderMode='docs';}
+            if(!ordersListening&&!syncHealth.orderDocsBlocked)startOrdersListener();
             const cloudJSON=JSON.stringify(cloudData);
             syncHealth.bytes=cloudJSON.length; syncHealth.lastSnapshot=Date.now();
             if(cloudJSON!==lastSyncedJSON){
               lastSyncedJSON=cloudJSON;
               // First load takes the cloud's orders as-is (this device's saved copy may be days old).
               // After that, merge so orders this device just entered or updated aren't lost.
-              if(firstSnapshot){
+              if(orderMode==='docs'){
+                // Orders come from the order documents; keep this iPad's list as it is.
+                stampLocalChanges(); stampLocalUnits();
+                if(Array.isArray(cloudData.orders)&&cloudData.orders.length)adoptLegacyOrders(cloudData.orders);
+                const local=window.db||{};
+                if(firstSnapshot){
+                  const ls=local.syncStamps||{}, sess={};
+                  stampedUnits.forEach((_,k)=>{if(ls[k])sess[k]=ls[k];});
+                  if(Object.keys(sess).length&&mergeUnits(cloudData,{...local,syncStamps:sess}))localWins=true;
+                } else if(mergeUnits(cloudData,local))localWins=true;
+                cloudData.orders=local.orders||[]; delete cloudData.deletedOrders;
+              }
+              else if(firstSnapshot){
                 rememberBase(cloudData.orders);
                 // Orders this iPad changed that never reached the cloud (e.g. it reloaded while offline).
                 const localOrders=window.db?.orders||[], cloudOrders=cloudData.orders=cloudData.orders||[];
@@ -443,7 +621,7 @@ if(!isConfigured(firebaseConfig)){
                 if(mergeUnits(cloudData,local))localWins=true;
                 rememberBase(JSON.parse(cloudJSON).orders);
               }
-              confirmPending(JSON.parse(cloudJSON).orders);
+              if(orderMode!=='docs')confirmPending(JSON.parse(cloudJSON).orders);
               window.db=cloudData;
               // Re-applying migrations must not push on its own: a device running different
               // code would undo it and push back, and the two would overwrite each other's
