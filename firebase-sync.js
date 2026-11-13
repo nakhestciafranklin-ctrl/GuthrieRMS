@@ -361,6 +361,7 @@ if(!isConfigured(firebaseConfig)){
             console.warn('Guthrie RMS cloud sync: push failed, retrying.',err);
             if(!syncHealth.failingSince)syncHealth.failingSince=Date.now();
             syncHealth.error=String(err&&(err.code||err.message)||err||'');
+            syncHealth.errorDetail=String(err&&err.message||'').slice(0,200);
             // Firebase usage limit reached (free plan quota): retrying every 2 s only adds load.
             // Back off and retry every minute; the banner tells staff what to do.
             syncHealth.quota=/resource-exhausted|quota/i.test(syncHealth.error+' '+(err&&err.message||''));
@@ -373,6 +374,15 @@ if(!isConfigured(firebaseConfig)){
         },PUSH_DEBOUNCE_MS);
       }
 
+      // Force a save of the shared data and any unsent orders now (manager "Retry now", or after
+      // reconnecting while the usage-limit warning is showing).
+      let lastRetry=0;
+      function retrySyncNow(){
+        if(Date.now()-lastRetry<5000)return; lastRetry=Date.now();
+        lastSyncedJSON=null; lastPushed.clear();
+        if(cloudReady)pushToCloud(); pushOrders();
+      }
+      window.__guthrieRetrySync=()=>{lastRetry=0;retrySyncNow();};
       // Reload once (at most every few minutes) when the shared data was written by a newer app version.
       function newerVersionInCloud(cloudData){
         if(!APP_VERSION||!(Number(cloudData?.appVersion)>APP_VERSION))return false;
@@ -664,6 +674,9 @@ if(!isConfigured(firebaseConfig)){
           // This device had newer order changes than the cloud copy it just received: send them back up.
           else if(localWins){pushToCloud();}
           clearTimeout(fallbackTimer);
+          // Reads work again (e.g. the Firebase plan was upgraded): try a save now so the
+          // "usage limit" warning clears without waiting for someone to change something.
+          if(syncHealth.quota||syncHealth.failingSince)retrySyncNow();
           syncHealth.connected=true; syncHealth.connectError='';
           window.__guthrieRMSBooted=true;
           setCloudStatus(true,'Connected — shared with all devices');

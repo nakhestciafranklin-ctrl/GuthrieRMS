@@ -1,5 +1,9 @@
 # Guthrie RMS Changelog
 
+## Usage-Limit Warning Clears by Itself
+- The "Firebase usage limit" banner used to stay up until the iPad successfully saved something, even after the plan was upgraded. Now, as soon as the cloud answers again, the iPad tries a save right away and the banner clears when it works.
+- Managers can tap the banner to retry immediately; it also shows Firebase's own error text to help diagnose.
+
 ## Orders Stored One per Cloud Record (Fits the Free Firebase Plan)
 - Each order is now its own small record in the cloud (guthrieRMS/order_<id>). A change sends only that order (a few KB) to each iPad, instead of re-sending all the shared data (about 600 KB on a busy day) to every iPad, which used up the free Firebase plan ("resource-exhausted").
 - The rest of the shared data (menu, users, inventory, settings, pars) stays in the shared copy, which is now much smaller and only re-sent when it changes.
