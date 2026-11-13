@@ -32,6 +32,9 @@ function isConfigured(cfg){
   return !!(cfg && cfg.apiKey && !String(cfg.apiKey).startsWith('REPLACE_'));
 }
 
+// Sync health for the "not syncing" banner: since when saves have been failing (null when fine)
+// and why.
+const syncHealth=window.__guthrieSyncHealth={failingSince:null,error:''};
 function setCloudStatus(ok,message){
   window.__guthrieRMSCloudStatus={ok,message};
 }
@@ -211,8 +214,11 @@ if(!isConfigured(firebaseConfig)){
               }
               tx.set(sharedDocRef,cleanForFirestore(out));
             });
+            syncHealth.failingSince=null; syncHealth.error='';
           }catch(err){
             console.warn('Guthrie RMS cloud sync: push failed, retrying.',err);
+            if(!syncHealth.failingSince)syncHealth.failingSince=Date.now();
+            syncHealth.error=String(err&&(err.code||err.message)||err||'');
             lastSyncedJSON=null;
             setTimeout(pushToCloud,2000);
           }finally{
