@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## "Not Syncing" Banner
+- A red banner at the bottom of every screen tells a station when its iPad isn't syncing: saves have been failing for more than 8 seconds (Wi-Fi down, or the Firebase usage limit), or the iPad started without the cloud ("Local only"). It clears by itself once saving works again.
+
 ## Easier Option (Modifier) Editing in Settings › Menu Items
 - The Add / Edit item pop-up replaces the typed options box with an option editor. Each group is a card with its name, a Required / Optional switch, a Pick 1 / Pick any switch, and one row per option with a +/− $ box for an upcharge (1.00) or discount (-8). Add Option, ✕ to remove, ↑ ↓ to reorder groups, Delete Group.
 - "+ Add a common group…" adds a ready-made group to edit: Hot or Iced, Ice, Flavor, Protein, Tortilla, Leave Off, Add Toppings, Warm, Allergy Alert.
