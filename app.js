@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111302;
+window.GUTHRIE_RMS_VERSION=2026111303;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -1494,7 +1494,7 @@ function unlockKmsAudio(){
  try{
   let AC=window.AudioContext||window.webkitAudioContext; if(!AC)return;
   if(!kmsAudio)kmsAudio=new AC();
-  if(kmsAudio.state!=='running')kmsAudio.resume().then(()=>{let b=document.getElementById('kmsSoundBanner');if(b)b.remove();}).catch(()=>{});
+  if(kmsAudio.state!=='running')kmsAudio.resume().then(()=>{let b=document.querySelector('.kms-sound-unlock');if(b)b.remove();}).catch(()=>{});
   // A silent blip completes the unlock on iPad Safari.
   let g=kmsAudio.createGain(); g.gain.value=0; let o=kmsAudio.createOscillator(); o.connect(g).connect(kmsAudio.destination); o.start(); o.stop(kmsAudio.currentTime+0.01);
  }catch(e){}
@@ -1528,21 +1528,16 @@ function checkKmsNewOrders(){
  if(!kmsSeen||kmsSeenStation!==station){kmsSeen=keys;kmsSeenStation=station;return;}
  let fresh=[...keys].filter(k=>!kmsSeen.has(k));
  kmsSeen=keys;
- if(fresh.length){window.__kmsHeardKeys=(window.__kmsHeardKeys||0)+fresh.length;window.__kmsHeardList=(window.__kmsHeardList||[]).concat(fresh.map(k=>k+'@'+Date.now())).slice(-500); playKmsChime(station); toast(`${fresh.length>1?fresh.length+' new tickets':'New ticket'} for ${kmsStationLabels[station]||'the KMS'}`);}
+ if(fresh.length){playKmsChime(station); toast(`${fresh.length>1?fresh.length+' new tickets':'New ticket'} for ${kmsStationLabels[station]||'the KMS'}`);}
 }
 function kmsSoundButton(){
  let on=kmsSoundOn();
- return `<div class="row kms-sound"><span class="small">This iPad: <b>${kmsStationLabels[kmsCurrentStation()]||'All Tickets'}</b></span><button class="small-btn" onclick="toggleKmsSound()">${on?'🔔 Sound On':'🔕 Sound Off'}</button>${on?`<button class="small-btn" onclick="playKmsChime()">Test Sound</button>`:''}</div>`;
+ return `<div class="row kms-sound"><span class="small">This iPad: <b>${kmsStationLabels[kmsCurrentStation()]||'All Tickets'}</b></span><button class="small-btn" onclick="toggleKmsSound()">${on?'🔔 Sound On':'🔕 Sound Off'}</button>${on?`<button class="small-btn" onclick="playKmsChime()">Test Sound</button>`:''}${on&&!kmsAudioReady()?`<button class="primary kms-sound-unlock" onclick="unlockKmsAudio();this.remove()">Tap to Enable Sound</button>`:''}</div>`;
 }
 // Tick the timers in place instead of re-rendering, so open logs and scroll position stay put.
 setInterval(()=>{
  checkKmsNewOrders();
  if(!(state.user&&state.view==='kms'))return;
- // Sound can be switched off by the browser (after a reload, or the iPad sleeping); show a big
- // banner until someone taps, so a KMS never misses chimes without anyone noticing.
- let sb=document.getElementById('kmsSoundBanner'), need=kmsSoundOn()&&!kmsAudioReady();
- if(need&&!sb){document.querySelector('.kms-screen')?.insertAdjacentHTML('afterbegin','<button id="kmsSoundBanner" class="kms-sound-banner" onclick="unlockKmsAudio()">🔇 Sound is off on this iPad — tap here to turn it on</button>');}
- else if(!need&&sb)sb.remove();
  document.querySelectorAll('[data-kms-sent]').forEach(el=>{let t=kmsElapsed(el.dataset.kmsSent), tk=el.closest('.ticket'); el.textContent=t.text; if(tk){tk.classList.toggle('warn',t.cls==='warn');tk.classList.toggle('late',t.cls==='late');}});
 },1000);
 function kmsLine(orderId,lineId){let o=db.orders.find(x=>x.id===orderId);return {o,i:o&&validItems(o).find(x=>x.lineId===lineId)};}
@@ -1993,22 +1988,6 @@ function reportRange(){
   if(r==='custom') return {from:state.reportFrom||null,to:state.reportTo||null,label:`${state.reportFrom||'Start'} to ${state.reportTo||'Today'}`};
   return {from:null,to:null,label:'All Time'};
 }
-// Reports include archived orders (earlier days moved to cloud storage). Days in the report range
-// are loaded once and cached; the report redraws when they arrive.
-const archiveCache={}, archiveLoading=new Set();
-function reportOrders(){
-  let {from,to}=reportRange(), A=window.__guthrieArchive;
-  let days=(db.archiveDays||[]).filter(d=>(!from||d>=from)&&(!to||d<=to));
-  let missing=days.filter(d=>!archiveCache[d]&&!archiveLoading.has(d));
-  if(A&&missing.length){
-    missing.forEach(d=>archiveLoading.add(d));
-    Promise.all(missing.map(d=>A.load(d).then(o=>{archiveCache[d]=o;}).catch(e=>{console.warn('Archive load failed',d,e);archiveCache[d]=[];}).finally(()=>archiveLoading.delete(d))))
-      .then(()=>{if(state.view==='reports')render();});
-  }
-  let ids=new Set((db.orders||[]).map(o=>o.id));
-  return [...(db.orders||[]),...days.flatMap(d=>archiveCache[d]||[]).filter(o=>!ids.has(o.id)&&ids.add(o.id))];
-}
-function reportArchiveNote(){let {from,to}=reportRange();let n=(db.archiveDays||[]).filter(d=>(!from||d>=from)&&(!to||d<=to)&&archiveLoading.has(d)).length;return n?`<p class="notice">Loading ${n} archived day(s)…</p>`:'';}
 function inReportRange(iso){
   if(!iso) return state.reportRange==='all';
   let {from,to}=reportRange(), day=new Date(iso).toLocaleDateString('en-CA');
@@ -2027,8 +2006,8 @@ function itemSalesBreakdown(orders){
 }
 function reports(){
   let range=reportRange();
-  let paidOrders=reportOrders().filter(o=>o.paid&&inReportRange(o.paidAt));
-  let sales=paidOrders.reduce((a,o)=>a+total(o),0), archiveNote=reportArchiveNote();
+  let paidOrders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
+  let sales=paidOrders.reduce((a,o)=>a+total(o),0);
   let refunds=(db.refunds||[]).filter(r=>inReportRange(r.processedAt)).reduce((a,r)=>a+(Number(r.amount)||0),0);
   let byType={};paidOrders.forEach(o=>{byType[o.type]=(byType[o.type]||0)+total(o);});
   let items=itemSalesBreakdown(paidOrders);
@@ -2037,7 +2016,7 @@ function reports(){
   let low=db.inventory.filter(i=>Number(i.onHand)<Number(i.par));
   let ranges=[['today','Today'],['week','Last 7 Days'],['month','This Month'],['all','All Time'],['custom','Custom']];
   let modText=r=>Object.entries(r.mods).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k} ×${v}`).join(', ');
-  return `<section class="card"><h1>Reports</h1>${archiveNote}
+  return `<section class="card"><h1>Reports</h1>
     <div class="row">${ranges.map(([k,l])=>`<button class="${(state.reportRange||'today')===k?'primary':'small-btn'}" onclick="state.reportRange='${k}';render()">${l}</button>`).join('')}</div>
     ${(state.reportRange==='custom')?`<div class="row section"><label>From<input type="date" class="input" value="${state.reportFrom||''}" onchange="state.reportFrom=this.value;render()"></label><label>To<input type="date" class="input" value="${state.reportTo||''}" onchange="state.reportTo=this.value;render()"></label></div>`:''}
     <p class="notice">Showing sales for <b>${range.label}</b>. Labor hours and inventory are current totals.</p>
@@ -2061,11 +2040,11 @@ function reports(){
 }
 window.exportReportCSV=()=>{
   let rows=[['Order ID','Type','Customer','Total','Status','Paid At']];
-  reportOrders().filter(o=>o.paid&&inReportRange(o.paidAt)).forEach(o=>rows.push([o.id,o.type,o.customer,total(o).toFixed(2),o.status,o.paidAt||'']));
+  db.orders.filter(o=>o.paid&&inReportRange(o.paidAt)).forEach(o=>rows.push([o.id,o.type,o.customer,total(o).toFixed(2),o.status,o.paidAt||'']));
   downloadCSV('guthrie-rms-sales.csv',rows);
 };
 window.exportItemSalesCSV=()=>{
-  let {label}=reportRange(), orders=reportOrders().filter(o=>o.paid&&inReportRange(o.paidAt));
+  let {label}=reportRange(), orders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
   let rows=[['Range','Item','Category','Qty Sold','Sales','Modifiers']];
   itemSalesBreakdown(orders).forEach(r=>rows.push([label,r.name,r.category,r.qty,r.sales.toFixed(2),Object.entries(r.mods).map(([k,v])=>`${k} x${v}`).join('; ')]));
   downloadCSV(`guthrie-rms-item-sales-${label.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,rows);
@@ -2623,133 +2602,13 @@ window.addSettingsListItem=(field)=>{let v=$('#newListItem')?.value.trim();if(!v
 window.removeSettingsListItem=(field,i)=>{if(!confirm('Remove this item?'))return;db.settings[field].splice(i,1);save();render();toast('Removed.');};
 function settingsData(){
   return `<div class="settings-page">
-    <div class="settings-page-head"><h1>Data</h1><p>Shared data size, old order cleanup, and local demo reset.</p></div>
-    ${(()=>{let h=syncHealth(),b=sharedDataBytes(),lim=h?.limit||1048576,pct=Math.min(100,b/lim*100),old=oldPaidOrders().length,orders=(db.orders||[]).length;
-      let mode=orderDocsMode()?`<p><b>Orders:</b> each order is its own small cloud record, so a change sends only that order to each iPad (fits the free Firebase plan).</p>`:h?.orderDocsBlocked?`<p class="notice" style="border-color:var(--red);color:var(--red)"><b>Orders are still stored inside the shared data</b> because the Firebase rules don't allow separate order records. Every change re-sends all the shared data to every iPad, which can use up the free Firebase plan. Free fix: Firebase Console › Firestore Database › Rules, allow the <code>guthrieRMS</code> collection, e.g.<br><code>match /guthrieRMS/{doc} { allow read, write: if request.auth != null; }</code><br>then Publish and reload the iPads.</p>`:`<p><b>Orders:</b> moving to separate order records…</p>`;
-      return `<div class="settings-card"><h2>Shared Data</h2><p>Menu, users, inventory, settings${orderDocsMode()?'':' and orders'} share one cloud copy, limited to 1 MB. It is now <b>${Math.round(b/1024)} KB (${pct.toFixed(0)}%)</b>${orderDocsMode()?'':` with ${orders} order(s)`}.</p>${mode}<div class="size-meter"><span style="width:${pct.toFixed(1)}%;background:${pct>=75?'var(--red)':pct>=50?'var(--gold)':'var(--green)'}"></span></div><p class="small">Paid orders from earlier days move to the archive automatically (hourly), so the shared data mainly holds today. Paid orders are also compacted an hour after they're done. Open orders are never moved.</p>
-      <h3>Order Archive (long-term storage)</h3>
-      <p>${window.__guthrieArchive?(archiveStatus.blocked?`<b style="color:var(--red)">Blocked by Firebase rules</b>, so paid orders older than 7 days are cleared instead. To turn the archive on, allow the app to read and write other documents in the <code>guthrieRMS</code> collection in Firebase Console › Firestore › Rules, for example:<br><code>match /guthrieRMS/{doc} { allow read, write: if request.auth != null; }</code>`:`Working${archiveStatus.last?' &bull; last run '+new Date(archiveStatus.last).toLocaleTimeString():''} &bull; ${(db.archiveDays||[]).length} day(s) archived${archiveStatus.error?` &bull; <b style="color:var(--red)">last error: ${attr(archiveStatus.error)}</b>`:''}`):'Not available (local only)'} &bull; ${archiveCandidates().length} order(s) waiting to archive.</p>${h?.quota?`<p class="notice" style="border-color:var(--red);color:var(--red)"><b>Firebase usage limit reached ("resource-exhausted").</b> The free Spark plan's limits are used up, so no device can sync. Open console.firebase.google.com › guthrie-rms › <b>Upgrade</b> › Blaze (pay as you go), and set a budget alert. Sync resumes within a minute and each iPad sends the orders it saved meanwhile.</p>`:''}<p>Sync: ${h?(h.failingSince?`<b style="color:var(--red)">not syncing since ${new Date(h.failingSince).toLocaleTimeString()}</b>`:h.lastOk?'last saved to the cloud '+new Date(h.lastOk).toLocaleTimeString():'connected'):'local only (no cloud)'}</p><div class="row"><button class="primary" onclick="archiveOldOrdersNow()">Archive Earlier Days Now</button>${archiveStatus.blocked||!window.__guthrieArchive?`<button class="small-btn" onclick="clearOldPaidOrdersNow()">Clear Paid Orders Older Than 7 Days (${old})</button>`:''}</div></div>`;})()}
+    <div class="settings-page-head"><h1>Data</h1><p>Local demo data stored in this browser only.</p></div>
     <div class="settings-card">
       <p>This resets all locally saved Guthrie RMS demo data in this browser (orders, inventory changes, users, schedule, etc.) back to the built-in demo seed.</p>
       <button class="primary danger" onclick="if(confirm('Reset all local demo data? This cannot be undone.')){localStorage.removeItem('guthrieRMS7A');localStorage.removeItem('guthrieRMS5A');localStorage.removeItem('guthrieRMS4K');localStorage.removeItem('guthrieRMS4F');location.reload();}">Reset Local App Data</button>
     </div>
   </div>`;
 }
-
-// ---- Sync health, data size and weekly cleanup ----
-// Banner on every screen when this device's changes haven't reached the cloud for a while
-// (Wi-Fi down, or the shared data too big to save), so it never fails silently.
-// Managers also see a warning as the shared data nears Firestore's 1 MB per-document limit.
-function syncHealth(){return window.__guthrieSyncHealth||null;}
-function orderDocsMode(){return window.__guthrieOrderStore?.mode?.()==='docs';}
-// Size of the shared doc. With order documents, orders aren't part of it.
-function sharedDataBytes(){let h=syncHealth();try{let d=db;if(orderDocsMode()){d={...db};delete d.orders;delete d.deletedOrders;}let local=JSON.stringify(d).length;return orderDocsMode()?local:Math.max(h?.bytes||0,local);}catch(e){return h?.bytes||0;}}
-function updateSyncBanner(){
-  let h=syncHealth(), el=document.getElementById('syncBanner');
-  if(!el){el=document.createElement('div');el.id='syncBanner';document.body.appendChild(el);}
-  let msg='', cls='', retry=false;
-  if(state.user&&h&&h.quota){
-    let detail=(h.errorDetail||h.error||'').replace(/\s+/g,' ').slice(0,140);
-    msg=state.user.role==='manager'
-      ?`⚠ Firebase is refusing updates (usage limit) — the KMS is not getting new orders; orders are saved on each iPad. If you just upgraded the plan, tap here to retry now (it also retries every minute).${detail?' Firebase says: '+detail:''}`
-      :'⚠ The cloud is not accepting updates right now, so the KMS is not getting new orders. Orders are saved on this iPad. Tell a manager right away.';
-    cls='sync-bad'; retry=state.user.role==='manager'?'sync':false;
-  } else if(state.user&&h&&h.connected===false&&Date.now()-(h.connectStart||Date.now())>10000){
-    // Still connecting (or reconnecting). Work done meanwhile is kept and sent once connected.
-    let secs=Math.round((Date.now()-h.connectStart)/1000);
-    retry=/could not load/i.test(h.connectError||'');
-    msg=`⚠ Not connected to the cloud (${secs<120?secs+' sec':Math.round(secs/60)+' min'}). Orders on this iPad are saved here and will be sent as soon as it connects. Check Wi-Fi.${retry?' Tap here to retry.':''}`;
-    cls='sync-bad';
-    // The cloud code itself didn't load (blocked or dropped download): reload to try again,
-    // at most every 2 minutes and only when nobody is in the middle of something.
-    if(retry&&secs>45&&!document.querySelector('.modal')&&!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName||'')){
-      try{let last=Number(sessionStorage.getItem('guthrieRetryAt'))||0;if(Date.now()-last>120000){sessionStorage.setItem('guthrieRetryAt',String(Date.now()));location.reload();}}catch(e){}
-    }
-  } else if(state.user&&h&&h.failingSince&&Date.now()-h.failingSince>8000){
-    let secs=Math.round((Date.now()-h.failingSince)/1000);
-    let big=/size|too large|exceeds|maximum/i.test(h.error);
-    msg=`⚠ Not syncing for ${secs<120?secs+' sec':Math.round(secs/60)+' min'}. ${big?'The shared data is too big to save; a manager should open Settings › Data.':'Changes on this iPad have not reached the other devices yet. Check Wi-Fi; it keeps retrying.'}`;
-    cls='sync-bad';
-  } else if(state.user?.role==='manager'&&h){
-    let pct=sharedDataBytes()/h.limit*100;
-    if(pct>=75){msg=`Shared data is ${Math.round(pct)}% full. Open Settings › Data.`;cls='sync-warn';}
-  }
-  if(el.dataset.msg!==msg){el.dataset.msg=msg;el.textContent=msg;el.className=cls;el.style.display=msg?'block':'none';el.style.cursor=retry?'pointer':'';el.onclick=retry==='sync'?()=>{window.__guthrieRetrySync?.();toast('Retrying sync…');}:retry?()=>location.reload():null;}
-}
-setInterval(updateSyncBanner,2000);
-// Paid orders older than 7 days are cleared from the shared data (their removal syncs to every
-// device), keeping it well under the size limit. Open, unpaid orders are never cleared.
-const PAID_ORDER_KEEP_DAYS=7;
-function oldPaidOrders(){
-  let cutoff=Date.now()-PAID_ORDER_KEEP_DAYS*864e5;
-  return (db.orders||[]).filter(o=>o.paid&&!kmsActive(o)&&(new Date(o.paidAt||o.payment?.processedAt||Number(o.id)).getTime()||Number(o.id))<cutoff);
-}
-function clearOldPaidOrders(){
-  let old=oldPaidOrders(); if(!old.length)return 0;
-  let ids=new Set(old.map(o=>o.id));
-  db.orders=db.orders.filter(o=>!ids.has(o.id));
-  (db.tables||[]).forEach(t=>{if(ids.has(t.orderId)){t.orderId=null;t.status='open';}});
-  save(); return old.length;
-}
-window.clearOldPaidOrdersNow=()=>{let n=oldPaidOrders().length;if(!n){alert('No paid orders older than 7 days.');return;}if(!confirm(`Clear ${n} paid order(s) older than 7 days from every device? Export any reports you need first.`))return;clearOldPaidOrders();render();toast(`Cleared ${n} old paid order(s).`);};
-// ---- Order archive and compaction ----
-// Paid orders from earlier days (tickets done) move to the cloud archive, one archive per day,
-// so the shared data only holds today and stays small and fast during a rush. Reports read the
-// archive. If the archive can't be written (e.g. Firebase rules block it), paid orders older
-// than 7 days are cleared instead, as before.
-const archiveStatus={last:0,moved:0,error:'',running:false};
-const dayOf=iso=>new Date(iso).toLocaleDateString('en-CA');
-function archiveCandidates(){let today=new Date().toLocaleDateString('en-CA');return (db.orders||[]).filter(o=>o.paid&&o.paidAt&&!kmsActive(o)&&dayOf(o.paidAt)<today);}
-async function archiveOldOrders(){
-  let A=window.__guthrieArchive;
-  if(archiveStatus.running)return;
-  if(!A||archiveStatus.blocked){clearOldPaidOrders();return;}
-  let list=archiveCandidates(); if(!list.length){archiveStatus.last=Date.now();return;}
-  archiveStatus.running=true;
-  try{
-    let byDay={}; list.forEach(o=>(byDay[dayOf(o.paidAt)]=byDay[dayOf(o.paidAt)]||[]).push(JSON.parse(JSON.stringify(o))));
-    for(let [day,orders] of Object.entries(byDay)){
-      await A.save(day,orders);
-      let ids=new Set(orders.map(o=>o.id));
-      window.__guthrieOrderStore?.markArchived?.([...ids]);
-      db.orders=db.orders.filter(o=>!ids.has(o.id));
-      db.archiveDays=[...new Set([...(db.archiveDays||[]),day])].sort();
-      delete archiveCache[day];
-      archiveStatus.moved+=orders.length; save();
-    }
-    archiveStatus.error=''; archiveStatus.last=Date.now();
-  }catch(e){
-    archiveStatus.error=String(e&&(e.code||e.message)||e);
-    if(/permission|denied|insufficient/i.test(archiveStatus.error))archiveStatus.blocked=true;
-    console.warn('Guthrie RMS: archive failed; falling back to clearing orders older than 7 days.',e);
-    clearOldPaidOrders();
-  }finally{archiveStatus.running=false;}
-}
-window.archiveOldOrdersNow=async()=>{await archiveOldOrders();render();toast(archiveStatus.error?'Archive could not run: '+archiveStatus.error:'Earlier days are archived.');};
-// An hour after an order is paid and its ticket is done, drop the KMS timing details (who
-// started / finished each item and when) and keep only the last two log entries. Sales, items,
-// options, payment and par counts are kept. Roughly doubles how many orders a day can hold.
-function compactOrders(){
-  let cutoff=Date.now()-3600000, n=0;
-  (db.orders||[]).forEach(o=>{
-    if(o.compact||!o.paid||kmsActive(o)||!(new Date(o.paidAt||0).getTime()<cutoff))return;
-    validItems(o).forEach(i=>{['kmsStarted','kmsStartedBy','kmsStartedAt','kmsDoneBy','kmsDoneAt','modCharge'].forEach(k=>delete i[k]);
-      if(i.kmsParts)Object.keys(i.kmsParts).forEach(k=>{i.kmsParts[k]={kmsDone:!!i.kmsParts[k]?.kmsDone};});});
-    if(Array.isArray(o.kmsLog)&&o.kmsLog.length>2)o.kmsLog=o.kmsLog.slice(-2);
-    o.compact=1; n++;
-  });
-  if(n)save();
-  return n;
-}
-// Archive runs about a minute after start-up (once cloud data has loaded), then hourly;
-// compaction every 10 minutes. Devices start at slightly different times to spread the work.
-function scheduleOrderMaintenance(){
-  let ready=()=>!window.__guthrieRMSApplyingCloud&&(window.__guthrieRMSBooted||!window.__guthrieSyncHealth);
-  let runArchive=()=>{if(ready()){archiveOldOrders();window.__guthrieOrderStore?.cleanTombstones?.();}}, runCompact=()=>{if(ready())compactOrders();};
-  setTimeout(runArchive,45000+Math.random()*45000); setInterval(runArchive,3600000);
-  setTimeout(runCompact,60000+Math.random()*60000); setInterval(runCompact,600000);
-}
-scheduleOrderMaintenance();
 
 window.addEventListener('error',function(e){
   const root=document.getElementById('app');

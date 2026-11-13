@@ -1,47 +1,9 @@
 # Guthrie RMS Changelog
 
-## Usage-Limit Warning Clears by Itself
-- The "Firebase usage limit" banner used to stay up until the iPad successfully saved something, even after the plan was upgraded. Now, as soon as the cloud answers again, the iPad tries a save right away and the banner clears when it works.
-- Managers can tap the banner to retry immediately; it also shows Firebase's own error text to help diagnose.
-
-## Orders Stored One per Cloud Record (Fits the Free Firebase Plan)
-- Each order is now its own small record in the cloud (guthrieRMS/order_<id>). A change sends only that order (a few KB) to each iPad, instead of re-sending all the shared data (about 600 KB on a busy day) to every iPad, which used up the free Firebase plan ("resource-exhausted").
-- The rest of the shared data (menu, users, inventory, settings, pars) stays in the shared copy, which is now much smaller and only re-sent when it changes.
-- Automatic move-over: the first iPad on this version moves every existing order into its own record, and only switches over once every order is confirmed in the cloud. iPads still on older code keep working; orders they add are moved over too. Archived orders are deleted from the order records (no leftover markers).
-- If the Firebase rules don't allow the order records, the app keeps orders in the shared copy as before and Settings › Data shows the free rule change to make.
-- Load-tested with a simulated Firestore (1 register + 6 KMS iPads, up to 150 existing orders moved over plus 80 rush orders, and a register that goes offline, reloads and reconnects): no lost orders, payments or KMS taps, every iPad matched, chimes exact per station. Estimated free-plan use for a 400-order day: about 25,000 of 50,000 reads, 2,200 of 20,000 writes and 30 MB of about 340 MB data transfer.
-
-## Firebase Usage Limit ("resource-exhausted")
-- When Firebase's free-plan limits are used up, every save fails with "resource-exhausted" and no iPad can sync. The app now says so plainly: managers see "Firebase usage limit reached … Upgrade to the Blaze plan", students see "Tell a manager right away", and Settings › Data explains the fix.
-- While the limit is reached, iPads retry once a minute instead of every 2 seconds. Orders stay saved on each iPad and are sent when sync resumes.
-- Cause: every change re-sends the whole shared data (about 600 KB on a busy day) to every iPad, which uses up the free plan quickly. Fix: upgrade the Firebase project to the Blaze (pay-as-you-go) plan.
-
-## No More "Local Only — Timed Out"
-- An iPad that takes longer than 6 seconds to reach the cloud (busy Wi-Fi, or every iPad reloading at once after an update) now shows "Connecting to the cloud… still trying" and keeps connecting, instead of "Local only — cloud connection timed out".
-- Orders, payments, 86s and other changes made while an iPad is still connecting are tracked from the moment the app opens and merged into the cloud copy when it connects (field by field), so nothing done on a slow iPad is lost. Before, the cloud copy replaced them.
-- If the cloud connection drops during service, the iPad reconnects by itself (every 5 seconds) and sends anything saved while disconnected. Sign-in also retries instead of giving up.
-- A red banner shows on any iPad not connected for more than 10 seconds: orders are saved on the iPad and will be sent when it connects. If the cloud code couldn't load at all, the banner says "Tap here to retry", and the iPad retries by itself when nobody is mid-order.
-- Tested: a register that takes 20 seconds to connect, rings up 2 orders, pays an order the Grill was completing and 86s an item meanwhile; and a connection drop mid-service. Everything reached the cloud and the KMS, with both the payment and the Grill's tap kept.
-
-## Rush-Proof Orders: Offline Safety, Order Archive Storage, Smaller Shared Data
-- Orders rung up while an iPad has no Wi-Fi are kept on that iPad until the cloud confirms them, even if the iPad reloads before reconnecting. They are sent as soon as it's back online and merged field by field with anything other devices changed meanwhile (KMS taps, payment). Before, a reload before reconnecting could drop them.
-- Order archive (long-term storage): paid orders from earlier days move hourly out of the shared data into one cloud archive per day (guthrieRMS/archive_YYYY-MM-DD). The shared data then holds mainly today, so it stays small and fast in a rush, and history is kept instead of cleared after 7 days. Reports (Today, Last 7 Days, This Month, All Time, Custom) include archived days. If the Firebase rules don't allow the archive, the app falls back to clearing paid orders older than 7 days and Settings › Data shows the rule to add.
-- An hour after an order is paid and its ticket is done, the KMS timing details are dropped (who started/finished each item and when); sales, items, options, payment and par counts are kept. About doubles how many orders one day can hold.
-- A finished ticket stays finished when devices reconnect: the ticket stage follows its combined log, so it only reopens when it was recalled or more items were sent.
-- Settings › Data shows archive status, archived days, orders waiting, and "Archive Earlier Days Now".
-- Load-tested (simulated shared database, 1 register + 6 KMS iPads, 60–100 orders at 1–2 a second, plus a register that loses Wi-Fi, rings up 3 orders, reloads and reconnects): no lost orders, payments or KMS taps; the offline orders reached the KMS after reconnecting; all iPads matched; chimes exact per station; earlier days archived (or cleared after 7 days when the archive is blocked).
-
 ## Easier Option (Modifier) Editing in Settings › Menu Items
 - The Add / Edit item pop-up replaces the typed options box with an option editor. Each group is a card with its name, a Required / Optional switch, a Pick 1 / Pick any switch, and one row per option with a +/− $ box for an upcharge (1.00) or discount (-8). Add Option, ✕ to remove, ↑ ↓ to reorder groups, Delete Group.
 - "+ Add a common group…" adds a ready-made group to edit: Hot or Iced, Ice, Flavor, Protein, Tortilla, Leave Off, Add Toppings, Warm, Allergy Alert.
 - A live Preview shows the options exactly as students will see them when ringing up.
-
-## Reliability for Busy Service (1 register + 6 KMS iPads)
-- Fixed: a payment could be lost when the register marked an order paid at the same moment a KMS station tapped that order (the device that saved last replaced the whole order). Orders now merge field by field against the last shared copy: a change made on only one device is always kept, ticket lines merge by line (removed lines stay removed, added lines are kept), and the KMS log and refunds combine. A paid order stays paid.
-- Load-tested with a simulated shared database, 1 register and 6 KMS iPads (Grill, Fry, Beverage, Expo, All Tickets, a second Grill) tapping Start/Complete at once: 60 orders at about 1 a second and 120 orders at about 2 a second, each sent and paid right away. Result: no lost orders, payments or KMS taps, every iPad ended up identical, and each station chimed exactly once per order sent to it.
-- Paid orders older than 7 days are cleared automatically (every hour, on every device) to keep the shared data far under the cloud's 1 MB limit. Open orders are never cleared. Settings › Data shows the shared data size, sync status and a "Clear Now" button.
-- A red banner shows on any iPad whose changes have not reached the cloud for more than 8 seconds (e.g. Wi-Fi down), instead of failing silently. Managers see a yellow warning if the shared data passes 75% of the limit.
-- KMS: a large "Sound is off on this iPad — tap here" banner shows whenever the browser has turned sound off (after a reload or the iPad sleeping) and disappears once tapped.
 
 ## KMS Sound Plays Only at the Order's Stations
 - Each KMS iPad now remembers its station (saved on that iPad). Before, every iPad went back to All Tickets when the app reloaded, so every station chimed for every order.
