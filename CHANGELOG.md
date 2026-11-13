@@ -1,5 +1,10 @@
 # Guthrie RMS Changelog
 
+## Easier Option (Modifier) Editing in Settings › Menu Items
+- The Add / Edit item pop-up replaces the typed options box with an option editor. Each group is a card with its name, a Required / Optional switch, a Pick 1 / Pick any switch, and one row per option with a +/− $ box for an upcharge (1.00) or discount (-8). Add Option, ✕ to remove, ↑ ↓ to reorder groups, Delete Group.
+- "+ Add a common group…" adds a ready-made group to edit: Hot or Iced, Ice, Flavor, Protein, Tortilla, Leave Off, Add Toppings, Warm, Allergy Alert.
+- A live Preview shows the options exactly as students will see them when ringing up.
+
 ## KMS Sound Plays Only at the Order's Stations
 - Each KMS iPad now remembers its station (saved on that iPad). Before, every iPad went back to All Tickets when the app reloaded, so every station chimed for every order.
 - A station chimes only for orders with items (or parts, like fries) sent to it. An order with tacos and a latte chimes on Grill and Beverage only. Expo and All Tickets chime for every order.
