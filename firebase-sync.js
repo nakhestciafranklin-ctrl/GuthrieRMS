@@ -451,6 +451,10 @@ if(!isConfigured(firebaseConfig)){
                 local[local.indexOf(l)]=next; byId.set(id,next);
               }
               baseOrders.set(c.id,orderKey(c));
+              // The cloud copy is now known: forget "already sent", so if it lacks this iPad's
+              // change (another iPad saved at the same instant), the change is sent again.
+              lastPushed.delete(c.id);
+              if(orderKey(local[local.findIndex(o=>String(o.id)===id)]||c)!==orderKey(c))dirty=true;
             });
             if(first){
               first=false; ordersReady=true;

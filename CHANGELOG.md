@@ -1,5 +1,12 @@
 # Guthrie RMS Changelog
 
+## Orders Stored One per Cloud Record (Fits the Free Firebase Plan)
+- Each order is now its own small record in the cloud (guthrieRMS/order_<id>). A change sends only that order (a few KB) to each iPad, instead of re-sending all the shared data (about 600 KB on a busy day) to every iPad, which used up the free Firebase plan ("resource-exhausted").
+- The rest of the shared data (menu, users, inventory, settings, pars) stays in the shared copy, which is now much smaller and only re-sent when it changes.
+- Automatic move-over: the first iPad on this version moves every existing order into its own record, and only switches over once every order is confirmed in the cloud. iPads still on older code keep working; orders they add are moved over too. Archived orders are deleted from the order records (no leftover markers).
+- If the Firebase rules don't allow the order records, the app keeps orders in the shared copy as before and Settings › Data shows the free rule change to make.
+- Load-tested with a simulated Firestore (1 register + 6 KMS iPads, up to 150 existing orders moved over plus 80 rush orders, and a register that goes offline, reloads and reconnects): no lost orders, payments or KMS taps, every iPad matched, chimes exact per station. Estimated free-plan use for a 400-order day: about 25,000 of 50,000 reads, 2,200 of 20,000 writes and 30 MB of about 340 MB data transfer.
+
 ## Firebase Usage Limit ("resource-exhausted")
 - When Firebase's free-plan limits are used up, every save fails with "resource-exhausted" and no iPad can sync. The app now says so plainly: managers see "Firebase usage limit reached … Upgrade to the Blaze plan", students see "Tell a manager right away", and Settings › Data explains the fix.
 - While the limit is reached, iPads retry once a minute instead of every 2 seconds. Orders stay saved on each iPad and are sent when sync resumes.
