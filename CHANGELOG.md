@@ -1,5 +1,9 @@
 # Guthrie RMS Changelog
 
+## Baby Spinach Salad with Grilled Chicken
+- The Baby Spinach Salad now comes with grilled chicken. The salad shows on the Salad KMS screen as usual and the chicken shows on Grill ("Grilled Chicken for Baby Spinach Salad"). Expo shows both, and the salad is done when both are done.
+- New "No Chicken" option takes the chicken off the Grill ticket. Price unchanged ($8).
+
 ## Shrimp & Grits
 - Added Shrimp & Grits ($12) to the Bistro menu under Weekly Chef Special, routed to the Grill KMS station.
 
