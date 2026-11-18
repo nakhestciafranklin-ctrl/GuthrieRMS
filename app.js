@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111801;
+window.GUTHRIE_RMS_VERSION=2026111802;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -720,11 +720,14 @@ importCafeMenu();
 const sideSwapPrices={'Sub Charred Broccolini':1,'Sub Gruyère Mac & Cheese':1};
 // Sandwiches come with pommes frites made at the Fry station; a side swap sends the
 // replacement side to the Grill instead. Each component gets its own KMS line.
+// The buttermilk chicken filet is fried at the Fry station; the sandwich's main line (the bun set)
+// stays on the Grill.
+const filetComponent={key:'filet',name:'Chicken Filet',station:'fry'};
 const friesComponent={key:'side',name:'Pommes Frites',station:'fry',swaps:{'Sub Charred Broccolini':{name:'Charred Broccolini',station:'grill'},'Sub Gruyère Mac & Cheese':{name:'Gruyère Mac & Cheese',station:'grill'}}};
 const bistroMenuData=[
  {id:201,name:'Guthrie Bistro Burger',price:12,category:'Handhelds',station:'grill',mods:['No Cheese','No Pickles','No Sauce','Sauce on Side','Medium','Medium Well','Well Done','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[friesComponent]},
  {id:202,name:'Smoked Turkey Club',price:10,category:'Handhelds',station:'grill',mods:['No Ham','No Gruyère','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[friesComponent]},
- {id:203,name:'Buttermilk-Brined Chicken',price:11,category:'Handhelds',station:'grill',mods:['No Aioli','Aioli on Side','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[friesComponent]},
+ {id:203,name:'Buttermilk-Brined Chicken',price:11,category:'Handhelds',station:'grill',mainTask:'Bun Set',mods:['No Aioli','Aioli on Side','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[filetComponent,friesComponent]},
  {id:222,name:'Golden Melt Grilled Cheese',price:3,category:'Handhelds',station:'grill',mods:['Cut in Half','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Allergy Alert']},
  {id:204,name:'Southern Cobb Salad',price:12,category:'Greens & Bowls',station:'salad',mods:['No Chicken','No Bacon','No Egg','No Avocado','No Feta','No Corn','Dressing on Side','Allergy Alert']},
  {id:205,name:'Baby Spinach Salad',price:8,category:'Greens & Bowls',station:'salad',mods:['No Goat Cheese','No Pecans','Dressing on Side','Allergy Alert']},
@@ -757,6 +760,13 @@ function importBistroMenu(){
   if(!Array.isArray(db.menu))db.menu=[];
   bistroMenuData.forEach(item=>{
     let existing=db.menu.find(m=>m.id===item.id);
+    // KMS parts (components) and the main line's label aren't edited in Settings, so they always
+    // follow the menu here, even for items changed in Settings > Menu Items.
+    if(existing&&!existing.deleted){
+      let comps=item.components?JSON.parse(JSON.stringify(item.components)):null;
+      if(JSON.stringify(existing.components||null)!==JSON.stringify(comps)){if(comps)existing.components=comps;else delete existing.components;changed=true;}
+      if((existing.mainTask||null)!==(item.mainTask||null)){if(item.mainTask)existing.mainTask=item.mainTask;else delete existing.mainTask;changed=true;}
+    }
     if(existing&&(existing.editedAt||existing.deleted))return; // changed or deleted in Settings > Menu Items
     if(existing){
       if(item.modPrices&&!existing.modPrices){existing.modPrices={...item.modPrices};changed=true;}
@@ -1482,7 +1492,8 @@ function kmsItemsList(o,_items,station){
   let i=t.i, isNew=(Number(i.sendRound)||1)>1&&i.sendRound===o.sendCount;
   let mods=(i.mods||[]).map(md=>`<span class="kms-mod ${/allerg/i.test(md)?'alert':''}">${md}</span>`).join('');
   let note=i.note?`<span class="kms-note">Note: ${i.note}</span>`:'';
-  let title=t.component?`<b>${t.name}</b><span class="small">for ${i.name}</span>`:`<b>${i.name}</b>`;
+  let mt=!t.component&&o.type!=='catering'?db.menu.find(x=>x.id===i.menuId)?.mainTask:'';
+  let title=t.component?`<b>${t.name}</b><span class="small">for ${i.name}</span>`:`<b>${i.name}</b>${mt?`<span class="small">${mt}</span>`:''}`;
   return `<div class="kms-line ${t.component&&showAll?'kms-part':''} ${t.done?'done':t.started?'started':''}">${kmsStepButton(o,t)}<div class="kms-line-body"><div class="kms-line-head">${title}${isNew?'<span class="kms-new">NEW</span>':''}${showAll?`<span class="kms-station">${(kmsStationLabels[t.station]||t.station).toUpperCase()}</span>`:''}${o.type==='table'?`<span class="small">Seat ${i.seat||'-'}</span>`:''}</div>${(mods||note)&&!(t.component&&showAll)?`<div class="kms-mods">${mods}${note}</div>`:''}</div></div>`;
  };
  return `<div class="kms-lines">${tasks.map(row).join('')}</div>`;
