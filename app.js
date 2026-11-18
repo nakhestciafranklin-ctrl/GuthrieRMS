@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111807;
+window.GUTHRIE_RMS_VERSION=2026111808;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -748,12 +748,12 @@ const bistroMenuData=[
  {id:225,name:'Strawberry Garden Lemonade Refill',price:0,category:'Beverages',station:'beverage',mods:['Light Ice','No Ice']},
  {id:223,name:'Iced Latte',price:3,category:'Beverages',station:'beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Light Ice','Extra Ice']},
  {id:224,name:'Hot Coffee with Syrup',price:3,category:'Beverages',station:'beverage',mods:['Vanilla','Mocha','Caramel','Pumpkin','Add Milk','Room for Cream']},
- {id:216,name:'Chocolate Chunk Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:217,name:'Snickerdoodle Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:218,name:'Sprinkle Sugar Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','Allergy Alert']},
- {id:219,name:'Salted Caramel Brownie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm','Allergy Alert']},
- {id:220,name:'Brown Butter Pecan Blondie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm','Allergy Alert']},
- {id:221,name:'Warm Peach Cobbler',price:3,category:'Bake Shop',station:'dessert',mods:['No Ice Cream','Ice Cream on Side','Allergy Alert']}
+ {id:216,name:'Chocolate Chunk Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','To-Go','Allergy Alert']},
+ {id:217,name:'Snickerdoodle Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','To-Go','Allergy Alert']},
+ {id:218,name:'Sprinkle Sugar Cookie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm Cookie','To-Go','Allergy Alert']},
+ {id:219,name:'Salted Caramel Brownie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm','To-Go','Allergy Alert']},
+ {id:220,name:'Brown Butter Pecan Blondie',price:3,category:'Bake Shop',station:'dessert',mods:['Warm','To-Go','Allergy Alert']},
+ {id:221,name:'Warm Peach Cobbler',price:3,category:'Bake Shop',station:'dessert',mods:['No Ice Cream','Ice Cream on Side','To-Go','Allergy Alert']}
 ];
 // Condiment options renamed from "X on Side" to "Add Side of X".
 const renamedBistroMods={'Ketchup on Side':'Add Side of Ketchup','Mustard on Side':'Add Side of Mustard','Mayo on Side':'Add Side of Mayo','Pickles on Side':'Add Side of Pickles','Aioli on Side':'Add Side of Aioli'};
@@ -762,6 +762,19 @@ const retiredBistroSeedIds=[1,2,3,4];
 // Bump when a Bistro price changes (e.g. spinach salad $8 -> $12): devices that already have the
 // menu take the new prices once. Items repriced in Settings › Menu Items are left alone.
 const bistroPriceVersion=1;
+// Bistro desserts (Bake Shop) get a "To-Go" option. Added once to items already
+// on a device (including ones edited in Settings), just before Allergy Alert.
+const dessertToGoVersion=1;
+function addDessertToGo(){
+  if((Number(db.dessertToGoVersion)||0)>=dessertToGoVersion)return false;
+  (db.menu||[]).forEach(m=>{
+    if(m.deleted||!(m.menu==='bistro'&&m.category==='Bake Shop'))return;
+    let ins=list=>{if(!Array.isArray(list)||list.includes('To-Go'))return list;let i=list.indexOf('Allergy Alert');let out=[...list];out.splice(i<0?out.length:i,0,'To-Go');return out;};
+    m.mods=ins(m.mods||[]);
+    if(Array.isArray(m.modGroups)&&m.modGroups.length&&!m.modGroups.some(g=>(g.options||[]).includes('To-Go'))){let g=m.modGroups.find(g=>(g.options||[]).includes('Allergy Alert'))||m.modGroups[0];g.options=ins(g.options||[]);}
+  });
+  db.dessertToGoVersion=dessertToGoVersion; return true;
+}
 function importBistroMenu(){
   let changed=false;
   if(!Array.isArray(db.menu))db.menu=[];
@@ -810,6 +823,7 @@ function importBistroMenu(){
     let c=cafeMenuData.find(x=>x.id===m.id); if(c&&!m.station)m.station=c.station;
     changed=true;
   });
+  if(addDessertToGo())changed=true;
   if(changed)save();
   return changed;
 }
