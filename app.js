@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111809;
+window.GUTHRIE_RMS_VERSION=2026111810;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -931,6 +931,7 @@ function importExemptionMenu(){
     db.exemptionMenuVersion=exemptionMenuVersion;changed=true;
   }
   if(importCafeHolidaySpecials())changed=true;
+  if(importBistroHolidayLattes())changed=true;
   if(changed)save();
   return changed;
 }
@@ -958,6 +959,17 @@ function importCafeHolidaySpecials(){
     if(update)['name','price','category','station','mods','modGroups','sortOrder'].forEach(k=>{if(JSON.stringify(existing[k])!==JSON.stringify(fresh[k])){if(fresh[k]===undefined)delete existing[k];else existing[k]=fresh[k];changed=true;}});
   });
   if(update){db.cafeHolidayVersion=cafeHolidayVersion;changed=true;}
+  return changed;
+}
+// Holiday lattes on the Bistro menu too (Holiday Specials section at the top of the Bistro tab).
+// Separate items from the café ones so each menu keeps its own daily pars.
+const bistroHolidayData=exHolidayLattes([[228,'Peppermint Mocha'],[229,'Winter Wonderland'],[230,'Pumpkin Spice Latte'],[231,'Chocolate Hazelnut Truffle'],[232,'Caramel Pumpkin Cheesecake'],[233,'Gingerbread Cookie Latte'],[234,'S\'mores Mocha'],[235,'Brown Sugar Cinnamon Latte'],[236,'Cookie Butter Latte']],'Holiday Specials').map((item,i)=>({...item,mods:item.modGroups.flatMap(g=>g.options),sortOrder:i}));
+function importBistroHolidayLattes(){
+  let changed=false;
+  bistroHolidayData.forEach(item=>{
+    if(db.menu.find(m=>m.id===item.id))return;
+    db.menu.push({...JSON.parse(JSON.stringify(item)),inv:'bistro',menu:'bistro',active:true,dailyPar:0});changed=true;
+  });
   return changed;
 }
 window.importExemptionMenu=importExemptionMenu;
@@ -1832,13 +1844,13 @@ function menuSorted(items){let key=([m,i])=>m.sortOrder!=null?1e6+Number(m.sortO
 // gets a food icon picked from its name, so each button has a picture for students.
 const menuPhotoIds={
  'breakfast-taco':[301,302,303],'cinnamon-roll-classic':[304],'cinnamon-roll-pumpkin':[310],'tacos':[311],'nachos':[312],'rice-bowl':[313],
- 'peppermint-mocha':[321,115],'winter-wonderland':[322,116],'pumpkin-spice-latte':[323,117],'chocolate-hazelnut-truffle':[324,118],
- 'caramel-pumpkin-cheesecake':[325,119],'gingerbread-cookie-latte':[326,120],'smores-mocha':[327,121],'brown-sugar-cinnamon-latte':[328,122],
+ 'peppermint-mocha':[321,115,228],'winter-wonderland':[322,116,229],'pumpkin-spice-latte':[323,117,230],'chocolate-hazelnut-truffle':[324,118,231],
+ 'caramel-pumpkin-cheesecake':[325,119,232],'gingerbread-cookie-latte':[326,120,233],'smores-mocha':[327,121,234],'brown-sugar-cinnamon-latte':[328,122,235],
  'latte':[305,113,223],'cappuccino':[319,126],'americano':[306,114,224,227],'horchata':[320],'agua-fresca':[308],'peach-tea':[307,212],
  'cookie':[101,216],'brownie':[219],
  // From the Guthrie Culinary Offerings board.
  'brisket-burger':[201,309],'club':[202],'tomato-basil-soup':[206],'grilled-cheese':[222],'cobb-salad':[204],'pomme-frites':[211],'mac-cheese':[210],
- 'broccolini':[209],'sprinkle-sugar-cookie':[218],'cookie-butter':[123],'strawberry-refresher':[109],'peach-berry-refresher':[110],'mango-refresher':[111],
+ 'broccolini':[209],'sprinkle-sugar-cookie':[218],'cookie-butter':[123,236],'strawberry-refresher':[109],'peach-berry-refresher':[110],'mango-refresher':[111],
  'blue-raspberry-refresher':[112],'hot-honey-wrap':[106],'quesadilla':[107],'street-corn-bowl':[108],'double-chocolate-cookie':[124],'sugar-cookie':[125]
 };
 const menuPhotos=Object.fromEntries(Object.entries(menuPhotoIds).flatMap(([f,ids])=>ids.map(id=>[id,`assets/menu/${f}.jpg`])));
