@@ -3,6 +3,9 @@
 ## Grilled Cheese to the Salad Station
 - Golden Melt Grilled Cheese now shows on the Salad KMS screen (was Grill).
 
+## Spinach Salad $12
+- Baby Spinach Salad (with grilled chicken) is now $12. iPads that already have the menu take the new price once; prices changed in Settings › Menu Items are left alone.
+
 ## Club to the Salad Station
 - The Smoked Turkey Club now shows on the Salad KMS screen (was Grill). Its pommes frites still go to Fry; a broccolini or mac & cheese side swap goes to Grill.
 
