@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Grilled Cheese to the Salad Station
+- Golden Melt Grilled Cheese now shows on the Salad KMS screen (was Grill).
+
 ## Club to the Salad Station
 - The Smoked Turkey Club now shows on the Salad KMS screen (was Grill). Its pommes frites still go to Fry; a broccolini or mac & cheese side swap goes to Grill.
 
