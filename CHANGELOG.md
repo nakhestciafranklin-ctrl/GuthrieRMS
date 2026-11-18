@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Strawberry Garden Lemonade Refill
+- Added Strawberry Garden Lemonade Refill (free, $0.00) to the Bistro menu under Beverages, with Light Ice / No Ice. It goes to the Beverage KMS station and still shows in reports.
+
 ## "Not Syncing" Banner
 - A red banner at the bottom of every screen tells a station when its iPad isn't syncing: saves have been failing for more than 8 seconds (Wi-Fi down, or the Firebase usage limit), or the iPad started without the cloud ("Local only"). It clears by itself once saving works again.
 
