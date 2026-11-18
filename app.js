@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111810;
+window.GUTHRIE_RMS_VERSION=2026111811;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -2063,6 +2063,14 @@ function inReportRange(iso){
   let {from,to}=reportRange(), day=new Date(iso).toLocaleDateString('en-CA');
   return (!from||day>=from)&&(!to||day<=to);
 }
+// Peak times: paid orders grouped by the hour they were started (order id = start time), with
+// orders, items and sales per hour. Hours with no orders are left out.
+function salesByHour(orders){
+  let map={};
+  orders.forEach(o=>{let h=new Date(Number(o.id)||o.paidAt).getHours();let r=map[h]||(map[h]={hour:h,orders:0,items:0,sales:0});r.orders++;r.items+=validItems(o).length;r.sales+=total(o);});
+  return Object.values(map).sort((a,b)=>a.hour-b.hour);
+}
+const hourLabel=h=>{let f=x=>((x+11)%12+1)+(x<12||x===24?' AM':' PM');return f(h)+' – '+f(h+1);};
 // Paid order lines grouped by item name, with quantity, sales, and a count of each modifier.
 function itemSalesBreakdown(orders){
   let map={};
@@ -2101,11 +2109,14 @@ function reports(){
     <h2>Sales by Item</h2>
     <table class="report-table"><tr><th>Item</th><th>Category</th><th>Qty Sold</th><th>Sales</th><th>% of Sales</th><th>Modifiers</th></tr>${items.map(r=>`<tr><td><b>${r.name}</b></td><td>${r.category}</td><td>${r.qty}</td><td>${money(r.sales)}</td><td>${sales>0?(r.sales/sales*100).toFixed(1)+'%':'—'}</td><td class="small">${modText(r)||'—'}</td></tr>`).join('')}${items.length?`<tr><td colspan="2"><b>Total</b></td><td><b>${itemCount}</b></td><td><b>${money(sales)}</b></td><td></td><td></td></tr>`:'<tr><td colspan="6">No items sold in this range.</td></tr>'}</table>
     <p class="small">Item sales are before refunds; refunds are recorded per order and shown in Total Refunds.</p>
+    <h2>Peak Times (Sales by Hour)</h2>
+    ${(()=>{let hrs=salesByHour(paidOrders);if(!hrs.length)return '<p>No paid orders in this range.</p>';let maxO=Math.max(...hrs.map(r=>r.orders)),maxS=Math.max(...hrs.map(r=>r.sales));
+      return `<table class="report-table"><tr><th>Hour</th><th>Orders</th><th>Items</th><th>Sales</th><th style="width:35%"></th></tr>${hrs.map(r=>`<tr${r.orders===maxO?' class="peak-row"':''}><td><b>${hourLabel(r.hour)}</b>${r.orders===maxO?' <span class="peak-tag">Peak</span>':''}</td><td>${r.orders}</td><td>${r.items}</td><td>${money(r.sales)}</td><td><div class="hour-bar"><span style="width:${maxS>0?(r.sales/maxS*100).toFixed(0):0}%"></span></div></td></tr>`).join('')}</table><p class="small">By the hour each order was started. Busiest hour (most orders) is marked Peak.</p>`;})()}
     <h2>Sales by Order Type</h2>
     <table class="report-table"><tr><th>Type</th><th>Total</th></tr>${Object.entries(byType).map(([t,v])=>`<tr><td>${t.toUpperCase()}</td><td>${money(v)}</td></tr>`).join('')||'<tr><td colspan="2">No paid orders in this range.</td></tr>'}</table>
     <h2>Recent Shifts</h2>
     <table class="report-table"><tr><th>Name</th><th>Position</th><th>In</th><th>Out</th><th>Hours</th></tr>${db.shifts.slice(-10).reverse().map(s=>`<tr><td>${s.name}</td><td>${s.pos||''}</td><td>${new Date(s.in).toLocaleString()}</td><td>${s.out?new Date(s.out).toLocaleString():'&mdash;'}</td><td>${(Number(s.hours)||0).toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="5">No shifts recorded yet.</td></tr>'}</table>
-    <div class="row section"><button class="primary" onclick="exportReportCSV()">Export Sales CSV</button><button class="primary" onclick="exportItemSalesCSV()">Export Item Sales CSV</button></div>
+    <div class="row section"><button class="primary" onclick="exportReportCSV()">Export Sales CSV</button><button class="primary" onclick="exportItemSalesCSV()">Export Item Sales CSV</button><button class="primary" onclick="exportHourlyCSV()">Export Peak Times CSV</button></div>
   </section>`;
 }
 window.exportReportCSV=()=>{
@@ -2118,6 +2129,12 @@ window.exportItemSalesCSV=()=>{
   let rows=[['Range','Item','Category','Qty Sold','Sales','Modifiers']];
   itemSalesBreakdown(orders).forEach(r=>rows.push([label,r.name,r.category,r.qty,r.sales.toFixed(2),Object.entries(r.mods).map(([k,v])=>`${k} x${v}`).join('; ')]));
   downloadCSV(`guthrie-rms-item-sales-${label.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,rows);
+};
+window.exportHourlyCSV=()=>{
+  let {label}=reportRange(), orders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
+  let rows=[['Range','Hour','Orders','Items','Sales']];
+  salesByHour(orders).forEach(r=>rows.push([label,hourLabel(r.hour),r.orders,r.items,r.sales.toFixed(2)]));
+  downloadCSV(`guthrie-rms-peak-times-${label.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,rows);
 };
 
 // ---- Invoices ----
