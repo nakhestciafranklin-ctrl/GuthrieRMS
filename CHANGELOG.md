@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Data Recovery Page (recover.html)
+- New page at recover.html (same address as the app, with recover.html at the end). It reads only the data saved in that device's browser and never connects to the cloud, so opening it can't overwrite anything. It shows which order dates the device still has, a report for any date range (sales, items sold, peak times, End of Day total), CSV downloads, and a full backup file. Use it on a device that hasn't opened the app since before Nov 11 to look for 10/16 orders.
+
 ## Peak Times in Reports
 - Reports has a Peak Times (Sales by Hour) table for the selected range: orders, items and sales for each hour (by when the order was started), with a bar for sales and the busiest hour marked Peak. "Export Peak Times CSV" downloads it.
 
