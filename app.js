@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111803;
+window.GUTHRIE_RMS_VERSION=2026111804;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -730,7 +730,8 @@ const bistroMenuData=[
  {id:203,name:'Buttermilk-Brined Chicken',price:11,category:'Handhelds',station:'grill',mainTask:'Bun Set',mods:['No Aioli','Aioli on Side','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Sub Charred Broccolini','Sub Gruyère Mac & Cheese','Allergy Alert'],modPrices:sideSwapPrices,components:[filetComponent,friesComponent]},
  {id:222,name:'Golden Melt Grilled Cheese',price:3,category:'Handhelds',station:'grill',mods:['Cut in Half','Add Side of Ketchup','Add Side of Mustard','Add Side of Mayo','Add Side of Pickles','Add Side of Aioli','Allergy Alert']},
  {id:204,name:'Southern Cobb Salad',price:12,category:'Greens & Bowls',station:'salad',mods:['No Chicken','No Bacon','No Egg','No Avocado','No Feta','No Corn','Dressing on Side','Allergy Alert']},
- {id:205,name:'Baby Spinach Salad',price:8,category:'Greens & Bowls',station:'salad',mods:['No Goat Cheese','No Pecans','Dressing on Side','Allergy Alert']},
+ // Comes with grilled chicken, made at the Grill; "No Chicken" takes that part off the ticket.
+ {id:205,name:'Baby Spinach Salad',price:8,category:'Greens & Bowls',station:'salad',mods:['No Chicken','No Goat Cheese','No Pecans','Dressing on Side','Allergy Alert'],components:[{key:'chicken',name:'Grilled Chicken',station:'grill',swaps:{'No Chicken':null}}]},
  {id:206,name:'Tomato Basil Soup',price:3,category:'Greens & Bowls',station:'grill',mods:['Allergy Alert']},
  {id:207,name:'Chicken & Sausage Gumbo',price:6,category:'Greens & Bowls',station:'grill',mods:['No Rice','Allergy Alert']},
  {id:208,name:"Chef's Weekly Feature",price:12,category:'Weekly Chef Special',station:'grill',mods:['Allergy Alert']},
@@ -1380,11 +1381,12 @@ function kmsActive(o){
  return new Date(o.sent).toLocaleDateString('en-CA')===productionToday();
 }
 // Components of an item made at another station (e.g. a sandwich's fries). A side-swap
-// modifier replaces the component (fries → broccolini at the Grill).
+// modifier replaces the component (fries → broccolini at the Grill); a swap to null removes it
+// (No Chicken on the spinach salad).
 function itemComponents(i,o){
  if(o?.type==='catering') return [];
  let m=i?.menuId!=null?db.menu.find(x=>x.id===i.menuId):null;
- return (m?.components||[]).map(c=>{let sw=Object.keys(c.swaps||{}).find(md=>(i.mods||[]).includes(md));let r=sw?c.swaps[sw]:c;return {key:c.key,name:r.name,station:r.station};});
+ return (m?.components||[]).map(c=>{let sw=Object.keys(c.swaps||{}).find(md=>(i.mods||[]).includes(md));let r=sw?c.swaps[sw]:c;return r?{key:c.key,name:r.name,station:r.station}:null;}).filter(Boolean);
 }
 // Every piece of work on a ticket: each item's main task at its station, plus one task per
 // component. The main task's state lives on the item (kmsStarted/kmsDone); components in kmsParts.
