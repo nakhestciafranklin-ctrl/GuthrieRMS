@@ -1,6 +1,6 @@
 // Bump with every release (with the ?v= tag in index.html). Devices running an older
 // cached copy reload themselves when the shared cloud data carries a newer version.
-window.GUTHRIE_RMS_VERSION=2026111811;
+window.GUTHRIE_RMS_VERSION=2026111812;
 const $=s=>document.querySelector(s); const app=$('#app');
 const money=n=>'$'+(Number(n)||0).toFixed(2); const now=()=>new Date().toISOString();
 const seed={users:[{id:1,name:'Demo Manager',pin:'9999',role:'manager',pos:'Manager',active:true,access:['clock','dining','quick','checkout','kms','inventory','catering','recipes','reports','invoices','development','schedule','closeout','setup'],inventoryScope:'all'},{id:2,name:'FOH Student',studentId:'1001',teacherId:6,pin:'1001',role:'student',pos:'Server',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:3,name:'BOH Student',studentId:'1002',teacherId:6,pin:'1002',role:'student',pos:'Line Cook',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:4,name:'Cashier Student',studentId:'1003',teacherId:6,pin:'1003',role:'student',pos:'Cashier',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:5,name:'Inventory Student',studentId:'1004',teacherId:6,pin:'1004',role:'student',pos:'Inventory Lead',active:true,access:['clock','dining','quick','checkout','kms','inventory','development'],inventoryScope:'assigned'},{id:6,name:'Teacher Demo',pin:'8888',role:'teacher',pos:'Instructor',active:true,access:['clock','inventory','reports'],inventoryScope:'culinary'}],positions:['Manager','Instructor','Server','Host','Cashier','Runner','Expo','Line Cook','Prep Cook','Dishwasher','Inventory Lead','Shift Leader'],tables:Array.from({length:20},(_,i)=>({id:i+1,seats:4,status:'open',orderId:null})),menu:[{id:1,name:'Bistro Burger',price:8.5,inv:'bistro',mods:['No Onion','No Tomato','No Lettuce','Add Cheese','Add Bacon','Medium','Well Done']},{id:2,name:'Southern Cobb Salad',price:9,inv:'bistro',mods:['No Tomato','No Corn','Extra Dressing','Dressing on Side']},{id:3,name:'Peach Tea',price:2.5,inv:'bistro',mods:['Light Ice','No Ice','Extra Peach']},{id:4,name:'Cookie',price:2,inv:'bistro',mods:['Warm Cookie']},{id:5,name:'Box Lunch',price:12,inv:'culinary',mods:['Turkey','Ham','Vegetarian','No Mayo']},{id:6,name:'Catering Dessert Tray',price:35,inv:'culinary',mods:['Assorted','Chocolate Only','No Nuts']}],inventory:[{id:1,division:'bistro',vendor:'HEB',name:'Burger Patties',onHand:24,par:40,unit:'each'},{id:2,division:'bistro',vendor:'HEB',name:'Peach Syrup',onHand:2,par:4,unit:'bottle'},{id:3,division:'culinary',vendor:'Ben E. Keith',name:'Flour',onHand:15,par:30,unit:'lb'},{id:4,division:'culinary',vendor:'Armstrong Chemicals',name:'Sanitizer',onHand:1,par:3,unit:'gal'},{id:5,division:'culinary',vendor:'Amazon',name:'To-Go Containers',onHand:50,par:100,unit:'each'}],orders:[],shifts:[],cashbox:[],deliveries:[],cateringMenus:[{id:1,name:'Executive Lunch Package',price:12,description:'Entree salad or sandwich, dessert, and beverage',items:['Box Lunch','Peach Tea','Cookie']},{id:2,name:'Bistro Box Lunch',price:10,description:'Box lunch package for staff or district events',items:['Box Lunch','Cookie']},{id:3,name:'Dessert Tray Package',price:35,description:'Assorted dessert tray priced per tray',items:['Catering Dessert Tray']},{id:4,name:'Custom Catering Menu',price:0,description:'Build a custom order using culinary menu items',items:[]}]} ;
@@ -2063,6 +2063,49 @@ function inReportRange(iso){
   let {from,to}=reportRange(), day=new Date(iso).toLocaleDateString('en-CA');
   return (!from||day>=from)&&(!to||day<=to);
 }
+// ---- Daily sales summaries ----
+// Each day's sales, items sold, peak times and order types are saved as a small summary in
+// db.dailySummaries (by local date), so Reports can still show a day after its orders are gone.
+// Saved about a minute after start-up and hourly, and at End of Day. A saved summary is never
+// replaced by one with fewer orders (e.g. if old orders were cleared).
+const localDay=t=>{let d=new Date(t);return isNaN(d)?'':d.toLocaleDateString('en-CA');};
+function buildDaySummary(day,orders){
+  let r2=n=>Math.round(n*100)/100, items={}, hours={}, types={}, sales=0;
+  orders.forEach(o=>{let t=total(o);sales+=t;types[o.type]=r2((types[o.type]||0)+t);
+    let h=new Date(Number(o.id)||o.paidAt).getHours();let hr=hours[h]||(hours[h]=[h,0,0,0]);hr[1]++;hr[2]+=validItems(o).length;hr[3]=r2(hr[3]+t);
+    validItems(o).forEach(i=>{let m=db.menu.find(x=>x.id===i.menuId);let it=items[i.name]||(items[i.name]=[i.name,m?.category||(o.type==='catering'?'Catering':'Other'),0,0]);it[2]++;it[3]=r2(it[3]+(Number(i.price)||0));});});
+  return {date:day,sales:r2(sales),orders:orders.length,items:Object.values(items),hours:Object.values(hours).sort((a,b)=>a[0]-b[0]),types,savedAt:now()};
+}
+function updateDailySummaries(){
+  let byDay={}; (db.orders||[]).forEach(o=>{if(!o.paid)return;let d=localDay(o.paidAt||Number(o.id));if(d)(byDay[d]=byDay[d]||[]).push(o);});
+  db.dailySummaries=db.dailySummaries||{}; let changed=false;
+  Object.entries(byDay).forEach(([d,orders])=>{
+    let cur=db.dailySummaries[d], next=buildDaySummary(d,orders);
+    if(cur&&cur.orders>next.orders)return;
+    let same=cur&&JSON.stringify({...cur,savedAt:0})===JSON.stringify({...next,savedAt:0});
+    if(!same){db.dailySummaries[d]=next;changed=true;}
+  });
+  return changed;
+}
+setTimeout(function runSummaries(){try{if(state.user!==undefined&&!window.__guthrieRMSApplyingCloud&&updateDailySummaries())save();}catch(e){console.warn('Daily summary save failed',e);}setTimeout(runSummaries,3600000);},60000);
+// Report data for the selected range: live paid orders, plus saved summaries for days in the
+// range that no longer have their orders.
+function reportData(){
+  let {from,to}=reportRange(), inR=d=>(!from||d>=from)&&(!to||d<=to);
+  let paidOrders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
+  let liveDays=new Set(db.orders.filter(o=>o.paid).map(o=>localDay(o.paidAt||Number(o.id))));
+  let sums=Object.values(db.dailySummaries||{}).filter(x=>inR(x.date)&&!liveDays.has(x.date)).sort((a,b)=>a.date<b.date?-1:1);
+  let sales=paidOrders.reduce((a,o)=>a+total(o),0)+sums.reduce((a,x)=>a+(Number(x.sales)||0),0);
+  let orderCount=paidOrders.length+sums.reduce((a,x)=>a+(x.orders||0),0);
+  let byType={};paidOrders.forEach(o=>{byType[o.type]=(byType[o.type]||0)+total(o);});sums.forEach(x=>Object.entries(x.types||{}).forEach(([t,v])=>byType[t]=(byType[t]||0)+v));
+  let items=itemSalesBreakdown(paidOrders), im=Object.fromEntries(items.map(r=>[r.name,r]));
+  sums.forEach(x=>(x.items||[]).forEach(([name,category,qty,sl])=>{let r=im[name]||(im[name]={name,category,qty:0,sales:0,mods:{}});r.qty+=qty;r.sales+=sl;}));
+  items=Object.values(im).sort((a,b)=>b.sales-a.sales||b.qty-a.qty);
+  let hm=Object.fromEntries(salesByHour(paidOrders).map(r=>[r.hour,r]));
+  sums.forEach(x=>(x.hours||[]).forEach(([h,o,it,sl])=>{let r=hm[h]||(hm[h]={hour:h,orders:0,items:0,sales:0});r.orders+=o;r.items+=it;r.sales+=sl;}));
+  let hours=Object.values(hm).sort((a,b)=>a.hour-b.hour);
+  return {paidOrders,sums,sales,orderCount,byType,items,hours};
+}
 // Peak times: paid orders grouped by the hour they were started (order id = start time), with
 // orders, items and sales per hour. Hours with no orders are left out.
 function salesByHour(orders){
@@ -2084,11 +2127,8 @@ function itemSalesBreakdown(orders){
 }
 function reports(){
   let range=reportRange();
-  let paidOrders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
-  let sales=paidOrders.reduce((a,o)=>a+total(o),0);
+  let rd=reportData(), {paidOrders,sales,byType,items}=rd;
   let refunds=(db.refunds||[]).filter(r=>inReportRange(r.processedAt)).reduce((a,r)=>a+(Number(r.amount)||0),0);
-  let byType={};paidOrders.forEach(o=>{byType[o.type]=(byType[o.type]||0)+total(o);});
-  let items=itemSalesBreakdown(paidOrders);
   let itemCount=items.reduce((a,r)=>a+r.qty,0);
   let hours=db.shifts.filter(s=>s.out).reduce((a,s)=>a+(Number(s.hours)||0),0);
   let low=db.inventory.filter(i=>Number(i.onHand)<Number(i.par));
@@ -2098,10 +2138,11 @@ function reports(){
     <div class="row">${ranges.map(([k,l])=>`<button class="${(state.reportRange||'today')===k?'primary':'small-btn'}" onclick="state.reportRange='${k}';render()">${l}</button>`).join('')}</div>
     ${(state.reportRange==='custom')?`<div class="row section"><label>From<input type="date" class="input" value="${state.reportFrom||''}" onchange="state.reportFrom=this.value;render()"></label><label>To<input type="date" class="input" value="${state.reportTo||''}" onchange="state.reportTo=this.value;render()"></label></div>`:''}
     <p class="notice">Showing sales for <b>${range.label}</b>. Labor hours and inventory are current totals.</p>
+    ${rd.sums.length?`<p class="small">Includes saved daily summaries for ${rd.sums.length} day(s) whose orders are no longer stored (${rd.sums.map(x=>x.date).join(', ')}). Item options aren't kept in summaries.</p>`:''}
     <div class="stats">
       <div><b>${money(sales)}</b><span>Total Sales</span></div>
       <div><b>${money(refunds)}</b><span>Total Refunds</span></div>
-      <div><b>${paidOrders.length}</b><span>Paid Orders</span></div>
+      <div><b>${rd.orderCount}</b><span>Paid Orders</span></div>
       <div><b>${itemCount}</b><span>Items Sold</span></div>
       <div><b>${hours.toFixed(2)}</b><span>Labor Hours</span></div>
       <div><b>${low.length}</b><span>Items Below Par</span></div>
@@ -2110,7 +2151,7 @@ function reports(){
     <table class="report-table"><tr><th>Item</th><th>Category</th><th>Qty Sold</th><th>Sales</th><th>% of Sales</th><th>Modifiers</th></tr>${items.map(r=>`<tr><td><b>${r.name}</b></td><td>${r.category}</td><td>${r.qty}</td><td>${money(r.sales)}</td><td>${sales>0?(r.sales/sales*100).toFixed(1)+'%':'—'}</td><td class="small">${modText(r)||'—'}</td></tr>`).join('')}${items.length?`<tr><td colspan="2"><b>Total</b></td><td><b>${itemCount}</b></td><td><b>${money(sales)}</b></td><td></td><td></td></tr>`:'<tr><td colspan="6">No items sold in this range.</td></tr>'}</table>
     <p class="small">Item sales are before refunds; refunds are recorded per order and shown in Total Refunds.</p>
     <h2>Peak Times (Sales by Hour)</h2>
-    ${(()=>{let hrs=salesByHour(paidOrders);if(!hrs.length)return '<p>No paid orders in this range.</p>';let maxO=Math.max(...hrs.map(r=>r.orders)),maxS=Math.max(...hrs.map(r=>r.sales));
+    ${(()=>{let hrs=rd.hours;if(!hrs.length)return '<p>No paid orders in this range.</p>';let maxO=Math.max(...hrs.map(r=>r.orders)),maxS=Math.max(...hrs.map(r=>r.sales));
       return `<table class="report-table"><tr><th>Hour</th><th>Orders</th><th>Items</th><th>Sales</th><th style="width:35%"></th></tr>${hrs.map(r=>`<tr${r.orders===maxO?' class="peak-row"':''}><td><b>${hourLabel(r.hour)}</b>${r.orders===maxO?' <span class="peak-tag">Peak</span>':''}</td><td>${r.orders}</td><td>${r.items}</td><td>${money(r.sales)}</td><td><div class="hour-bar"><span style="width:${maxS>0?(r.sales/maxS*100).toFixed(0):0}%"></span></div></td></tr>`).join('')}</table><p class="small">By the hour each order was started. Busiest hour (most orders) is marked Peak.</p>`;})()}
     <h2>Sales by Order Type</h2>
     <table class="report-table"><tr><th>Type</th><th>Total</th></tr>${Object.entries(byType).map(([t,v])=>`<tr><td>${t.toUpperCase()}</td><td>${money(v)}</td></tr>`).join('')||'<tr><td colspan="2">No paid orders in this range.</td></tr>'}</table>
@@ -2125,15 +2166,15 @@ window.exportReportCSV=()=>{
   downloadCSV('guthrie-rms-sales.csv',rows);
 };
 window.exportItemSalesCSV=()=>{
-  let {label}=reportRange(), orders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
+  let {label}=reportRange();
   let rows=[['Range','Item','Category','Qty Sold','Sales','Modifiers']];
-  itemSalesBreakdown(orders).forEach(r=>rows.push([label,r.name,r.category,r.qty,r.sales.toFixed(2),Object.entries(r.mods).map(([k,v])=>`${k} x${v}`).join('; ')]));
+  reportData().items.forEach(r=>rows.push([label,r.name,r.category,r.qty,r.sales.toFixed(2),Object.entries(r.mods).map(([k,v])=>`${k} x${v}`).join('; ')]));
   downloadCSV(`guthrie-rms-item-sales-${label.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,rows);
 };
 window.exportHourlyCSV=()=>{
-  let {label}=reportRange(), orders=db.orders.filter(o=>o.paid&&inReportRange(o.paidAt));
+  let {label}=reportRange();
   let rows=[['Range','Hour','Orders','Items','Sales']];
-  salesByHour(orders).forEach(r=>rows.push([label,hourLabel(r.hour),r.orders,r.items,r.sales.toFixed(2)]));
+  reportData().hours.forEach(r=>rows.push([label,hourLabel(r.hour),r.orders,r.items,r.sales.toFixed(2)]));
   downloadCSV(`guthrie-rms-peak-times-${label.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.csv`,rows);
 };
 
@@ -2357,7 +2398,8 @@ window.submitCloseout=()=>{
   let countedCash=Number($('#closeoutCash')?.value)||0;
   db.dailyCloseouts=db.dailyCloseouts||[];
   db.dailyCloseouts.push({id:Date.now(),date:today,sales,countedCash,notes:$('#closeoutNotes')?.value||'',closedBy:state.user.name,closedAt:now()});
-  save();render();toast('Day closed out.');
+  updateDailySummaries();
+  save();render();toast('Day closed out. Today\'s sales summary is saved.');
 };
 
 // ---- Settings ----

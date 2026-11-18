@@ -1,5 +1,9 @@
 # Guthrie RMS Changelog
 
+## Daily Sales Summaries Kept Permanently
+- Each day's sales, paid orders, items sold, peak times (by hour) and sales by order type are saved as a small daily summary (about 1–2 KB a day). Saved about a minute after an iPad starts and every hour, and at End of Day. Every day whose orders are still stored is saved right away.
+- Reports use a day's summary when its orders are no longer stored, so past days always show (item options aren't kept in summaries). The Item Sales and Peak Times CSV exports include them. A summary is never replaced by one with fewer orders.
+
 ## Data Recovery Page (recover.html)
 - New page at recover.html (same address as the app, with recover.html at the end). It reads only the data saved in that device's browser and never connects to the cloud, so opening it can't overwrite anything. It shows which order dates the device still has, a report for any date range (sales, items sold, peak times, End of Day total), CSV downloads, and a full backup file. Use it on a device that hasn't opened the app since before Nov 11 to look for 10/16 orders.
 
