@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Shrimp & Grits
+- Added Shrimp & Grits ($12) to the Bistro menu under Weekly Chef Special, routed to the Grill KMS station.
+
 ## Buttermilk-Brined Chicken KMS Routing
 - The chicken sandwich now splits on the KMS: the bun set shows on Grill (labeled "Bun Set"), and the chicken filet and pommes frites show on Fry. Swapping the side to broccolini or mac & cheese sends that side to Grill. Expo shows every part, and the item is done when all parts are done.
 - KMS parts now always follow the built-in menu, even for items edited in Settings › Menu Items.
