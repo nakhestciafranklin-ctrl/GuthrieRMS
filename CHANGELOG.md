@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Peak Times in Reports
+- Reports has a Peak Times (Sales by Hour) table for the selected range: orders, items and sales for each hour (by when the order was started), with a bar for sales and the busiest hour marked Peak. "Export Peak Times CSV" downloads it.
+
 ## Holiday Lattes on the Bistro Menu
 - The Bistro tab (Dining Room tables and Counter + To-Go) has a Holiday Specials section at the top with the 9 holiday lattes ($3: Peppermint Mocha, Winter Wonderland, Pumpkin Spice Latte, Chocolate Hazelnut Truffle, Caramel Pumpkin Cheesecake, Gingerbread Cookie Latte, S'mores Mocha, Brown Sugar Cinnamon Latte, Cookie Butter Latte). Each asks Hot or Iced, plus whipped cream, drizzle and ice; Beverage KMS station. Separate from the café lattes so each menu keeps its own pars.
 
