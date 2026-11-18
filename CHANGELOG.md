@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Club to the Salad Station
+- The Smoked Turkey Club now shows on the Salad KMS screen (was Grill). Its pommes frites still go to Fry; a broccolini or mac & cheese side swap goes to Grill.
+
 ## Baby Spinach Salad with Grilled Chicken
 - The Baby Spinach Salad now comes with grilled chicken. The salad shows on the Salad KMS screen as usual and the chicken shows on Grill ("Grilled Chicken for Baby Spinach Salad"). Expo shows both, and the salad is done when both are done.
 - New "No Chicken" option takes the chicken off the Grill ticket. Price unchanged ($8).
