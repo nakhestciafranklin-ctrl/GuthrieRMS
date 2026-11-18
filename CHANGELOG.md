@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## Americano on the Bistro Menu
+- Added Americano ($2) to Bistro Beverages: Vanilla / Mocha / Caramel / Pumpkin syrup +$1, Add Milk, Room for Cream. Goes to the Beverage KMS station.
+
 ## To-Go Option on Bistro Desserts
 - Bistro Bake Shop desserts (Chocolate Chunk Cookie, Snickerdoodle Cookie, Sprinkle Sugar Cookie, Salted Caramel Brownie, Brown Butter Pecan Blondie, Warm Peach Cobbler) have a "To-Go" option. It shows on the ticket and the Dessert KMS screen. Added once to iPads that already have the menu, including items edited in Settings.
 
