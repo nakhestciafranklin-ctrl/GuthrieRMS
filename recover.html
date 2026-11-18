@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guthrie RMS Recovery</title>
+<!--
+  Recovery page: reads the copy of Guthrie RMS data saved in THIS browser, without connecting to
+  the cloud (it does not load app.js or firebase-sync.js), so opening it can't overwrite anything.
+  Shows which order dates this device still has and, for a chosen date range, total sales, items
+  sold and peak times, with CSV downloads and a full backup file. It never changes or deletes data.
+-->
+<style>
+:root{--blue:#003DA5;--light:#D9E8FF;--ink:#102033;--gold:#F9A825;--red:#C62828;--green:#2E7D32;--gray:#f3f6fb}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--gray);color:var(--ink)}
+header{background:var(--blue);color:white;padding:14px 16px}header h1{margin:0;font-size:22px}
+main{max-width:1000px;margin:auto;padding:16px}.card{background:white;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.08);padding:18px;margin-bottom:16px}
+.notice{background:var(--light);border:1px solid var(--blue);border-radius:10px;padding:10px 12px;color:var(--blue);font-weight:700}
+.warn{background:#fff7df;border-color:var(--gold);color:var(--ink)}
+.bad{background:#fdecea;border-color:var(--red);color:var(--red)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input{padding:10px;border:1px solid #b5c4d6;border-radius:10px;font:inherit}
+button{border:0;border-radius:12px;padding:12px 14px;background:var(--blue);color:white;font-weight:700;cursor:pointer;font:inherit;font-weight:700}
+button.alt{background:white;color:var(--blue);border:2px solid var(--blue)}
+table{width:100%;border-collapse:collapse;margin:8px 0}th,td{padding:8px 10px;border-bottom:1px solid #dbe3ef;text-align:left}th{background:var(--blue);color:white}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}.stats div{background:var(--gray);border-radius:12px;padding:12px}.stats b{display:block;font-size:24px}
+.peak td{background:#fff7df}.tag{background:var(--gold);border-radius:999px;padding:2px 8px;font-size:12px;font-weight:800}
+.bar{height:12px;background:#e3e9f2;border-radius:999px;overflow:hidden}.bar span{display:block;height:100%;background:var(--blue)}
+.small{font-size:13px;opacity:.8}
+</style>
+</head>
+<body>
+<header><h1>Guthrie RMS — Data Recovery</h1><div class="small">Reads only this device's saved copy. Does not connect to the cloud or change anything.</div></header>
+<main id="out"><div class="card">Reading this device's saved data…</div></main>
+<script>
+(function(){
+  const KEYS=['guthrieRMS7A','guthrieRMS5A','guthrieRMS4K','guthrieRMS4F'];
+  const money=n=>'$'+(Number(n)||0).toFixed(2);
+  const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const ymd=t=>{const d=new Date(t);return isNaN(d)?'':d.toLocaleDateString('en-CA');};
+  const items=o=>Array.isArray(o?.items)?o.items.filter(i=>i&&i.name&&Number(i.price)>=0):[];
+  const total=o=>items(o).reduce((a,i)=>a+(Number(i.price)||0),0);
+  const hourLabel=h=>{const f=x=>((x+11)%12+1)+(x<12||x===24?' AM':' PM');return f(h)+' – '+f(h+1);};
+  const out=document.getElementById('out');
+  // Load every saved copy on this device.
+  const copies=[];
+  KEYS.forEach(k=>{try{const raw=localStorage.getItem(k);if(!raw)return;const d=JSON.parse(raw);copies.push({key:k,data:d,raw});}catch(e){copies.push({key:k,error:String(e)});}});
+  // Paid orders from all copies, de-duplicated by id (newest copy first).
+  const byId=new Map();
+  copies.forEach(c=>(c.data?.orders||[]).forEach(o=>{if(o&&o.paid&&!byId.has(o.id))byId.set(o.id,o);}));
+  const paid=[...byId.values()];
+  const days={};paid.forEach(o=>{const d=ymd(o.paidAt||Number(o.id));if(d)(days[d]=days[d]||[]).push(o);});
+  const dayList=Object.keys(days).sort();
+  const closeouts=copies.flatMap(c=>c.data?.dailyCloseouts||[]);
+  let from='2026-10-16', to='2026-10-16';
+  function render(){
+    if(!copies.length){out.innerHTML='<div class="card"><p class="notice bad">No Guthrie RMS data is saved on this device (in this browser). Try another iPad or computer that used the app before November 11.</p></div>';return;}
+    const sel=paid.filter(o=>{const d=ymd(o.paidAt||Number(o.id));return d>=from&&d<=to;});
+    const sales=sel.reduce((a,o)=>a+total(o),0);
+    const itemMap={};sel.forEach(o=>items(o).forEach(i=>{const r=itemMap[i.name]||(itemMap[i.name]={name:i.name,qty:0,sales:0,mods:{}});r.qty++;r.sales+=Number(i.price)||0;(i.mods||[]).forEach(m=>r.mods[m]=(r.mods[m]||0)+1);}));
+    const itemRows=Object.values(itemMap).sort((a,b)=>b.sales-a.sales||b.qty-a.qty);
+    const hrMap={};sel.forEach(o=>{const h=new Date(Number(o.id)||o.paidAt).getHours();const r=hrMap[h]||(hrMap[h]={hour:h,orders:0,items:0,sales:0});r.orders++;r.items+=items(o).length;r.sales+=total(o);});
+    const hrs=Object.values(hrMap).sort((a,b)=>a.hour-b.hour);const maxO=Math.max(0,...hrs.map(r=>r.orders)),maxS=Math.max(0,...hrs.map(r=>r.sales));
+    const close=closeouts.filter(c=>c.date>=from&&c.date<=to);
+    out.innerHTML=`
+    <div class="card">
+      <h2>What this device has</h2>
+      <p>${copies.map(c=>c.error?`${c.key}: could not read`:`${c.key}: ${(c.data.orders||[]).length} order(s), ${Math.round(c.raw.length/1024)} KB`).join('<br>')}</p>
+      <p><b>${paid.length}</b> paid order(s) on <b>${dayList.length}</b> day(s)${dayList.length?`: ${dayList[0]} to ${dayList[dayList.length-1]}`:''}.</p>
+      ${days['2026-10-16']?`<p class="notice">This device HAS 10/16 orders (${days['2026-10-16'].length}). Download the backup below before opening the main app on this device.</p>`:`<p class="notice warn">This device does not have 10/16 orders.</p>`}
+      <details><summary>All dates on this device</summary><p class="small">${dayList.map(d=>`${d} (${days[d].length})`).join(', ')||'none'}</p></details>
+      <div class="row"><button onclick="downloadBackup()">Download Full Backup (all saved data)</button></div>
+      <p class="small">Keep the backup file. It can be sent to your developer to put the orders back.</p>
+    </div>
+    <div class="card">
+      <h2>Report</h2>
+      <div class="row"><label>From <input type="date" value="${from}" onchange="setRange(this.value,null)"></label><label>To <input type="date" value="${to}" onchange="setRange(null,this.value)"></label></div>
+      <div class="stats"><div><b>${money(sales)}</b>Total Sales</div><div><b>${sel.length}</b>Paid Orders</div><div><b>${itemRows.reduce((a,r)=>a+r.qty,0)}</b>Items Sold</div>${close.length?`<div><b>${money(close.reduce((a,c)=>a+(Number(c.sales)||0),0))}</b>End of Day total</div>`:''}</div>
+      <h3>Items Sold</h3>
+      <table><tr><th>Item</th><th>Qty</th><th>Sales</th><th>Options</th></tr>${itemRows.map(r=>`<tr><td><b>${esc(r.name)}</b></td><td>${r.qty}</td><td>${money(r.sales)}</td><td class="small">${esc(Object.entries(r.mods).map(([k,v])=>k+' ×'+v).join(', '))}</td></tr>`).join('')||'<tr><td colspan="4">No paid orders in this range on this device.</td></tr>'}</table>
+      <h3>Peak Times</h3>
+      <table><tr><th>Hour</th><th>Orders</th><th>Items</th><th>Sales</th><th style="width:30%"></th></tr>${hrs.map(r=>`<tr${r.orders===maxO?' class="peak"':''}><td><b>${hourLabel(r.hour)}</b>${r.orders===maxO?' <span class="tag">Peak</span>':''}</td><td>${r.orders}</td><td>${r.items}</td><td>${money(r.sales)}</td><td><div class="bar"><span style="width:${maxS?(r.sales/maxS*100).toFixed(0):0}%"></span></div></td></tr>`).join('')||'<tr><td colspan="5">—</td></tr>'}</table>
+      <div class="row"><button onclick="dl('orders')">Download Orders CSV</button><button onclick="dl('items')">Download Items CSV</button><button onclick="dl('hours')">Download Peak Times CSV</button></div>
+    </div>`;
+    window.__sel={sel,itemRows,hrs};
+  }
+  window.setRange=(f,t)=>{if(f)from=f;if(t)to=t;if(from>to){if(f)to=from;else from=to;}render();};
+  function csv(rows){return rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');}
+  function save(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
+  window.dl=kind=>{const {sel,itemRows,hrs}=window.__sel;const tag=from===to?from:from+'_to_'+to;
+    if(kind==='orders')save(`guthrie-orders-${tag}.csv`,csv([['Order ID','Started','Paid At','Type','Customer','Items','Total','Payment'],...sel.map(o=>[o.id,new Date(Number(o.id)).toLocaleString(),o.paidAt||'',o.type,o.customer,items(o).map(i=>i.name+((i.mods||[]).length?' ('+i.mods.join(', ')+')':'')).join('; '),total(o).toFixed(2),o.payment?.type||''])]),'text/csv');
+    if(kind==='items')save(`guthrie-items-${tag}.csv`,csv([['Item','Qty Sold','Sales','Options'],...itemRows.map(r=>[r.name,r.qty,r.sales.toFixed(2),Object.entries(r.mods).map(([k,v])=>k+' x'+v).join('; ')])]),'text/csv');
+    if(kind==='hours')save(`guthrie-peak-times-${tag}.csv`,csv([['Hour','Orders','Items','Sales'],...hrs.map(r=>[hourLabel(r.hour),r.orders,r.items,r.sales.toFixed(2)])]),'text/csv');};
+  window.downloadBackup=()=>{const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');save(`guthrie-rms-backup-${stamp}.json`,JSON.stringify({savedAt:new Date().toISOString(),device:navigator.userAgent,copies:copies.filter(c=>c.data).map(c=>({key:c.key,data:c.data}))}),'application/json');};
+  render();
+})();
+</script>
+</body>
+</html>
