@@ -1,5 +1,8 @@
 # Guthrie RMS Changelog
 
+## To-Go Option on Bistro Desserts
+- Bistro Bake Shop desserts (Chocolate Chunk Cookie, Snickerdoodle Cookie, Sprinkle Sugar Cookie, Salted Caramel Brownie, Brown Butter Pecan Blondie, Warm Peach Cobbler) have a "To-Go" option. It shows on the ticket and the Dessert KMS screen. Added once to iPads that already have the menu, including items edited in Settings.
+
 ## Grilled Cheese to the Salad Station
 - Golden Melt Grilled Cheese now shows on the Salad KMS screen (was Grill).
 
